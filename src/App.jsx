@@ -1,12 +1,34 @@
 import { Routes, Route } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import FindCourtsPage from './pages/FindCourtsPage'
+import CourtDetailPage from './pages/CourtDetailPage'
+import BookingPage from './pages/BookingPage'
+import BookingConfirmedPage from './pages/BookingConfirmedPage'
+import SlotUnavailablePage from './pages/SlotUnavailablePage'
+import OwnerLoginPage from './pages/OwnerLoginPage'
+import OwnerDashboardPage from './pages/OwnerDashboardPage'
+import AddCourtPage from './pages/AddCourtPage'
+import OwnerBookingsPage from './pages/OwnerBookingsPage'
+import OwnerRegisterPage from './pages/OwnerRegisterPage'
+
+
+
+
 
 function App() {
   return (
     <Routes>
+      <Route path="/owner/register" element={<OwnerRegisterPage />} />
+      <Route path="/owner/courts/add" element={<AddCourtPage />} />
+      <Route path="/owner/courts/:id/bookings" element={<OwnerBookingsPage />} />
+      <Route path="/owner/dashboard" element={<OwnerDashboardPage />} />
+      <Route path="/owner/login" element={<OwnerLoginPage />} />
+      <Route path="/booking/confirmed" element={<BookingConfirmedPage />} />
+      <Route path="/booking/unavailable" element={<SlotUnavailablePage />} /> 
+      <Route path="/booking/:id" element={<BookingPage />} />
       <Route path="/" element={<HomePage />} />
       <Route path="/courts" element={<FindCourtsPage />} />
+      <Route path="/courts/:id" element={<CourtDetailPage />} />
     </Routes>
   )
 }
