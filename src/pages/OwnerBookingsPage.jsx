@@ -29,8 +29,7 @@ function OwnerBookingsPage() {
         <nav style={{ padding: '16px 12px', flex: 1 }}>
           {[
             { label: 'Dashboard', path: '/owner/dashboard' },
-            { label: 'Manage Courts', path: '/owner/courts' },
-            { label: 'Bookings', path: '/owner/bookings' },
+{ label: 'Add Court', path: '/owner/courts/add' },
           ].map(item => (
             <button key={item.path} onClick={() => navigate(item.path)}
               style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500', marginBottom: '4px', background: 'transparent', color: '#9ca3af' }}>

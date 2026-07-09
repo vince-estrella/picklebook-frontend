@@ -45,8 +45,7 @@ function OwnerDashboardPage() {
         <nav style={{ padding: '16px 12px', flex: 1 }}>
           {[
             { label: 'Dashboard', path: '/owner/dashboard' },
-            { label: 'Manage Courts', path: '/owner/courts' },
-            { label: 'Bookings', path: '/owner/bookings' },
+{ label: 'Add Court', path: '/owner/courts/add' },
           ].map(item => (
             <button
               key={item.path}
@@ -143,13 +142,21 @@ function OwnerDashboardPage() {
                     <td style={{ padding: '14px 16px', fontSize: '14px' }}>₱{court.pricePerHour}/hr</td>
                     <td style={{ padding: '14px 16px', fontSize: '14px' }}>{court.type || '—'}</td>
                     <td style={{ padding: '14px 16px' }}>
-                      <button
-                        onClick={() => navigate(`/owner/courts/${court.id}/bookings`)}
-                        style={{ fontSize: '13px', color: '#16a34a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
-                      >
-                        View Bookings
-                      </button>
-                    </td>
+  <div style={{ display: 'flex', gap: '12px' }}>
+    <button
+      onClick={() => navigate(`/owner/courts/${court.id}/edit`)}
+      style={{ fontSize: '13px', color: '#374151', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+    >
+      Edit
+    </button>
+    <button
+      onClick={() => navigate(`/owner/courts/${court.id}/bookings`)}
+      style={{ fontSize: '13px', color: '#16a34a', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+    >
+      View Bookings
+    </button>
+  </div>
+</td>
                   </tr>
                 ))
               )}

@@ -10,6 +10,7 @@ import OwnerDashboardPage from './pages/OwnerDashboardPage'
 import AddCourtPage from './pages/AddCourtPage'
 import OwnerBookingsPage from './pages/OwnerBookingsPage'
 import OwnerRegisterPage from './pages/OwnerRegisterPage'
+import EditCourtPage from './pages/EditCourtPage'
 
 
 
@@ -18,6 +19,7 @@ import OwnerRegisterPage from './pages/OwnerRegisterPage'
 function App() {
   return (
     <Routes>
+      <Route path="/owner/courts/:id/edit" element={<EditCourtPage />} />
       <Route path="/owner/register" element={<OwnerRegisterPage />} />
       <Route path="/owner/courts/add" element={<AddCourtPage />} />
       <Route path="/owner/courts/:id/bookings" element={<OwnerBookingsPage />} />

@@ -1,34 +1,45 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import api from '../services/api'
 
 const AMENITIES_OPTIONS = ['Night Lighting', 'Free WiFi', 'Parking', 'Locker Rooms', 'Water Station', 'Paddle Rental', 'Changing Rooms', 'Ample Parking']
 
-function AddCourtPage() {
+function EditCourtPage() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({
-    name: '',
-    address: '',
-    type: 'Outdoor',
-    surfaceType: '',
-    maxPlayers: 4,
-    pricePerHour: '',
-    description: '',
-    externalBookingUrl: '',
-    monFriOpen: '06:00:00',
-    monFriClose: '22:00:00',
-    satOpen: '07:00:00',
-    satClose: '21:00:00',
-    sunOpen: '08:00:00',
-    sunClose: '20:00:00',
-    latitude: 0,
-    longitude: 0,
-    courtOwnerId: JSON.parse(localStorage.getItem('owner') || '{}').id,
-  })
+  const { id } = useParams()
+  const [form, setForm] = useState(null)
   const [amenities, setAmenities] = useState([])
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
+  const [fetching, setFetching] = useState(true)
   const [error, setError] = useState(null)
+
+  useEffect(() => {
+    api.get(`/courts/${id}`).then(res => {
+      const court = res.data
+      setForm({
+        name: court.name || '',
+        address: court.address || '',
+        type: court.type || 'Outdoor',
+        surfaceType: court.surfaceType || '',
+        maxPlayers: court.maxPlayers || 4,
+        pricePerHour: court.pricePerHour || '',
+        description: court.description || '',
+        externalBookingUrl: court.externalBookingUrl || '',
+        monFriOpen: court.monFriOpen || '06:00:00',
+        monFriClose: court.monFriClose || '22:00:00',
+        satOpen: court.satOpen || '07:00:00',
+        satClose: court.satClose || '21:00:00',
+        sunOpen: court.sunOpen || '08:00:00',
+        sunClose: court.sunClose || '20:00:00',
+        latitude: court.latitude || 0,
+        longitude: court.longitude || 0,
+        courtOwnerId: court.courtOwnerId,
+      })
+      setAmenities(court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : [])
+      setFetching(false)
+    }).catch(() => navigate('/owner/dashboard'))
+  }, [id])
 
   const toggleAmenity = (a) => {
     setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
@@ -42,26 +53,31 @@ function AddCourtPage() {
     setLoading(true)
     setError(null)
     try {
-      const courtData = { ...form, amenities: amenities.join(','), pricePerHour: parseFloat(form.pricePerHour), maxPlayers: parseInt(form.maxPlayers) }
-      const res = await api.post('/courts', courtData)
-      const courtId = res.data.id
+      const courtData = {
+        ...form,
+        amenities: amenities.join(','),
+        pricePerHour: parseFloat(form.pricePerHour),
+        maxPlayers: parseInt(form.maxPlayers)
+      }
+      await api.put(`/courts/${id}`, courtData)
 
-      // Upload images if any
       for (const img of images) {
         const formData = new FormData()
         formData.append('file', img)
-        await api.post(`/courts/${courtId}/images`, formData, {
+        await api.post(`/courts/${id}/images`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })
       }
 
       navigate('/owner/dashboard')
-    } catch (err) {
-      setError('Failed to save court. Please try again.')
+    } catch {
+      setError('Failed to update court. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  if (fetching) return <div style={{ padding: '40px', color: '#6b7280' }}>Loading...</div>
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb' }}>
@@ -74,7 +90,7 @@ function AddCourtPage() {
         <nav style={{ padding: '16px 12px', flex: 1 }}>
           {[
             { label: 'Dashboard', path: '/owner/dashboard' },
-{ label: 'Add Court', path: '/owner/courts/add' },
+            { label: 'Add Court', path: '/owner/courts/add' },
           ].map(item => (
             <button key={item.path} onClick={() => navigate(item.path)}
               style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500', marginBottom: '4px', background: 'transparent', color: '#9ca3af' }}>
@@ -88,34 +104,31 @@ function AddCourtPage() {
       <div style={{ flex: 1, padding: '32px', maxWidth: '800px' }}>
         <button onClick={() => navigate('/owner/dashboard')}
           style={{ color: '#16a34a', fontSize: '14px', marginBottom: '24px', background: 'none', border: 'none', cursor: 'pointer' }}>
-          ← Back to List
+          ← Back to Dashboard
         </button>
 
-        <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>Register New Court</h1>
-        <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '32px' }}>Enter the specific details for your facility to start receiving bookings.</p>
+        <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>Edit Court</h1>
+        <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '32px' }}>Update your court details.</p>
 
         {/* Image Upload */}
-        <div style={{ border: '2px dashed #e5e7eb', borderRadius: '12px', padding: '32px', textAlign: 'center', marginBottom: '24px', background: 'white' }}>
-          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>📷 Click to upload court images</p>
-          <p style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '12px' }}>High-resolution JPEG or PNG, max 10MB</p>
+        <div style={{ border: '2px dashed #e5e7eb', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '24px', background: 'white' }}>
+          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>📷 Upload additional court images</p>
           <input type="file" multiple accept="image/*" onChange={e => setImages(Array.from(e.target.files))}
             style={{ fontSize: '13px', color: '#374151' }} />
-          {images.length > 0 && <p style={{ fontSize: '13px', color: '#16a34a', marginTop: '8px' }}>{images.length} image(s) selected</p>}
+          {images.length > 0 && <p style={{ fontSize: '13px', color: '#16a34a', marginTop: '8px' }}>{images.length} new image(s) selected</p>}
         </div>
 
         {/* Basic Info */}
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Court Name</label>
-            <input placeholder="e.g. Court 1 - Pickle Court" value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
+            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
               style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
           </div>
 
           <div style={{ marginBottom: '16px' }}>
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Full Address</label>
-            <input placeholder="Blk 1, Lot 1, Court 1" value={form.address}
-              onChange={e => setForm({ ...form, address: e.target.value })}
+            <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
               style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
           </div>
 
@@ -149,7 +162,7 @@ function AddCourtPage() {
             </div>
             <div>
               <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Price per Hour (₱)</label>
-              <input type="number" placeholder="350" value={form.pricePerHour} onChange={e => setForm({ ...form, pricePerHour: e.target.value })}
+              <input type="number" value={form.pricePerHour} onChange={e => setForm({ ...form, pricePerHour: e.target.value })}
                 style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
             </div>
           </div>
@@ -192,19 +205,17 @@ function AddCourtPage() {
           ))}
         </div>
 
-        {/* External URL + Description */}
+        {/* Description */}
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>External Booking URL (Optional)</label>
             <input placeholder="https://yourclub.com/book" value={form.externalBookingUrl}
               onChange={e => setForm({ ...form, externalBookingUrl: e.target.value })}
               style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-            <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>If you use a third-party booking system, link it here.</p>
           </div>
           <div>
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Court Description</label>
-            <textarea placeholder="Describe what makes this court unique, player expectations, or local club rules..."
-              value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
               rows={4}
               style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', resize: 'vertical' }} />
           </div>
@@ -215,11 +226,11 @@ function AddCourtPage() {
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
           <button onClick={() => navigate('/owner/dashboard')}
             style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151' }}>
-            Discard Draft
+            Cancel
           </button>
           <button onClick={handleSubmit} disabled={loading}
             style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: 'none', background: '#16a34a', color: 'white', cursor: loading ? 'not-allowed' : 'pointer' }}>
-            {loading ? 'Saving...' : 'Save Court'}
+            {loading ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -227,4 +238,4 @@ function AddCourtPage() {
   )
 }
 
-export default AddCourtPage
+export default EditCourtPage
