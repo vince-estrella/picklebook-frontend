@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom' 
+import logo from "../assets/picklebook-logo.png"; // or .svg
 
 function Navbar() {
   return (
