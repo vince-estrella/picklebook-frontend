@@ -64,7 +64,7 @@ function HomePage() {
         {/* Right: Image */}
         <div style={{ flex: 1, borderRadius: '16px', overflow: 'hidden', height: '360px', background: '#e5e7eb' }}>
           <img
-            src="https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&q=80"
+            src="https://res.cloudinary.com/graham-media-group/image/upload/f_auto/q_auto/c_scale,w_640/v1/media/gmg/K475EAGIMRDPVJAUVCTSLLA55A?_a=DAJHqpDbZAAA"
             alt="Pickleball court"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
