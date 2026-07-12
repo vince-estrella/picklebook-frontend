@@ -82,7 +82,7 @@ function CourtDetailPage() {
             court.images.slice(0, 3).map((img, i) => (
               <img
                 key={i}
-                src={`http://localhost:5154${img.imageUrl}`}
+                src={`https://picklebook-api-production.up.railway.app${img.imageUrl}`}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 alt="court"
               />
