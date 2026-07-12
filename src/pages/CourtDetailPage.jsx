@@ -14,17 +14,18 @@ function CourtDetailPage() {
   const [selectedSlot, setSelectedSlot] = useState(null)
 
   const generateSlots = (open, close) => {
-    const slots = []
-    let [startH] = open.split(':').map(Number)
-    const [endH] = close.split(':').map(Number)
-    while (startH < endH) {
-      const start = `${String(startH).padStart(2, '0')}:00`
-      const end = `${String(startH + 1).padStart(2, '0')}:00`
-      slots.push({ start, end })
-      startH++
-    }
-    return slots
+  const slots = []
+  let [startH] = open.split(':').map(Number)
+  const [endH] = close.split(':').map(Number)
+
+  while (startH < endH) {
+    const start = `${String(startH).padStart(2, '0')}:00`
+    const end = `${String(startH + 1).padStart(2, '0')}:00`
+    slots.push({ start, end })
+    startH++
   }
+  return slots
+}
 
   useEffect(() => {
     api.get(`/courts/${id}`).then(res => setCourt(res.data))
@@ -55,6 +56,13 @@ function CourtDetailPage() {
   const isBooked = (slot) => bookedSlots.some(b =>
     b.startTime.substring(0, 5) === slot.start
   )
+  const isPast = (slot) => {
+  const now = new Date()
+  const isToday = selectedDate === now.toISOString().split('T')[0]
+  if (!isToday) return false
+  const slotHour = parseInt(slot.start.split(':')[0])
+  return slotHour <= now.getHours()
+}
 
   const amenitiesList = court.amenities ? court.amenities.split(',') : []
 
@@ -161,40 +169,47 @@ function CourtDetailPage() {
             {/* Date */}
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Select Date</label>
             <input
-              type="date"
-              value={selectedDate}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={e => { setSelectedDate(e.target.value); setSelectedSlot(null) }}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box' }}
-            />
+  type="date"
+  value={selectedDate}
+  min={new Date().toISOString().split('T')[0]}
+  max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+  onChange={e => { setSelectedDate(e.target.value); setSelectedSlot(null) }}
+  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box' }}
+/>
 
             {/* Time Slots */}
             <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>Available Times</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
               {slots.map(slot => {
-                const booked = isBooked(slot)
-                const selected = selectedSlot?.start === slot.start
-                return (
-                  <button
-                    key={slot.start}
-                    disabled={booked}
-                    onClick={() => setSelectedSlot(slot)}
-                    style={{
-                      padding: '8px 4px',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      border: '1px solid #e5e7eb',
-                      cursor: booked ? 'not-allowed' : 'pointer',
-                      background: booked ? '#f3f4f6' : selected ? '#16a34a' : '#f9fafb',
-                      color: booked ? '#9ca3af' : selected ? 'white' : '#374151',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    {slot.start}
-                  </button>
-                )
-              })}
+  const booked = isBooked(slot)
+  const past = isPast(slot)
+  const selected = selectedSlot?.start === slot.start
+  const disabled = booked || past
+  return (
+    <button
+      key={slot.start}
+      disabled={disabled}
+      onClick={() => !disabled && setSelectedSlot(slot)}
+      style={{
+        padding: '8px 4px',
+        borderRadius: '8px',
+        fontSize: '13px',
+        fontWeight: '500',
+        border: '1px solid #e5e7eb',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        background: booked ? '#f3f4f6' : past ? '#f3f4f6' : selected ? '#16a34a' : '#f9fafb',
+        color: booked ? '#9ca3af' : past ? '#d1d5db' : selected ? 'white' : '#374151',
+        transition: 'all 0.15s',
+        position: 'relative'
+      }}
+    >
+      {slot.start}
+      {past && !booked && (
+        <span style={{ fontSize: '9px', display: 'block', color: '#d1d5db' }}>past</span>
+      )}
+    </button>
+  )
+})}
             </div>
 
             {/* Book Button */}
