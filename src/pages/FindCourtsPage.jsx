@@ -32,7 +32,7 @@ function FindCourtsPage() {
               <div className="relative h-48 bg-gray-200">
                 {court.images && court.images.length > 0 ? (
                   <img
-                    src={`https://picklebook-api-production.up.railway.app${court.images[0].imageUrl}`}
+                    src={court.images[0].imageUrl}
                     alt={court.name}
                     className="w-full h-full object-cover"
                   />
