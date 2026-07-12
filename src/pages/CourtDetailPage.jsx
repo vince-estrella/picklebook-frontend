@@ -219,15 +219,17 @@ function CourtDetailPage() {
         <div className="w-full h-[360px] md:h-[440px] rounded-xl overflow-hidden grid grid-cols-4 grid-rows-2 gap-1 relative">
           {images.length > 0 ? (
             <>
-              <img
-                src={`${API_BASE}${images[0].imageUrl}`}
-                className="col-span-2 row-span-2 w-full h-full object-cover"
-                alt={court.name}
-              />
+              
+<img
+  src={images[0].imageUrl}
+  className="col-span-2 row-span-2 w-full h-full object-cover"
+  alt={court.name}
+/>
+              
               {images.slice(1, 5).map((img, i) => (
                 <img
                   key={i}
-                  src={`${API_BASE}${img.imageUrl}`}
+                  src={`${img.imageUrl}`}
                   className="w-full h-full object-cover"
                   alt="court"
                 />
