@@ -7,9 +7,21 @@ function CourtDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [court, setCourt] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  )
+  const getDefaultDate = () => {
+  const now = new Date()
+  const today = now.toISOString().split('T')[0]
+  
+  // Get court close time to check if all slots are past
+  // If current hour is past 10pm (22:00), default to tomorrow
+  if (now.getHours() >= 22) {
+    const tomorrow = new Date(now)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return tomorrow.toISOString().split('T')[0]
+  }
+  return today
+}
+
+const [selectedDate, setSelectedDate] = useState(getDefaultDate())
   const [bookedSlots, setBookedSlots] = useState([])
   const [selectedSlot, setSelectedSlot] = useState(null)
 
