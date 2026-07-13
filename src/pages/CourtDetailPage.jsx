@@ -1,3 +1,4 @@
+import CourtMap from "../components/CourtMap";
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../services/api'
@@ -119,6 +120,47 @@ function CourtDetailPage() {
                 </div>
               </div>
             )}
+
+            <div>
+              <h2
+                style={{
+                fontSize: "18px",
+                fontWeight: "700",
+                marginBottom: "12px",
+                }}
+              >
+    📍 Location
+              </h2>
+
+              <CourtMap
+                latitude={10.3157}
+                longitude={123.8854}
+                courtName={court.name}
+              />
+
+              <p
+                style={{
+                marginTop: "10px",
+                color: "#6b7280",
+                fontSize: "14px",
+              }}
+              >
+              {court.address}
+              </p>
+
+              <a
+                href={`https://www.google.com/maps?q=10.3157,123.8854`}
+                target="_blank"
+                rel="noopener noreferrer"
+              style={{
+                color: "#16a34a",
+                fontWeight: "600",
+                textDecoration: "none",
+              }}
+              >
+    Open in Google Maps
+              </a>
+            </div>
 
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>Operating Hours</h2>
