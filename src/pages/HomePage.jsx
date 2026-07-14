@@ -1,3 +1,11 @@
+import {
+  FaSearch,
+  FaBolt,
+  FaHistory
+} from 'react-icons/fa'
+
+import { MdOutlineEventAvailable } from 'react-icons/md'
+
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 
@@ -25,7 +33,10 @@ function HomePage() {
               onClick={() => navigate('/courts')}
               style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '14px 28px', fontWeight: '600', fontSize: '15px', cursor: 'pointer' }}
             >
-              🔍 Find Courts
+             <>
+  <FaSearch style={{ marginRight: '8px' }} />
+  Find Courts
+</>
             </button>
             <button
               onClick={() => navigate('/courts')}
@@ -69,12 +80,38 @@ function HomePage() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
             {[
-              { icon: '⚡', title: 'Easy Booking', desc: 'A streamlined checkout flow designed for speed. Select your time, confirm, and you\'re ready to hit the court.' },
-              { icon: '🔄', title: 'Real-Time Availability', desc: 'Live syncing with facility calendars. Never worry about double bookings or outdated schedules ever again.' },
-              { icon: '🕐', title: 'Booking History', desc: 'Access your past sessions and upcoming games in a single, unified view. Rebook your favorite spots in one click.' },
-            ].map(f => (
+  {
+    icon: <FaBolt color="#16a34a" />,
+    title: 'Easy Booking',
+    desc: 'A streamlined checkout flow designed for speed. Select your time, confirm, and you\'re ready to hit the court.'
+  },
+  {
+    icon: <MdOutlineEventAvailable color="#16a34a" />,
+    title: 'Real-Time Availability',
+    desc: 'Live syncing with facility calendars. Never worry about double bookings or outdated schedules.'
+  },
+  {
+    icon: <FaHistory color="#16a34a" />,
+    title: 'Booking History',
+    desc: 'Access your past sessions and upcoming games in one place.'
+  }
+].map(f => (
               <div key={f.title} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px' }}>
-                <div style={{ fontSize: '28px', marginBottom: '12px' }}>{f.icon}</div>
+             <div
+  style={{
+    width: '56px',
+    height: '56px',
+    borderRadius: '14px',
+    background: '#f0fdf4',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
+    marginBottom: '18px'
+  }}
+>
+  {f.icon}
+</div>
                 <h3 style={{ fontWeight: '700', fontSize: '16px', marginBottom: '8px' }}>{f.title}</h3>
                 <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>{f.desc}</p>
               </div>
@@ -90,11 +127,24 @@ function HomePage() {
           Join the high-performance pickleball community today. Simple, fast, and reliable.
         </p>
         <button
-          onClick={() => navigate('/courts')}
-          style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '14px 32px', fontWeight: '600', fontSize: '15px', cursor: 'pointer' }}
-        >
-          Get Started
-        </button>
+  onClick={() => navigate('/courts')}
+  style={{
+    background: '#16a34a',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '14px 28px',
+    fontWeight: '600',
+    fontSize: '15px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  }}
+>
+  <FaSearch />
+  Find Courts
+</button>
       </div>
 
       {/* Footer */}
