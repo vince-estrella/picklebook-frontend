@@ -13,12 +13,10 @@
     "@tailwindcss/vite": "^4.3.2",
     "axios": "^1.18.1",
     "leaflet": "^1.9.4",
+    "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-<<<<<<< HEAD
     "react-icons": "^5.7.0",
-=======
->>>>>>> 65aa1605384b2b2fb8d3b2577797c488874b7e7f
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.1",
     "tailwindcss": "^4.3.2"

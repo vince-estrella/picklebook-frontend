@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { User, Mail, Phone, Lock, ArrowRight, CalendarCheck, Users as UsersIcon } from 'lucide-react'
 import api from '../services/api'
 
 function OwnerRegisterPage() {
@@ -43,91 +44,212 @@ function OwnerRegisterPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }}>
+    <div className="min-h-screen w-full px-12 py-16 relative bg-slate-50 flex flex-col justify-center items-center overflow-hidden">
 
-      {/* Left: Dark panel */}
-      <div style={{ width: '40%', background: '#1a1a1a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
-        <div style={{ width: '56px', height: '56px', background: '#16a34a', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
-          🏓
+      {/* Decorative blurred accents */}
+      <div className="w-96 h-96 -left-20 top-0 absolute bg-green-300/20 rounded-full blur-[50px] pointer-events-none" />
+      <div className="w-[512px] h-[506px] right-0 bottom-0 absolute bg-rose-200/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Right-side promo panel (desktop only) */}
+      <div className="hidden lg:flex w-96 h-full absolute right-0 top-0 flex-col justify-center overflow-hidden">
+        <div className="flex-1 relative flex flex-col justify-center">
+          <img className="flex-1 w-full h-full object-cover" src="https://placehold.co/427x1013" alt="" />
+          <div className="w-96 h-full absolute inset-0 bg-gradient-to-l from-green-800/0 to-green-800/20" />
+          <div className="absolute left-12 bottom-24 pr-8 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 bg-green-300 rounded-sm" />
+              <span className="text-white text-sm font-semibold uppercase leading-4 tracking-wider">Member Perks</span>
+            </div>
+            <p className="text-white text-3xl font-bold leading-10">
+              Book courts in seconds, find local clubs, and track your game.
+            </p>
+            <div className="pt-2 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full backdrop-blur-md flex justify-center items-center shrink-0">
+                  <CalendarCheck className="w-4 h-5 text-white" />
+                </div>
+                <span className="text-white text-base font-normal leading-6">Instant Court Reservations</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-full backdrop-blur-md flex justify-center items-center shrink-0">
+                  <UsersIcon className="w-6 h-3 text-white" />
+                </div>
+                <span className="text-white text-base font-normal leading-6">Connect with Players</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <h2 style={{ color: '#16a34a', fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>PickleBook</h2>
-        <p style={{ color: '#9ca3af', textAlign: 'center', fontSize: '14px', lineHeight: '1.6' }}>
-          Join the fastest-growing pickleball court management platform in the Philippines.
-        </p>
       </div>
 
-      {/* Right: Register form */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px', background: '#fafafa' }}>
-        <div style={{ width: '100%', maxWidth: '420px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Create Account</h1>
-          <p style={{ color: '#6b7280', marginBottom: '32px', fontSize: '14px' }}>Register your facility to start receiving bookings.</p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>First Name</label>
-              <input placeholder="Juan" value={form.firstName}
-                onChange={e => setForm({ ...form, firstName: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Last Name</label>
-              <input placeholder="Dela Cruz" value={form.lastName}
-                onChange={e => setForm({ ...form, lastName: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Email Address</label>
-            <input type="email" placeholder="name@facility.com" value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Phone Number</label>
-            <input placeholder="09171234567" value={form.phone}
-              onChange={e => setForm({ ...form, phone: e.target.value })}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Password</label>
-              <input type="password" placeholder="••••••••" value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Confirm Password</label>
-              <input type="password" placeholder="••••••••" value={form.confirmPassword}
-                onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-          </div>
-
-          {error && (
-            <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '16px' }}>{error}</p>
-          )}
-
-          <button
-            onClick={handleRegister}
-            disabled={loading}
-            style={{ width: '100%', padding: '12px', borderRadius: '8px', fontWeight: '600', fontSize: '15px', border: 'none', background: '#16a34a', color: 'white', cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '16px' }}
-          >
-            {loading ? 'Creating account...' : 'Create Account →'}
-          </button>
-
-          <p style={{ textAlign: 'center', fontSize: '13px', color: '#6b7280' }}>
-            Already have an account?{' '}
-            <span
-              onClick={() => navigate('/owner/login')}
-              style={{ color: '#16a34a', fontWeight: '600', cursor: 'pointer' }}
-            >
-              Log in
-            </span>
+      {/* Form column */}
+      <div className="w-full max-w-[672px] flex flex-col gap-6 relative z-10">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-center text-green-800 text-3xl font-bold leading-10">PickleBook</h1>
+          <p className="text-center text-neutral-700 text-base font-normal leading-6">
+            Join the fastest-growing pickleball community
           </p>
         </div>
+
+        <div className="px-8 pt-10 pb-8 bg-white/95 rounded-xl shadow-[0px_4px_20px_0px_rgba(15,23,42,0.05)] outline outline-1 outline-offset-[-1px] outline-slate-200 backdrop-blur-md flex flex-col gap-6">
+
+          {/* Log In / Register tabs */}
+          <div className="p-1 bg-gray-100 rounded-lg flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => navigate('/owner/login')}
+              className="flex-1 px-4 py-2 text-center text-neutral-700 text-sm font-semibold leading-4 tracking-wide rounded-md"
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              className="flex-1 px-4 py-2 bg-white rounded-md shadow-sm text-center text-green-800 text-sm font-bold leading-4 tracking-wide"
+            >
+              Register
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-center items-start gap-4">
+              <div className="flex-1 pt-1 flex flex-col gap-2">
+                <label className="text-slate-800 text-sm font-semibold leading-4 tracking-wide">First Name</label>
+                <div className="relative flex flex-col">
+                  <User className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Rhey Albert"
+                    value={form.firstName}
+                    onChange={e => setForm({ ...form, firstName: e.target.value })}
+                    className="pl-10 pr-4 py-3 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 text-base font-normal text-slate-800 placeholder:text-gray-400 focus:outline-green-700 focus:outline-2"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 pt-1 flex flex-col gap-2">
+                <label className="text-slate-800 text-sm font-semibold leading-4 tracking-wide">Last Name</label>
+                <div className="relative flex flex-col">
+                  <User className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Crispo"
+                    value={form.lastName}
+                    onChange={e => setForm({ ...form, lastName: e.target.value })}
+                    className="pl-10 pr-4 py-3 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 text-base font-normal text-slate-800 placeholder:text-gray-400 focus:outline-green-700 focus:outline-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center items-start gap-4">
+              <div className="flex-1 pt-1 flex flex-col gap-2">
+                <label className="text-slate-800 text-sm font-semibold leading-4 tracking-wide">Email Address</label>
+                <div className="relative flex flex-col">
+                  <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    placeholder="rheyalbert@example.com"
+                    value={form.email}
+                    onChange={e => setForm({ ...form, email: e.target.value })}
+                    className="pl-10 pr-4 py-3 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 text-base font-normal text-slate-800 placeholder:text-gray-400 focus:outline-green-700 focus:outline-2"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 pt-1 flex flex-col gap-2">
+                <label className="text-slate-800 text-sm font-semibold leading-4 tracking-wide">Phone Number</label>
+                <div className="relative flex flex-col">
+                  <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    placeholder="09763169029"
+                    value={form.phone}
+                    onChange={e => setForm({ ...form, phone: e.target.value })}
+                    className="pl-10 pr-4 py-3 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 text-base font-normal text-slate-800 placeholder:text-gray-400 focus:outline-green-700 focus:outline-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-center items-start gap-4">
+              <div className="flex-1 pt-1 flex flex-col gap-2">
+                <label className="text-slate-800 text-sm font-semibold leading-4 tracking-wide">Password</label>
+                <div className="relative flex flex-col">
+                  <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    className="pl-10 pr-4 py-3 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 text-base font-normal text-slate-800 placeholder:text-gray-400 focus:outline-green-700 focus:outline-2"
+                  />
+                </div>
+              </div>
+              <div className="flex-1 pt-1 flex flex-col gap-2">
+                <label className="text-slate-800 text-sm font-semibold leading-4 tracking-wide">Confirm Password</label>
+                <div className="relative flex flex-col">
+                  <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={form.confirmPassword}
+                    onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+                    className="pl-10 pr-4 py-3 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 text-base font-normal text-slate-800 placeholder:text-gray-400 focus:outline-green-700 focus:outline-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-red-600 text-sm font-normal leading-5">{error}</p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleRegister}
+              disabled={loading}
+              className="py-4 bg-green-800 hover:bg-green-900 disabled:opacity-70 disabled:cursor-not-allowed rounded-xl shadow-lg flex justify-center items-center gap-2 text-white text-sm font-semibold leading-4 tracking-wide transition-colors"
+            >
+              {loading ? 'Creating account...' : 'Create Account'}
+              {!loading && <ArrowRight className="w-4 h-4" />}
+            </button>
+          </div>
+
+          <div className="pt-8 border-t border-stone-300 flex flex-col gap-4">
+            <p className="text-center text-neutral-700 text-sm font-normal leading-5">Or register with</p>
+            <div className="flex justify-start items-start gap-4">
+              <button
+                type="button"
+                className="flex-1 px-6 py-3 rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex justify-center items-center gap-2 hover:bg-gray-50"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 20 20">
+                  <path fill="#4285F4" d="M19.6 10.23c0-.68-.06-1.36-.17-2H10v3.79h5.4a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.9-1.75 2.97-4.33 2.97-7.31z"/>
+                  <path fill="#34A853" d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.22-2.5c-.9.6-2.05.96-3.4.96-2.6 0-4.8-1.76-5.6-4.12H1.1v2.6A10 10 0 0 0 10 20z"/>
+                  <path fill="#FBBC05" d="M4.4 11.9a6 6 0 0 1 0-3.8v-2.6H1.1a10 10 0 0 0 0 9l3.3-2.6z"/>
+                  <path fill="#EA4335" d="M10 3.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.6 9.6 0 0 0 10 0 10 10 0 0 0 1.1 5.5l3.3 2.6C5.2 5.74 7.4 3.98 10 3.98z"/>
+                </svg>
+                <span className="text-center text-slate-800 text-sm font-semibold leading-4 tracking-wide">Google</span>
+              </button>
+              <button
+                type="button"
+                className="flex-1 px-6 py-3 rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex justify-center items-center gap-2 hover:bg-gray-50"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 20 20">
+                  <path fill="#1877F2" d="M20 10a10 10 0 1 0-11.56 9.88v-6.99H5.9V10h2.54V7.8c0-2.5 1.5-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V10h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 20 10z"/>
+                </svg>
+                <span className="text-center text-slate-800 text-sm font-semibold leading-4 tracking-wide">Facebook</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center text-neutral-700 text-sm font-normal leading-5">
+          Already have an account?{' '}
+          <button
+            type="button"
+            onClick={() => navigate('/owner/login')}
+            className="text-green-800 font-normal hover:underline"
+          >
+            Log in now
+          </button>
+        </p>
       </div>
     </div>
   )

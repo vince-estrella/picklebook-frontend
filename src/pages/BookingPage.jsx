@@ -7,7 +7,7 @@ function BookingPage() {
   const { id } = useParams()
   const { state } = useLocation()
   const navigate = useNavigate()
-  const { court, selectedDate, selectedSlot } = state || {}
+const { court, selectedDate, selectedSlots } = state || {}
 
   const [form, setForm] = useState({
     firstName: '',
@@ -17,10 +17,10 @@ function BookingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  if (!court || !selectedSlot) {
-    navigate('/courts')
-    return null
-  }
+if (!court || !selectedSlots || selectedSlots.length === 0) {
+  navigate('/courts')
+  return null
+}
 
   const handleSubmit = async () => {
     if (!form.firstName || !form.lastName || !form.phone) {
@@ -35,8 +35,8 @@ function BookingPage() {
       const res = await api.post('/bookings', {
         courtId: parseInt(id),
         date: selectedDate,
-        startTime: selectedSlot.start + ':00',
-        endTime: selectedSlot.end + ':00',
+        startTime: selectedSlots[0].start + ':00',
+endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
         bookerName: `${form.firstName} ${form.lastName}`,
         bookerPhone: form.phone,
       })
@@ -44,7 +44,9 @@ function BookingPage() {
       navigate('/booking/confirmed', { state: { booking: res.data, court } })
     } catch (err) {
       if (err.response?.data === 'This time slot is already booked.') {
-        navigate('/booking/unavailable', { state: { court, selectedDate, selectedSlot } })
+       navigate('/booking/unavailable', { 
+  state: { court, selectedDate, selectedSlots } 
+})
       } else {
         setError('Something went wrong. Please try again.')
       }
@@ -52,6 +54,9 @@ function BookingPage() {
       setLoading(false)
     }
   }
+
+  const duration = selectedSlots.length
+const totalPrice = duration * court.pricePerHour
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -155,22 +160,28 @@ function BookingPage() {
                 </div>
                 <div>
                   <p style={{ color: '#9ca3af', marginBottom: '2px' }}>TIME</p>
-                  <p style={{ fontWeight: '600' }}>{selectedSlot.start} – {selectedSlot.end}</p>
+                  <p style={{ fontWeight: '600' }}>
+  {selectedSlots[0].start} – {selectedSlots[selectedSlots.length - 1].end}
+</p>
                 </div>
                 <div>
                   <p style={{ color: '#9ca3af', marginBottom: '2px' }}>DURATION</p>
-                  <p style={{ fontWeight: '600' }}>60 Minutes</p>
+                 <p style={{ fontWeight: '600' }}>
+  {duration * 60} Minutes
+</p>
                 </div>
               </div>
 
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                   <span style={{ color: '#6b7280' }}>Standard Rate</span>
-                  <span>₱{court.pricePerHour}</span>
+  <span>₱{totalPrice}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', marginTop: '8px' }}>
                   <span>Total to Pay</span>
-                  <span style={{ color: '#16a34a' }}>₱{court.pricePerHour}</span>
+               <span style={{ color: '#16a34a' }}>
+  ₱{totalPrice}
+</span>
                 </div>
               </div>
             </div>

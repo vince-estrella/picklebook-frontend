@@ -1,31 +1,83 @@
-import CourtMap from "../components/CourtMap";
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import {
+  Star, MapPin, Share2, Heart, ShieldCheck, KeyRound, Droplets,
+  Sun, Fan, Wifi, ParkingCircle, ShowerHead, Flag, ChevronRight, Check
+} from 'lucide-react'
+import CourtMap from '../components/CourtMap'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
+
+// ── Constants ────────────────────────────────────────────────────────────
+const SERVICE_FEE = 5 // flat platform fee per booking, in the same currency as pricePerHour
+const API_BASE = 'https://picklebook-api-production.up.railway.app'
+
+// Maps a raw amenity string to an icon. Falls back to a generic check mark
+// for anything the design doesn't have a specific icon for yet.
+const AMENITY_ICONS = [
+  { match: /light/i, icon: Sun },
+  { match: /fan|cool/i, icon: Fan },
+  { match: /wi-?fi/i, icon: Wifi },
+  { match: /park/i, icon: ParkingCircle },
+  { match: /locker|shower/i, icon: ShowerHead },
+  { match: /water/i, icon: Droplets },
+]
+function iconForAmenity(name) {
+  const found = AMENITY_ICONS.find(a => a.match.test(name))
+  return found ? found.icon : Check
+}
+
+// Works out "Open now" from the same open/close fields the hours table uses.
+function computeIsOpenNow(court) {
+  if (!court) return null
+  const now = new Date()
+  const day = now.getDay()
+  const open = day === 0 ? court.sunOpen : day === 6 ? court.satOpen : court.monFriOpen
+  const close = day === 0 ? court.sunClose : day === 6 ? court.satClose : court.monFriClose
+  if (!open || !close) return null
+  const [oh, om] = open.split(':').map(Number)
+  const [ch, cm] = close.split(':').map(Number)
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  return nowMin >= oh * 60 + om && nowMin < ch * 60 + cm
+}
+
+function formatCurrency(n) {
+  return `₱${Number(n).toFixed(2)}`
+}
+
+function generateSlots(open, close) {
+  const slots = []
+  let [startH] = open.split(':').map(Number)
+  const [endH] = close.split(':').map(Number)
+  while (startH < endH) {
+    const start = `${String(startH).padStart(2, '0')}:00`
+    const end = `${String(startH + 1).padStart(2, '0')}:00`
+    slots.push({ start, end })
+    startH++
+  }
+  return slots
+}
+
+function StarRating({ value, size = 14 }) {
+  if (value === undefined || value === null) return null
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Star size={size} className="fill-amber-800 text-amber-800" />
+      <span className="text-sm font-bold text-zinc-900">{value.toFixed(1)}</span>
+    </span>
+  )
+}
 
 function CourtDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [court, setCourt] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  )
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [bookedSlots, setBookedSlots] = useState([])
-  const [selectedSlot, setSelectedSlot] = useState(null)
-
-  const generateSlots = (open, close) => {
-    const slots = []
-    let [startH] = open.split(':').map(Number)
-    const [endH] = close.split(':').map(Number)
-    while (startH < endH) {
-      const start = `${String(startH).padStart(2, '0')}:00`
-      const end = `${String(startH + 1).padStart(2, '0')}:00`
-      slots.push({ start, end })
-      startH++
-    }
-    return slots
-  }
+  const [selectedSlots, setSelectedSlots] = useState([])
+  const [showFullDescription, setShowFullDescription] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [showAllReviews, setShowAllReviews] = useState(false)
 
   useEffect(() => {
     api.get(`/courts/${id}`).then(res => setCourt(res.data))
@@ -38,12 +90,14 @@ function CourtDetailPage() {
       .catch(() => setBookedSlots([]))
   }, [id, selectedDate])
 
-  if (!court) return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="p-8 text-gray-500">Loading...</div>
-    </div>
-  )
+  if (!court) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <div className="p-8 text-neutral-500">Loading...</div>
+      </div>
+    )
+  }
 
   const dayOfWeek = new Date(selectedDate).getDay()
   const openTime = dayOfWeek === 0 ? court.sunOpen : dayOfWeek === 6 ? court.satOpen : court.monFriOpen
@@ -53,217 +107,378 @@ function CourtDetailPage() {
     (!closeTime || closeTime === '00:00:00') ? '22:00' : closeTime
   )
 
-  const isBooked = (slot) => bookedSlots.some(b =>
-    b.startTime.substring(0, 5) === slot.start
-  )
+  const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) === slot.start)
+  const toggleSlot = (slot) => {
+    setSelectedSlots(prev => {
+      const exists = prev.some(s => s.start === slot.start)
+      if (exists) return prev.filter(s => s.start !== slot.start)
+      return [...prev, slot].sort((a, b) => a.start.localeCompare(b.start))
+    })
+  }
 
-  const amenitiesList = court.amenities ? court.amenities.split(',') : []
+  const amenitiesList = court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : []
+  const images = court.images && court.images.length > 0 ? court.images : []
+  const latitude = court.latitude ?? 10.3157
+  const longitude = court.longitude ?? 123.8854
+
+  // ── Fields the backend doesn't provide yet — sensible, clearly-marked fallbacks ──
+  const hostName = court.hostName || 'the PickleBook team'
+  const hostAvatarUrl = court.hostAvatarUrl || null
+  const rating = typeof court.rating === 'number' ? court.rating : null
+  const reviewCount = typeof court.reviewCount === 'number' ? court.reviewCount : 0
+  const reviews = Array.isArray(court.reviews) ? court.reviews : []
+  const breadcrumb = (court.city && court.barangay)
+    ? [court.city, court.barangay, court.name]
+    : (court.address ? court.address.split(',').map(s => s.trim()) : [court.name])
+
+  const isOpen = computeIsOpenNow(court)
+
+  const subtotal = selectedSlots.length * (court.pricePerHour || 0)
+  const total = selectedSlots.length > 0 ? subtotal + SERVICE_FEE : 0
+
+  const trustBadges = [
+    { icon: ShieldCheck, title: 'Verified court', body: 'Inspected regularly for quality.' },
+    { icon: KeyRound, title: 'Quick check-in', body: 'Digital access codes provided.' },
+    {
+      icon: Droplets,
+      title: amenitiesList.length > 0 ? 'Amenities included' : 'Standard setup',
+      body: amenitiesList.length > 0 ? amenitiesList.slice(0, 2).join(', ') + '.' : 'Court and nets ready to play.'
+    },
+  ]
+
+  const description = court.description || ''
+  const isLongDescription = description.length > 220
+  const shownDescription = !isLongDescription || showFullDescription
+    ? description
+    : description.slice(0, 220).trimEnd() + '…'
+
+  const handleShare = async () => {
+    const url = window.location.href
+    if (navigator.share) {
+      try { await navigator.share({ title: court.name, url }) } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url)
+      alert('Link copied to clipboard')
+    }
+  }
+
+  const visibleReviews = showAllReviews ? reviews : reviews.slice(0, 2)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar />
-      <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '40px 32px' }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-          <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#111827', margin: 0 }}>{court.name}</h1>
-            <p style={{ color: '#6b7280', marginTop: '4px' }}>📍 {court.address}</p>
+      <div className="max-w-5xl mx-auto px-6 md:px-12 py-8 flex flex-col gap-4">
+
+        {/* Breadcrumb + title */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center flex-wrap text-xs font-medium text-neutral-700">
+            {breadcrumb.map((crumb, i) => (
+              <span key={i} className="flex items-center">
+                {i > 0 && <ChevronRight size={12} className="mx-1 text-neutral-400" />}
+                <span className={i === breadcrumb.length - 1 ? 'text-green-800 font-bold' : ''}>{crumb}</span>
+              </span>
+            ))}
           </div>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {court.type && <span style={{ background: '#f3f4f6', color: '#374151', fontSize: '13px', padding: '4px 12px', borderRadius: '999px' }}>{court.type}</span>}
-            {court.maxPlayers > 0 && <span style={{ background: '#f3f4f6', color: '#374151', fontSize: '13px', padding: '4px 12px', borderRadius: '999px' }}>Max {court.maxPlayers} Players</span>}
-            {court.surfaceType && <span style={{ background: '#f3f4f6', color: '#374151', fontSize: '13px', padding: '4px 12px', borderRadius: '999px' }}>{court.surfaceType}</span>}
+
+          <div className="flex justify-between items-end flex-wrap gap-3">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-3xl font-bold text-slate-800 leading-tight">{court.name}</h1>
+              <div className="flex items-center flex-wrap gap-2 text-sm text-neutral-700">
+                {rating !== null ? (
+                  <>
+                    <StarRating value={rating} />
+                    <span>•</span>
+                    <span className="underline">{reviewCount} review{reviewCount === 1 ? '' : 's'}</span>
+                    <span>•</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-neutral-400">No reviews yet</span>
+                    <span>•</span>
+                  </>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <MapPin size={14} /> {court.address}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button onClick={handleShare} className="flex items-center gap-1 px-2 py-2 rounded-lg text-sm font-semibold text-zinc-900 hover:bg-gray-100">
+                <Share2 size={16} /> Share
+              </button>
+              <button onClick={() => setSaved(s => !s)} className="flex items-center gap-1 px-2 py-2 rounded-lg text-sm font-semibold text-zinc-900 hover:bg-gray-100">
+                <Heart size={18} className={saved ? 'fill-red-500 text-red-500' : ''} /> Save
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Images */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', height: '260px', borderRadius: '12px', overflow: 'hidden', marginBottom: '32px' }}>
-          {court.images && court.images.length > 0 ? (
-            court.images.slice(0, 3).map((img, i) => (
+        {/* Image gallery */}
+        <div className="w-full h-[360px] md:h-[440px] rounded-xl overflow-hidden grid grid-cols-4 grid-rows-2 gap-1 relative">
+          {images.length > 0 ? (
+            <>
               <img
-                key={i}
-                src={`https://picklebook-api-production.up.railway.app${img.imageUrl}`}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                alt="court"
+                src={`${API_BASE}${images[0].imageUrl}`}
+                className="col-span-2 row-span-2 w-full h-full object-cover"
+                alt={court.name}
               />
-            ))
+              {images.slice(1, 5).map((img, i) => (
+                <img
+                  key={i}
+                  src={`${API_BASE}${img.imageUrl}`}
+                  className="w-full h-full object-cover"
+                  alt="court"
+                />
+              ))}
+              {images.length > 5 && (
+                <button
+                  onClick={() => {}}
+                  className="absolute bottom-4 right-4 px-4 py-2 bg-slate-50 rounded-lg shadow outline outline-1 outline-neutral-500 text-base text-zinc-900"
+                >
+                  Show all photos
+                </button>
+              )}
+            </>
           ) : (
-            <div style={{ gridColumn: '1 / -1', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+            <div className="col-span-4 row-span-2 bg-gray-200 flex items-center justify-center text-gray-400">
               No images uploaded yet
             </div>
           )}
         </div>
 
-        {/* Body: Info + Booking Panel */}
-        <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
-
-          {/* Left: Info */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-            {court.description && (
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>About the Court</h2>
-                <p style={{ color: '#4b5563', lineHeight: '1.6' }}>{court.description}</p>
-              </div>
-            )}
-
-            {amenitiesList.length > 0 && (
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>Amenities</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  {amenitiesList.map(a => (
-                    <div key={a} style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4b5563', fontSize: '14px' }}>
-                      <span style={{ color: '#16a34a' }}>✓</span> {a.trim()}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
+        {/* Host + trust badges */}
+        <div className="pt-4 pb-8 border-b border-stone-300 flex flex-col gap-6">
+          <div className="flex justify-between items-center">
             <div>
-              <h2
-                style={{
-                fontSize: "18px",
-                fontWeight: "700",
-                marginBottom: "12px",
-                }}
-              >
-    📍 Location
-              </h2>
-
-              <CourtMap
-                latitude={10.3157}
-                longitude={123.8854}
-                courtName={court.name}
-              />
-
-              <p
-                style={{
-                marginTop: "10px",
-                color: "#6b7280",
-                fontSize: "14px",
-              }}
-              >
-              {court.address}
+              <h2 className="text-2xl font-semibold text-zinc-900">Managed by {hostName}</h2>
+              <p className="text-base text-neutral-700">
+                {court.type || 'Outdoor venue'} • Max {court.maxPlayers || 4} players • {court.surfaceType || 'Standard surface'}
               </p>
-
-              <a
-                href={`https://www.google.com/maps?q=10.3157,123.8854`}
-                target="_blank"
-                rel="noopener noreferrer"
-              style={{
-                color: "#16a34a",
-                fontWeight: "600",
-                textDecoration: "none",
-              }}
-              >
-    Open in Google Maps
-              </a>
             </div>
-
-            <div>
-              <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '12px' }}>Operating Hours</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', color: '#4b5563' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Monday - Friday</span>
-                  <span>{court.monFriOpen} – {court.monFriClose}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Saturday</span>
-                  <span>{court.satOpen} – {court.satClose}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Sunday</span>
-                  <span>{court.sunOpen} – {court.sunClose}</span>
-                </div>
-              </div>
+            <div className="w-14 h-14 rounded-full outline outline-1 outline-stone-300 overflow-hidden bg-gray-200 flex items-center justify-center text-neutral-500 text-sm">
+              {hostAvatarUrl ? <img src={hostAvatarUrl} className="w-full h-full object-cover" alt={hostName} /> : hostName.charAt(0).toUpperCase()}
             </div>
           </div>
 
-          {/* Right: Booking Panel */}
-          <div style={{
-            width: '300px',
-            minWidth: '300px',
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '12px',
-            padding: '24px',
-            position: 'sticky',
-            top: '24px'
-          }}>
-            {/* Price */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <span style={{ fontSize: '12px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Hourly Rate</span>
-              <span style={{ fontSize: '24px', fontWeight: '700', color: '#16a34a' }}>
-                ₱{court.pricePerHour}<span style={{ fontSize: '13px', fontWeight: '400', color: '#9ca3af' }}>/hr</span>
-              </span>
-            </div>
+          <div className="flex flex-col md:flex-row justify-center gap-4">
+            {trustBadges.map((b, i) => (
+              <div key={i} className="flex-1 p-4 bg-gray-100 rounded-xl flex gap-4">
+                <b.icon size={20} className="text-green-800 shrink-0" />
+                <div>
+                  <p className="text-base text-slate-800">{b.title}</p>
+                  <p className="text-sm text-neutral-700">{b.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-            {/* Date */}
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Select Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={e => { setSelectedDate(e.target.value); setSelectedSlot(null) }}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px 12px', fontSize: '14px', marginBottom: '16px', boxSizing: 'border-box' }}
-            />
+        {/* About */}
+        {description && (
+          <div className="pb-8 border-b border-stone-300 flex flex-col gap-4">
+            <h2 className="text-2xl font-semibold text-zinc-900">About this court</h2>
+            <p className="text-lg text-neutral-700 leading-7 whitespace-pre-line">{shownDescription}</p>
+            {isLongDescription && (
+              <button
+                onClick={() => setShowFullDescription(s => !s)}
+                className="inline-flex items-center gap-1 text-base font-bold text-green-800 underline w-fit"
+              >
+                {showFullDescription ? 'Show less' : 'Show more'}
+                <ChevronRight size={14} className={showFullDescription ? '-rotate-90' : 'rotate-90'} />
+              </button>
+            )}
+          </div>
+        )}
 
-            {/* Time Slots */}
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '8px' }}>Available Times</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
-              {slots.map(slot => {
-                const booked = isBooked(slot)
-                const selected = selectedSlot?.start === slot.start
+        {/* Amenities */}
+        {amenitiesList.length > 0 && (
+          <div className="pb-8 border-b border-stone-300 flex flex-col gap-4">
+            <h2 className="text-2xl font-semibold text-zinc-900">What this court offers</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6">
+              {amenitiesList.map(a => {
+                const Icon = iconForAmenity(a)
                 return (
-                  <button
-                    key={slot.start}
-                    disabled={booked}
-                    onClick={() => setSelectedSlot(slot)}
-                    style={{
-                      padding: '8px 4px',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      border: '1px solid #e5e7eb',
-                      cursor: booked ? 'not-allowed' : 'pointer',
-                      background: booked ? '#f3f4f6' : selected ? '#16a34a' : '#f9fafb',
-                      color: booked ? '#9ca3af' : selected ? 'white' : '#374151',
-                      transition: 'all 0.15s'
-                    }}
-                  >
-                    {slot.start}
-                  </button>
+                  <div key={a} className="flex items-center gap-4 h-6">
+                    <Icon size={20} className="text-slate-800 shrink-0" />
+                    <span className="text-base text-neutral-700">{a}</span>
+                  </div>
                 )
               })}
             </div>
-
-            {/* Book Button */}
-            <button
-              disabled={!selectedSlot}
-              onClick={() => navigate(`/booking/${id}`, {
-                state: { court, selectedDate, selectedSlot }
-              })}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: '8px',
-                fontWeight: '600',
-                fontSize: '15px',
-                border: 'none',
-                cursor: selectedSlot ? 'pointer' : 'not-allowed',
-                background: selectedSlot ? '#16a34a' : '#e5e7eb',
-                color: selectedSlot ? 'white' : '#9ca3af',
-                transition: 'background 0.15s'
-              }}
-            >
-              Book Now
-            </button>
-            <p style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', marginTop: '8px' }}>
-              You won't be charged yet
-            </p>
           </div>
+        )}
+
+        {/* Location & hours */}
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold text-zinc-900">Location & hours</h2>
+            {isOpen !== null && (
+              <span className={`px-2 py-1 rounded-full text-xs font-bold ${isOpen ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                {isOpen ? 'Open now' : 'Closed now'}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="flex-1 flex flex-col gap-2 pb-4">
+              {[
+                ['Mon - Fri', court.monFriOpen, court.monFriClose],
+                ['Saturday', court.satOpen, court.satClose],
+                ['Sunday', court.sunOpen, court.sunClose],
+              ].map(([label, open, close]) => (
+                <div key={label} className="py-2 border-b border-stone-300 flex justify-between">
+                  <span className="text-base text-neutral-700">{label}</span>
+                  <span className="text-base font-medium text-slate-800">{open} – {close}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex-1 flex flex-col gap-2">
+              <CourtMap latitude={latitude} longitude={longitude} courtName={court.name} />
+              <p className="text-sm text-neutral-500">{court.address}</p>
+              <a
+                href={`https://www.google.com/maps?q=${latitude},${longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-green-800 font-semibold no-underline w-fit"
+              >
+                Open in Google Maps
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Booking panel */}
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex-1 hidden md:block" />
+          <div className="w-full md:w-[380px] shrink-0 md:sticky md:top-6 p-6 bg-slate-50 rounded-2xl shadow-xl outline outline-1 outline-stone-300 flex flex-col gap-4">
+            <div className="flex justify-between items-end">
+              <div className="flex items-end gap-1">
+                <span className="text-2xl font-bold text-slate-800">{formatCurrency(court.pricePerHour)}</span>
+                <span className="text-base text-neutral-700">/ hour</span>
+              </div>
+              {rating !== null && (
+                <div className="flex items-center gap-1 text-sm">
+                  <StarRating value={rating} size={13} />
+                  <span className="text-neutral-700">· {reviewCount} reviews</span>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 rounded-xl outline outline-1 outline-stone-300 flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-800 uppercase tracking-wide">Select date</span>
+              <input
+                type="date"
+                value={selectedDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => { setSelectedDate(e.target.value); setSelectedSlots([]) }}
+                className="text-base text-zinc-900 border-none outline-none bg-transparent p-0"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium text-slate-800 uppercase tracking-wide">Available times</span>
+              <div className="grid grid-cols-2 gap-2">
+                {slots.map(slot => {
+                  const booked = isBooked(slot)
+                  const selected = selectedSlots.some(s => s.start === slot.start)
+                  return (
+                    <button
+                      key={slot.start}
+                      disabled={booked}
+                      onClick={() => toggleSlot(slot)}
+                      className={[
+                        'px-3 py-2 rounded-lg text-sm text-center transition-all',
+                        booked
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through outline outline-1 outline-stone-300'
+                          : selected
+                            ? 'bg-green-100 outline outline-2 outline-green-800 font-bold text-zinc-900'
+                            : 'outline outline-1 outline-stone-300 text-zinc-900 hover:bg-gray-50',
+                      ].join(' ')}
+                    >
+                      {slot.start}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-stone-300 flex flex-col gap-2">
+              {selectedSlots.length > 0 && (
+                <>
+                  <div className="flex justify-between text-base text-neutral-700">
+                    <span>{selectedSlots.length} hour{selectedSlots.length > 1 ? 's' : ''} x {formatCurrency(court.pricePerHour)}</span>
+                    <span>{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-base text-neutral-700">
+                    <span>Service fee</span>
+                    <span>{formatCurrency(SERVICE_FEE)}</span>
+                  </div>
+                  <div className="pt-2 flex justify-between text-lg font-bold text-slate-800">
+                    <span>Total</span>
+                    <span>{formatCurrency(total)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              disabled={selectedSlots.length === 0}
+              onClick={() => navigate(`/booking/${id}`, { state: { court, selectedDate, selectedSlots } })}
+              className={[
+                'w-full py-3 rounded-xl font-semibold text-base transition-colors',
+                selectedSlots.length > 0
+                  ? 'bg-green-800 text-white shadow-lg cursor-pointer hover:bg-green-900'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed',
+              ].join(' ')}
+            >
+              Book now
+            </button>
+            <p className="text-sm text-neutral-500 text-center">You won't be charged yet</p>
+
+            <div className="pt-4 border-t border-stone-300 flex justify-center">
+              <button className="flex items-center gap-1 text-xs font-medium text-neutral-700 hover:text-neutral-900">
+                <Flag size={12} /> Report listing
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Reviews */}
+        <div className="pt-12 pb-8 border-t border-stone-300 flex flex-col gap-6">
+          <h2 className="text-2xl font-semibold text-zinc-900">Recent reviews</h2>
+          {reviews.length === 0 ? (
+            <p className="text-neutral-500">No reviews yet — be the first to book and leave one.</p>
+          ) : (
+            <>
+              <div className="flex flex-col md:flex-row gap-8">
+                {visibleReviews.map(r => (
+                  <div key={r.id} className="flex-1 flex flex-col gap-2">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-neutral-200 rounded-full overflow-hidden flex items-center justify-center text-neutral-500 text-sm">
+                        {r.avatarUrl ? <img src={r.avatarUrl} className="w-full h-full object-cover" alt={r.authorName} /> : r.authorName?.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-zinc-900">{r.authorName}</p>
+                        <p className="text-xs font-medium text-neutral-700">{r.date}</p>
+                      </div>
+                    </div>
+                    <p className="text-base text-neutral-700">{r.comment}</p>
+                  </div>
+                ))}
+              </div>
+              {reviews.length > 2 && !showAllReviews && (
+                <button
+                  onClick={() => setShowAllReviews(true)}
+                  className="px-6 py-2 rounded-lg outline outline-1 outline-slate-800 text-base text-zinc-900 w-fit"
+                >
+                  Show all {reviews.length} reviews
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
