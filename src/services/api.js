@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:5154/api',
+  baseURL: 'https://picklebook-api-production.up.railway.app/api',
 })
 
 // Automatically attach JWT token to every request if it exists

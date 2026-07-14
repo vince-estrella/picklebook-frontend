@@ -53,6 +53,32 @@ function FindCourtsPage() {
 
       <Navbar />
 
+<<<<<<< HEAD
+=======
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {courts.map(court => (
+            <div
+              key={court.id}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
+            >
+              {/* Court Image */}
+              <div className="relative h-48 bg-gray-200">
+                {court.images && court.images.length > 0 ? (
+                  <img
+                    src={`https://picklebook-api-production.up.railway.app${court.images[0].imageUrl}`}
+                    alt={court.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    No image
+                  </div>
+                )}
+                <span className="absolute top-3 right-3 bg-white text-gray-900 text-sm font-semibold px-3 py-1 rounded-full">
+                  ₱{court.pricePerHour}/hr
+                </span>
+              </div>
+>>>>>>> 65aa1605384b2b2fb8d3b2577797c488874b7e7f
 
       <div className="
         w-full max-w-[1280px]
