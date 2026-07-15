@@ -72,16 +72,20 @@
     const { id } = useParams()
     const navigate = useNavigate()
     const [court, setCourt] = useState(null)
-    const getDefaultDate = () => {
+    const getLocalDateString = (date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  const getDefaultDate = () => {
     const now = new Date()
-    const today = now.toISOString().split('T')[0]
-    // If past 10pm, default to tomorrow since today's slots are likely unavailable
     if (now.getHours() >= 22) {
       const tomorrow = new Date(now)
       tomorrow.setDate(tomorrow.getDate() + 1)
-      return tomorrow.toISOString().split('T')[0]
+      return getLocalDateString(tomorrow)
     }
-    return today
+    return getLocalDateString(now)
   }
   const [selectedDate, setSelectedDate] = useState(getDefaultDate())
     const [bookedSlots, setBookedSlots] = useState([])
@@ -127,12 +131,12 @@
       })
     }
     const isPast = (slot) => {
-      const now = new Date()
-      const isToday = selectedDate === now.toISOString().split('T')[0]
-      if (!isToday) return false
-      const slotHour = parseInt(slot.start.split(':')[0])
-      return slotHour <= now.getHours()
-    }
+    const now = new Date()
+    const todayStr = getLocalDateString(now)
+    if (selectedDate !== todayStr) return false
+    const slotHour = parseInt(slot.start.split(':')[0])
+    return slotHour <= now.getHours()
+  }
 
     const amenitiesList = court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : []
     const images = court.images && court.images.length > 0 ? court.images : []
@@ -392,8 +396,8 @@
                 <input
                   type="date"
                   value={selectedDate}
-                  min={new Date().toISOString().split('T')[0]}
-                  max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                  min={getLocalDateString(new Date())}
+                  max={getLocalDateString(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))}
                   onChange={e => { setSelectedDate(e.target.value); setSelectedSlots([]) }}
                   className="text-base text-zinc-900 border-none outline-none bg-transparent p-0"
                 />
