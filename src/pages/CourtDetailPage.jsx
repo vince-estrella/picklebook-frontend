@@ -72,7 +72,18 @@
     const { id } = useParams()
     const navigate = useNavigate()
     const [court, setCourt] = useState(null)
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+    const getDefaultDate = () => {
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    // If past 10pm, default to tomorrow since today's slots are likely unavailable
+    if (now.getHours() >= 22) {
+      const tomorrow = new Date(now)
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      return tomorrow.toISOString().split('T')[0]
+    }
+    return today
+  }
+  const [selectedDate, setSelectedDate] = useState(getDefaultDate())
     const [bookedSlots, setBookedSlots] = useState([])
     const [selectedSlots, setSelectedSlots] = useState([])
     const [showFullDescription, setShowFullDescription] = useState(false)
