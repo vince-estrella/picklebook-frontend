@@ -140,7 +140,7 @@ const totalPrice = duration * court.pricePerHour
           <div style={{ width: '280px', minWidth: '280px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
             {court.images && court.images.length > 0 ? (
               <img
-                src={`https://picklebook-api-production.up.railway.app${court.images[0].imageUrl}`}
+                src={court.images[0].imageUrl}
                 style={{ width: '100%', height: '140px', objectFit: 'cover' }}
                 alt="court"
               />

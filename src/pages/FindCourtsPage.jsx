@@ -376,7 +376,7 @@ function FindCourtsPage() {
 court.images?.length > 0 ?
 
 <img
-  src={`http://localhost:5154${court.images[0].imageUrl}`}
+  src={court.images[0].imageUrl}
   alt={court.name}
   className="
     w-full
