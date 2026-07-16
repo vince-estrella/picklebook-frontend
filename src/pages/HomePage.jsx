@@ -9,6 +9,13 @@ import { MdOutlineEventAvailable } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 
+const COLORS = {
+  primary: '#16a34a',
+  primaryHover: '#15803d',
+  outline: '#ffffff',
+  outlineHover: '#f3f4f6',
+}
+
 function HomePage() {
   const navigate = useNavigate()
 
@@ -31,7 +38,9 @@ function HomePage() {
           <div style={{ display: 'flex', gap: '12px' }}>
             <button
               onClick={() => navigate('/courts')}
-              style={{ background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', padding: '14px 28px', fontWeight: '600', fontSize: '15px', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = COLORS.primaryHover}
+              onMouseLeave={e => e.currentTarget.style.background = COLORS.primary}
+              style={{ background: COLORS.primary, color: 'white', border: 'none', borderRadius: '8px', padding: '14px 28px', fontWeight: '600', fontSize: '15px', cursor: 'pointer', transition: 'background 0.15s ease' }}
             >
              <>
   <FaSearch style={{ marginRight: '8px' }} />
@@ -40,7 +49,9 @@ function HomePage() {
             </button>
             <button
               onClick={() => navigate('/courts')}
-              style={{ background: 'white', color: '#374151', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 28px', fontWeight: '600', fontSize: '15px', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.background = COLORS.outlineHover}
+              onMouseLeave={e => e.currentTarget.style.background = COLORS.outline}
+              style={{ background: COLORS.outline, color: '#374151', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 28px', fontWeight: '600', fontSize: '15px', cursor: 'pointer', transition: 'background 0.15s ease' }}
             >
               Book Now
             </button>
@@ -128,8 +139,10 @@ function HomePage() {
         </p>
         <button
   onClick={() => navigate('/courts')}
+  onMouseEnter={e => e.currentTarget.style.background = COLORS.primaryHover}
+  onMouseLeave={e => e.currentTarget.style.background = COLORS.primary}
   style={{
-    background: '#16a34a',
+    background: COLORS.primary,
     color: 'white',
     border: 'none',
     borderRadius: '8px',
@@ -139,7 +152,9 @@ function HomePage() {
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    gap: '8px',
+    margin: '0 auto',
+    transition: 'background 0.15s ease'
   }}
 >
   <FaSearch />
@@ -155,7 +170,14 @@ function HomePage() {
         </div>
         <div style={{ display: 'flex', gap: '24px' }}>
           {['Privacy Policy', 'Terms of Service', 'Contact Support'].map(link => (
-            <span key={link} style={{ color: '#6b7280', fontSize: '13px', cursor: 'pointer' }}>{link}</span>
+            <span
+              key={link}
+              onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+              onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}
+              style={{ color: '#6b7280', fontSize: '13px', cursor: 'pointer', transition: 'color 0.15s ease' }}
+            >
+              {link}
+            </span>
           ))}
         </div>
       </div>

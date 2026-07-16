@@ -227,11 +227,11 @@
               </div>
 
               <div className="flex items-center gap-4">
-                <button onClick={handleShare} className="flex items-center gap-1 px-2 py-2 rounded-lg text-sm font-semibold text-zinc-900 hover:bg-gray-100">
+                <button onClick={handleShare} className="flex items-center gap-1 px-2 py-2 rounded-lg text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-gray-100 active:scale-95">
                   <Share2 size={16} /> Share
                 </button>
-                <button onClick={() => setSaved(s => !s)} className="flex items-center gap-1 px-2 py-2 rounded-lg text-sm font-semibold text-zinc-900 hover:bg-gray-100">
-                  <Heart size={18} className={saved ? 'fill-red-500 text-red-500' : ''} /> Save
+                <button onClick={() => setSaved(s => !s)} className="flex items-center gap-1 px-2 py-2 rounded-lg text-sm font-semibold text-zinc-900 transition-colors duration-150 hover:bg-gray-100 active:scale-95">
+                  <Heart size={18} className={`transition-colors duration-150 ${saved ? 'fill-red-500 text-red-500' : ''}`} /> Save
                 </button>
               </div>
             </div>
@@ -244,7 +244,7 @@
                 
   <img
     src={images[0].imageUrl}
-    className="col-span-2 row-span-2 w-full h-full object-cover"
+    className="col-span-2 row-span-2 w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
     alt={court.name}
   />
                 
@@ -252,14 +252,14 @@
                   <img
                     key={i}
                     src={`${img.imageUrl}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
                     alt="court"
                   />
                 ))}
                 {images.length > 5 && (
                   <button
                     onClick={() => {}}
-                    className="absolute bottom-4 right-4 px-4 py-2 bg-slate-50 rounded-lg shadow outline outline-1 outline-neutral-500 text-base text-zinc-900"
+                    className="absolute bottom-4 right-4 px-4 py-2 bg-slate-50 rounded-lg shadow outline outline-1 outline-neutral-500 text-base text-zinc-900 transition-colors duration-150 hover:bg-white hover:shadow-md"
                   >
                     Show all photos
                   </button>
@@ -288,7 +288,7 @@
 
             <div className="flex flex-col md:flex-row justify-center gap-4">
               {trustBadges.map((b, i) => (
-                <div key={i} className="flex-1 p-4 bg-gray-100 rounded-xl flex gap-4">
+                <div key={i} className="flex-1 p-4 bg-gray-100 rounded-xl flex gap-4 transition-colors duration-150 hover:bg-gray-200">
                   <b.icon size={20} className="text-green-800 shrink-0" />
                   <div>
                     <p className="text-base text-slate-800">{b.title}</p>
@@ -307,10 +307,10 @@
               {isLongDescription && (
                 <button
                   onClick={() => setShowFullDescription(s => !s)}
-                  className="inline-flex items-center gap-1 text-base font-bold text-green-800 underline w-fit"
+                  className="inline-flex items-center gap-1 text-base font-bold text-green-800 underline w-fit transition-colors duration-150 hover:text-green-900"
                 >
                   {showFullDescription ? 'Show less' : 'Show more'}
-                  <ChevronRight size={14} className={showFullDescription ? '-rotate-90' : 'rotate-90'} />
+                  <ChevronRight size={14} className={`transition-transform duration-200 ${showFullDescription ? '-rotate-90' : 'rotate-90'}`} />
                 </button>
               )}
             </div>
@@ -366,7 +366,7 @@
                   href={`https://www.google.com/maps?q=${latitude},${longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-green-800 font-semibold no-underline w-fit"
+                  className="text-green-800 font-semibold no-underline w-fit transition-colors duration-150 hover:text-green-900 hover:underline"
                 >
                   Open in Google Maps
                 </a>
@@ -391,7 +391,7 @@
                 )}
               </div>
 
-  <div className="p-4 rounded-xl outline outline-1 outline-stone-300 flex flex-col gap-1">
+  <div className="p-4 rounded-xl outline outline-1 outline-stone-300 flex flex-col gap-1 transition-colors duration-150 focus-within:outline-2 focus-within:outline-green-700">
                 <span className="text-xs font-medium text-slate-800 uppercase tracking-wide">Select date</span>
                 <input
                   type="date"
@@ -417,12 +417,12 @@
                         disabled={disabled}
                         onClick={() => toggleSlot(slot)}
                         className={[
-                          'px-3 py-2 rounded-lg text-sm text-center transition-all',
+                          'px-3 py-2 rounded-lg text-sm text-center transition-all duration-150',
                           disabled
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through outline outline-1 outline-stone-300'
                             : selected
-                              ? 'bg-green-100 outline outline-2 outline-green-800 font-bold text-zinc-900'
-                              : 'outline outline-1 outline-stone-300 text-zinc-900 hover:bg-gray-50',
+                              ? 'bg-green-100 outline outline-2 outline-green-800 font-bold text-zinc-900 hover:bg-green-200'
+                              : 'outline outline-1 outline-stone-300 text-zinc-900 hover:bg-green-50 hover:outline-green-700 active:scale-95',
                         ].join(' ')}
                       >
                         {slot.start}
@@ -455,9 +455,9 @@
                 disabled={selectedSlots.length === 0}
                 onClick={() => navigate(`/booking/${id}`, { state: { court, selectedDate, selectedSlots } })}
                 className={[
-                  'w-full py-3 rounded-xl font-semibold text-base transition-colors',
+                  'w-full py-3 rounded-xl font-semibold text-base transition-all duration-150',
                   selectedSlots.length > 0
-                    ? 'bg-green-800 text-white shadow-lg cursor-pointer hover:bg-green-900'
+                    ? 'bg-green-800 text-white shadow-lg cursor-pointer hover:bg-green-900 hover:shadow-xl active:scale-[0.98]'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed',
                 ].join(' ')}
               >
@@ -466,7 +466,7 @@
               <p className="text-sm text-neutral-500 text-center">You won't be charged yet</p>
 
               <div className="pt-4 border-t border-stone-300 flex justify-center">
-                <button className="flex items-center gap-1 text-xs font-medium text-neutral-700 hover:text-neutral-900">
+                <button className="flex items-center gap-1 text-xs font-medium text-neutral-700 transition-colors duration-150 hover:text-neutral-900">
                   <Flag size={12} /> Report listing
                 </button>
               </div>
@@ -499,7 +499,7 @@
                 {reviews.length > 2 && !showAllReviews && (
                   <button
                     onClick={() => setShowAllReviews(true)}
-                    className="px-6 py-2 rounded-lg outline outline-1 outline-slate-800 text-base text-zinc-900 w-fit"
+                    className="px-6 py-2 rounded-lg outline outline-1 outline-slate-800 text-base text-zinc-900 w-fit transition-colors duration-150 hover:bg-slate-800 hover:text-white"
                   >
                     Show all {reviews.length} reviews
                   </button>

@@ -9,6 +9,7 @@ function FindCourtsPage() {
   const [courts, setCourts] = useState([])
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
+  const [viewMode, setViewMode] = useState('Grid')
 
   const navigate = useNavigate()
 
@@ -108,6 +109,12 @@ function FindCourtsPage() {
                   border
                   px-4
                   py-2.5
+                  transition-colors
+                  duration-150
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-green-700/30
+                  focus:border-green-700
                 "
               />
 
@@ -140,6 +147,12 @@ function FindCourtsPage() {
                     rounded-lg
                     px-3
                     py-2
+                    transition-colors
+                    duration-150
+                    focus:outline-none
+                    focus:ring-2
+                    focus:ring-green-700/30
+                    focus:border-green-700
                   "
                 />
 
@@ -155,6 +168,12 @@ function FindCourtsPage() {
                     rounded-lg
                     px-3
                     py-2
+                    transition-colors
+                    duration-150
+                    focus:outline-none
+                    focus:ring-2
+                    focus:ring-green-700/30
+                    focus:border-green-700
                   "
                 />
 
@@ -181,28 +200,28 @@ function FindCourtsPage() {
 
 
 
-              <label className="flex gap-2">
+              <label className="flex gap-2 items-center cursor-pointer group">
 
-                <input type="checkbox"/>
+                <input type="checkbox" className="accent-green-800 cursor-pointer"/>
 
-                Available Today
-
-              </label>
-
-
-
-              <label className="flex gap-2">
-
-                <input type="checkbox"/>
-
-                Instant Book
+                <span className="transition-colors duration-150 group-hover:text-slate-800">Available Today</span>
 
               </label>
 
 
 
+              <label className="flex gap-2 items-center cursor-pointer group">
 
-              <label className="flex gap-2">
+                <input type="checkbox" className="accent-green-800 cursor-pointer"/>
+
+                <span className="transition-colors duration-150 group-hover:text-slate-800">Instant Book</span>
+
+              </label>
+
+
+
+
+              <label className="flex gap-2 items-center cursor-pointer group">
 
                 <input
                   type="checkbox"
@@ -214,9 +233,10 @@ function FindCourtsPage() {
                       :"Indoor"
                     )
                   }
+                  className="accent-green-800 cursor-pointer"
                 />
 
-                Indoor Courts
+                <span className="transition-colors duration-150 group-hover:text-slate-800">Indoor Courts</span>
 
               </label>
 
@@ -239,6 +259,11 @@ function FindCourtsPage() {
                 border
                 rounded-lg
                 py-3
+                transition-colors
+                duration-150
+                hover:bg-gray-100
+                hover:border-gray-400
+                active:scale-[0.98]
               "
             >
               Reset All Filters
@@ -302,26 +327,42 @@ function FindCourtsPage() {
               border
               rounded-lg
               p-1
+              flex
             ">
 
               <button
-                className="
-                  bg-green-800
-                  text-white
+                onClick={() => setViewMode('Grid')}
+                className={`
                   px-5
                   py-2
                   rounded-md
-                "
+                  transition-colors
+                  duration-150
+                  ${
+                    viewMode === 'Grid'
+                    ? 'bg-green-800 text-white'
+                    : 'text-slate-600 hover:bg-gray-100'
+                  }
+                `}
               >
                 Grid
               </button>
 
 
               <button
-                className="
+                onClick={() => setViewMode('Map')}
+                className={`
                   px-5
                   py-2
-                "
+                  rounded-md
+                  transition-colors
+                  duration-150
+                  ${
+                    viewMode === 'Map'
+                    ? 'bg-green-800 text-white'
+                    : 'text-slate-600 hover:bg-gray-100'
+                  }
+                `}
               >
                 Map
               </button>
@@ -359,6 +400,10 @@ function FindCourtsPage() {
     rounded-2xl
     border
     overflow-hidden
+    transition-all
+    duration-200
+    hover:shadow-lg
+    hover:-translate-y-1
   "
 >
 
@@ -369,6 +414,8 @@ function FindCourtsPage() {
   h-56
   relative
   bg-gray-200
+  overflow-hidden
+  group
 ">
 
 
@@ -382,6 +429,9 @@ court.images?.length > 0 ?
     w-full
     h-full
     object-cover
+    transition-transform
+    duration-300
+    group-hover:scale-105
   "
 />
 
@@ -586,6 +636,10 @@ className="
  border
  border-green-800
  text-green-800
+ transition-colors
+ duration-150
+ hover:bg-green-800
+ hover:text-white
 "
 >
 04:00 PM
@@ -601,6 +655,10 @@ className="
  border
  border-green-800
  text-green-800
+ transition-colors
+ duration-150
+ hover:bg-green-800
+ hover:text-white
 "
 >
 05:30 PM
@@ -609,6 +667,7 @@ className="
 
 
 <button
+disabled
 className="
  px-4
  py-2
@@ -616,6 +675,7 @@ className="
  bg-gray-100
  text-gray-500
  line-through
+ cursor-not-allowed
 "
 >
 07:00 PM
@@ -650,8 +710,11 @@ className="
  py-3.5
  rounded-xl
  font-medium
+ transition-all
+ duration-150
  hover:bg-green-700
- transition
+ hover:shadow-md
+ active:scale-[0.98]
 "
 
 >

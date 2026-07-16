@@ -3,6 +3,11 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 
+const COLORS = {
+  primary: '#16a34a',
+  primaryHover: '#15803d',
+}
+
 function BookingPage() {
   const { id } = useParams()
   const { state } = useLocation()
@@ -64,7 +69,9 @@ const totalPrice = duration * court.pricePerHour
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 32px' }}>
         <button
           onClick={() => navigate(-1)}
-          style={{ color: '#16a34a', fontSize: '14px', marginBottom: '24px', background: 'none', border: 'none', cursor: 'pointer' }}
+          onMouseEnter={e => { e.currentTarget.style.color = COLORS.primaryHover; e.currentTarget.style.textDecoration = 'underline' }}
+          onMouseLeave={e => { e.currentTarget.style.color = COLORS.primary; e.currentTarget.style.textDecoration = 'none' }}
+          style={{ color: COLORS.primary, fontSize: '14px', marginBottom: '24px', background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s ease', padding: 0 }}
         >
           ← Back to court selection
         </button>
@@ -83,7 +90,9 @@ const totalPrice = duration * court.pricePerHour
                   placeholder="Juan"
                   value={form.firstName}
                   onChange={e => setForm({ ...form, firstName: e.target.value })}
-                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+                  onFocus={e => { e.target.style.borderColor = COLORS.primary; e.target.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.15)' }}
+                  onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }}
+                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.15s ease, box-shadow 0.15s ease' }}
                 />
               </div>
               <div>
@@ -92,7 +101,9 @@ const totalPrice = duration * court.pricePerHour
                   placeholder="Dela Cruz"
                   value={form.lastName}
                   onChange={e => setForm({ ...form, lastName: e.target.value })}
-                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+                  onFocus={e => { e.target.style.borderColor = COLORS.primary; e.target.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.15)' }}
+                  onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }}
+                  style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.15s ease, box-shadow 0.15s ease' }}
                 />
               </div>
             </div>
@@ -103,7 +114,9 @@ const totalPrice = duration * court.pricePerHour
                 placeholder="09171234567"
                 value={form.phone}
                 onChange={e => setForm({ ...form, phone: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+                onFocus={e => { e.target.style.borderColor = COLORS.primary; e.target.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.15)' }}
+                onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }}
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.15s ease, box-shadow 0.15s ease' }}
               />
               <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>We'll send a confirmation SMS to this number.</p>
             </div>
@@ -120,6 +133,10 @@ const totalPrice = duration * court.pricePerHour
             <button
               onClick={handleSubmit}
               disabled={loading}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = COLORS.primaryHover }}
+              onMouseLeave={e => { if (!loading) e.currentTarget.style.background = COLORS.primary }}
+              onMouseDown={e => { if (!loading) e.currentTarget.style.transform = 'scale(0.98)' }}
+              onMouseUp={e => { if (!loading) e.currentTarget.style.transform = 'scale(1)' }}
               style={{
                 width: '100%',
                 padding: '14px',
@@ -128,8 +145,10 @@ const totalPrice = duration * court.pricePerHour
                 fontSize: '15px',
                 border: 'none',
                 cursor: loading ? 'not-allowed' : 'pointer',
-                background: '#16a34a',
+                background: COLORS.primary,
                 color: 'white',
+                transition: 'background 0.15s ease, transform 0.1s ease',
+                opacity: loading ? 0.8 : 1,
               }}
             >
               {loading ? 'Confirming...' : 'Confirm Booking'}
