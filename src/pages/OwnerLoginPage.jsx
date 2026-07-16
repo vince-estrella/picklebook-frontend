@@ -37,10 +37,18 @@ function OwnerLoginPage() {
 
       {/* Left: Dark panel */}
       <div style={{ width: '40%', background: '#1a1a1a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
-        <div style={{ width: '56px', height: '56px', background: '#16a34a', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px' }}>
+        <div
+          onClick={() => navigate('/')}
+          style={{ width: '56px', height: '56px', background: '#16a34a', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '20px', cursor: 'pointer' }}
+        >
           🏓
         </div>
-        <h2 style={{ color: '#16a34a', fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>PickleBook</h2>
+        <h2
+          onClick={() => navigate('/')}
+          style={{ color: '#16a34a', fontSize: '28px', fontWeight: '700', marginBottom: '8px', cursor: 'pointer' }}
+        >
+          PickleBook
+        </h2>
         <p style={{ color: '#9ca3af', textAlign: 'center', fontSize: '14px', lineHeight: '1.6' }}>
           The high-performance operating system for premier pickleball facilities.
         </p>
