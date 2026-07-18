@@ -70,6 +70,21 @@ function BookingsListPage() {
     navigate('/owner/login')
   }
 
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Cancel this booking? This cannot be undone.')) return
+    try {
+      await api.patch(`/bookings/${bookingId}/status`, JSON.stringify('Cancelled'), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, status: 'Cancelled' } : b))
+      )
+    } catch (err) {
+      console.error('Failed to cancel booking:', err)
+      alert('Could not cancel booking. Please try again.')
+    }
+  }
+
   const currentPath = window.location.pathname
 
   const filteredBookings = bookings.filter((b) => {
@@ -293,6 +308,7 @@ function BookingsListPage() {
                           </button>
                           {b.status === 'Pending' && (
                             <button
+                              onClick={() => handleCancelBooking(b.id)}
                               className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-red-600 hover:bg-red-100"
                               title="Cancel Booking"
                             >
