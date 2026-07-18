@@ -36,7 +36,13 @@ function OwnerDashboardPage() {
   const owner = JSON.parse(localStorage.getItem('owner') || '{}')
   const [courts, setCourts] = useState([])
   const [bookings, setBookings] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeBookings: 0,
+    monthlyRevenue: 0,
+    weeklyRevenue: [],
+  })
+  const [loading, setLoading] = useState(true) 
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -44,10 +50,13 @@ function OwnerDashboardPage() {
       return
     }
     Promise.all([
-      api.get('/courts'),
-      // fetch bookings for all courts - we'll get today's for now
-    ]).then(([courtsRes]) => {
+      api.get('/courts/owner'),
+      api.get('/bookings/owner'),
+      api.get('/bookings/stats'),
+    ]).then(([courtsRes, bookingsRes, statsRes]) => {
       setCourts(courtsRes.data)
+      setBookings(bookingsRes.data)
+      setStats(statsRes.data)
       setLoading(false)
     }).catch(() => {
       navigate('/owner/login')
@@ -69,9 +78,6 @@ function OwnerDashboardPage() {
   }
 
   const totalCourts = courts.length
-  const activeBookings = bookings.length
-  // Revenue isn't wired up to a real endpoint yet - shown as a dash until that data exists.
-  const monthlyRevenue = null
   const currentPath = window.location.pathname
 
   return (
@@ -205,7 +211,7 @@ function OwnerDashboardPage() {
               </div>
               <div className="pt-8 flex flex-col gap-1">
                 <span className="text-slate-500 text-xs font-medium uppercase leading-4 tracking-wide">Active Bookings</span>
-                <span className="text-slate-800 text-3xl font-bold leading-10">{activeBookings}</span>
+                <span className="text-slate-800 text-3xl font-bold leading-10">{stats.activeBookings}</span>
               </div>
             </div>
 
@@ -217,8 +223,8 @@ function OwnerDashboardPage() {
               </div>
               <div className="pt-8 flex flex-col gap-1">
                 <span className="opacity-80 text-zinc-200 text-xs font-medium uppercase leading-4 tracking-wide">Monthly Revenue</span>
-                <span className="text-white text-3xl font-bold leading-10">
-                  {monthlyRevenue !== null ? `₱${monthlyRevenue}` : '—'}
+               <span className="text-white text-3xl font-bold leading-10">
+                  ₱{Number(stats.monthlyRevenue).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>
             </div>
@@ -331,18 +337,25 @@ function OwnerDashboardPage() {
               <div className="p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">
                 <span className="text-slate-800 text-sm font-semibold leading-4 tracking-wide">Weekly Revenue</span>
                 <div className="h-48 pt-8 flex justify-center items-end gap-2">
-                  {[16, 24, 20, 32, 28, 36, 12].map((h, i) => (
-                    <div
-                      key={i}
-                      className="w-7 bg-green-700 rounded-t-sm transition-opacity duration-150 hover:opacity-100"
-                      style={{ height: `${h * 4}px`, opacity: i === 4 ? 1 : 0.2 + i * 0.12 }}
-                    />
-                  ))}
+                  {(() => {
+                    const max = Math.max(1, ...stats.weeklyRevenue.map(d => d.total))
+                    return stats.weeklyRevenue.map((d, i) => (
+                      <div
+                        key={d.date}
+                        className="w-7 bg-green-700 rounded-t-sm transition-opacity duration-150 hover:opacity-100"
+                        style={{
+                          height: `${Math.max(4, (d.total / max) * 160)}px`,
+                          opacity: i === stats.weeklyRevenue.length - 1 ? 1 : 0.3 + (i / stats.weeklyRevenue.length) * 0.5,
+                        }}
+                        title={`₱${d.total} on ${d.date}`}
+                      />
+                    ))
+                  })()}
                 </div>
                 <div className="px-1 flex justify-between">
-                  {WEEKDAYS.map(day => (
-                    <span key={day} className="text-slate-500 text-[10px] font-bold uppercase leading-4">
-                      {day}
+                  {stats.weeklyRevenue.map(d => (
+                    <span key={d.date} className="text-slate-500 text-[10px] font-bold uppercase leading-4">
+                      {d.day}
                     </span>
                   ))}
                 </div>
@@ -361,13 +374,13 @@ function OwnerDashboardPage() {
                           <span className="w-2.5 h-2.5 bg-green-800 rounded-full block" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-slate-800 text-xs font-medium leading-4 truncate">{b.userName}</p>
+                          <p className="text-slate-800 text-xs font-medium leading-4 truncate">{b.bookerName}</p>
                           <p className="text-slate-500 text-xs font-normal leading-4 truncate">
-                            {b.courtName} • {b.time}
+                            {b.courtName} • {b.startTime?.slice(0, 5)}
                           </p>
                         </div>
                         <span className="text-green-800 text-xs font-bold leading-4 shrink-0">
-                          ₱{b.amount}
+                          ₱{Number(b.amount).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                         </span>
                       </div>
                     ))

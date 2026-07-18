@@ -73,7 +73,7 @@ function OwnerUsersPage() {
     // Assumption: backend exposes all of an owner's bookings at this route,
     // mirroring the existing GET /bookings/court/{id} pattern. Adjust if the
     // real endpoint differs.
-    api.get(`/bookings/owner/${owner.id}`)
+    api.get('/bookings/owner')
       .then(res => {
         setBookings(res.data)
         setLoading(false)

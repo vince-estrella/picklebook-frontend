@@ -54,7 +54,7 @@ function BookingsListPage() {
       return
     }
     api
-      .get('/bookings')
+      .get('/bookings/owner')
       .then((res) => {
         setBookings(res.data)
         setLoading(false)
@@ -77,7 +77,7 @@ function BookingsListPage() {
     const q = search.trim().toLowerCase()
     const matchesSearch =
       !q ||
-      b.userName?.toLowerCase().includes(q) ||
+      b.bookerName?.toLowerCase().includes(q) ||
       b.courtName?.toLowerCase().includes(q)
     return matchesStatus && matchesSearch
   })
@@ -259,16 +259,16 @@ function BookingsListPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-800 text-xs font-semibold shrink-0">
-                            {b.userName?.[0] || '?'}
+                            {b.bookerName?.[0] || '?'}
                           </div>
-                          <span className="text-slate-800 text-sm font-medium leading-5">{b.userName}</span>
+                          <span className="text-slate-800 text-sm font-medium leading-5">{b.bookerName}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-neutral-700 text-sm font-normal leading-5">
                         {b.courtName}
                       </td>
                       <td className="px-6 py-4 text-neutral-700 text-sm font-normal leading-5">
-                        {b.date} • {b.time}
+                        {new Date(b.date).toLocaleDateString('en-PH')} • {b.startTime?.slice(0, 5)}–{b.endTime?.slice(0, 5)}
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-slate-800 text-sm font-bold leading-5">₱{b.amount}</span>
