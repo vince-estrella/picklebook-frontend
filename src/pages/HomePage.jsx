@@ -410,6 +410,18 @@ function HomePage() {
               key={link}
               className="hb-link"
               tabIndex={0}
+              role="button"
+              onClick={() => {
+                if (link === 'Privacy Policy') navigate('/privacy-policy')
+                if (link === 'Terms of Service') navigate('/terms')
+                if (link === 'Contact Support') navigate('/contact')
+              }}
+              onKeyDown={e => {
+                if (e.key !== 'Enter') return
+                if (link === 'Privacy Policy') navigate('/privacy-policy')
+                if (link === 'Terms of Service') navigate('/terms')
+                if (link === 'Contact Support') navigate('/contact')
+              }}
               onMouseEnter={e => e.currentTarget.style.color = COLORS.chalk}
               onMouseLeave={e => e.currentTarget.style.color = '#5B6864'}
               style={{ color: '#5B6864', fontSize: '13px', cursor: 'pointer', transition: 'color 0.15s ease' }}

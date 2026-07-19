@@ -15,7 +15,9 @@ import BookingsListPage from './pages/BookingsListPage'
 import OwnerUsersPage from './pages/OwnerUsersPage'
 import OwnerSupportPage from './pages/OwnerSupportPage'
 import QueueManager from './pages/QueueManager'
-
+import ContactSupportPage from './pages/ContactSupportPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsOfServicePage from './pages/TermsOfServicePage'
 
 
 
@@ -39,6 +41,9 @@ function App() {
       <Route path="/owner/bookings" element={<BookingsListPage />} />
       <Route path="/owner/support" element={<OwnerSupportPage />} />
       <Route path="/queue" element={<QueueManager />} />
+      <Route path="/contact" element={<ContactSupportPage />} />
+       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
     </Routes>
   )
 }
