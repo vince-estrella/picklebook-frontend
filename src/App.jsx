@@ -13,7 +13,8 @@ import OwnerRegisterPage from './pages/OwnerRegisterPage'
 import EditCourtPage from './pages/EditCourtPage'
 import BookingsListPage from './pages/BookingsListPage'
 import OwnerUsersPage from './pages/OwnerUsersPage'
-
+import OwnerSupportPage from './pages/OwnerSupportPage'
+import QueueManager from './pages/QueueManager'
 
 
 
@@ -36,6 +37,8 @@ function App() {
       <Route path="/courts/:id" element={<CourtDetailPage />} />
       <Route path="/owner/users" element={<OwnerUsersPage />} />
       <Route path="/owner/bookings" element={<BookingsListPage />} />
+      <Route path="/owner/support" element={<OwnerSupportPage />} />
+      <Route path="/queue" element={<QueueManager />} />
     </Routes>
   )
 }

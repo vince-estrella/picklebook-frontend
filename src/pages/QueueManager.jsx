@@ -1,0 +1,1117 @@
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import {
+  FaSearch,
+  FaTrashAlt,
+  FaLock,
+  FaLockOpen,
+  FaExchangeAlt,
+  FaLink,
+  FaUnlink,
+  FaChevronUp,
+  FaChevronDown,
+  FaTimes,
+  FaRandom,
+  FaUndo,
+  FaSyncAlt,
+  FaUserPlus,
+  FaBed,
+  FaPlay,
+  FaFlagCheckered,
+} from 'react-icons/fa'
+import Navbar from '../components/Navbar'
+
+// ---------------------------------------------------------------------------
+// Design tokens — shared with HomePage so this page reads as the same
+// product: court navy, chalk-line white, citron accent, scoreboard mono.
+// ---------------------------------------------------------------------------
+const COLORS = {
+  navy: '#0B2A38',
+  navyDeep: '#071D27',
+  teal: '#0F6B5C',
+  citron: '#D7E22B',
+  citronHover: '#C3CC1F',
+  chalk: '#EEF1EA',
+  chalkDim: '#DCE1D6',
+  ink: '#101817',
+  inkMute: '#5B6864',
+}
+
+const FONT_IMPORT = `
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+`
+
+const STORAGE_KEY = 'picklebook_queue_state_v1'
+const COURT_COUNT = 3
+const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Pro']
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+let uidCounter = 0
+const uid = () => `id-${Date.now()}-${(uidCounter++).toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+function emptyCourts() {
+  return Array.from({ length: COURT_COUNT }, (_, i) => ({
+    id: i + 1,
+    name: `Court ${i + 1}`,
+    locked: false,
+    teamA: [],
+    teamB: [],
+  }))
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed.players || !parsed.courts) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function saveState(players, courts) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ players, courts }))
+  } catch {
+    // storage unavailable — fail silently, session still works in memory
+  }
+}
+
+function clone(obj) {
+  return JSON.parse(JSON.stringify(obj))
+}
+
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/**
+ * Orders the waiting list for matchmaking: lower games-played always goes
+ * first (fairness), but players tied on games-played are shuffled randomly
+ * every time this runs, instead of falling back to a fixed join-order —
+ * that fixed tie-break was why the same foursomes kept re-forming.
+ */
+function priorityQueue(players) {
+  const waiting = players.filter(p => p.status === 'waiting')
+  const tiers = new Map()
+  for (const p of waiting) {
+    if (!tiers.has(p.gamesPlayed)) tiers.set(p.gamesPlayed, [])
+    tiers.get(p.gamesPlayed).push(p)
+  }
+  const orderedKeys = [...tiers.keys()].sort((a, b) => a - b)
+  return orderedKeys.flatMap(k => shuffle(tiers.get(k)))
+}
+
+/** How strongly two players have partnered recently — higher = avoid pairing again. */
+function repeatScore(x, y) {
+  let score = 0
+  if (x.lastPartnerId === y.id) score += 2
+  if ((x.partnerHistory || []).includes(y.id)) score += 1
+  if ((y.partnerHistory || []).includes(x.id)) score += 1
+  return score
+}
+
+function recordPartner(p, partnerId) {
+  p.lastPartnerId = partnerId
+  p.partnerHistory = [partnerId, ...(p.partnerHistory || [])].slice(0, 3)
+}
+
+/**
+ * Splits a group of 4 players into two teams of 2.
+ * Respects a fixed pair if one exists within the group; otherwise chooses
+ * the split that least repeats each player's most recent teammate.
+ */
+function splitIntoTeams(fourInput) {
+  const four = shuffle(fourInput)
+  const pairId = four.find(p => p.fixedPairId)?.fixedPairId
+  if (pairId) {
+    const pairMembers = four.filter(p => p.fixedPairId === pairId)
+    if (pairMembers.length === 2) {
+      const others = four.filter(p => p.fixedPairId !== pairId)
+      return { teamA: pairMembers, teamB: others }
+    }
+  }
+
+  const combos = shuffle([
+    [[0, 1], [2, 3]],
+    [[0, 2], [1, 3]],
+    [[0, 3], [1, 2]],
+  ])
+  let best = combos[0]
+  let bestScore = Infinity
+  for (const combo of combos) {
+    const [a, b] = combo[0].map(i => four[i])
+    const [c, d] = combo[1].map(i => four[i])
+    const score = repeatScore(a, b) + repeatScore(c, d)
+    if (score < bestScore) {
+      bestScore = score
+      best = combo
+    }
+  }
+  const teamA = best[0].map(i => four[i])
+  const teamB = best[1].map(i => four[i])
+  return { teamA, teamB }
+}
+
+/**
+ * Pulls the next fair group of 4 off the front of a priority-sorted queue,
+ * keeping a fixed pair together whenever both members are available.
+ */
+function pickGroup(queue) {
+  const selected = []
+  const used = new Set()
+  for (let i = 0; i < queue.length && selected.length < 4; i++) {
+    const p = queue[i]
+    if (used.has(p.id)) continue
+    if (p.fixedPairId && selected.length === 3) {
+      // adding this player's partner would overflow the group — skip for now,
+      // they'll anchor the next group instead.
+      const partnerAvailable = queue.some(q => q.fixedPairId === p.fixedPairId && q.id !== p.id && !used.has(q.id))
+      if (partnerAvailable) continue
+    }
+    selected.push(p)
+    used.add(p.id)
+    if (p.fixedPairId) {
+      const partner = queue.find(q => q.fixedPairId === p.fixedPairId && q.id !== p.id && !used.has(q.id))
+      if (partner && selected.length < 4) {
+        selected.push(partner)
+        used.add(partner.id)
+      }
+    }
+  }
+  if (selected.length < 4) return null
+  return selected
+}
+
+/**
+ * Fills every open (unlocked, empty) court from the waiting queue —
+ * prioritizing fewest games played, then longest wait.
+ */
+function generateMatches(players, courts) {
+  const queue = priorityQueue(players)
+  const nextPlayers = clone(players)
+  const nextCourts = clone(courts)
+  const byId = Object.fromEntries(nextPlayers.map(p => [p.id, p]))
+
+  for (const court of nextCourts) {
+    if (court.locked) continue
+    if (court.teamA.length > 0 || court.teamB.length > 0) continue
+    if (queue.length < 4) break
+
+    const group = pickGroup(queue)
+    if (!group) break
+    // remove chosen players from local queue copy
+    for (const g of group) {
+      const idx = queue.findIndex(q => q.id === g.id)
+      if (idx !== -1) queue.splice(idx, 1)
+    }
+
+    const { teamA, teamB } = splitIntoTeams(group)
+    court.teamA = teamA.map(p => p.id)
+    court.teamB = teamB.map(p => p.id)
+
+    recordPartner(byId[teamA[0].id], teamA[1].id)
+    recordPartner(byId[teamA[1].id], teamA[0].id)
+    recordPartner(byId[teamB[0].id], teamB[1].id)
+    recordPartner(byId[teamB[1].id], teamB[0].id)
+    for (const p of [...teamA, ...teamB]) {
+      byId[p.id].status = 'playing'
+      byId[p.id].courtId = court.id
+    }
+  }
+
+  return { players: nextPlayers, courts: nextCourts }
+}
+
+// ---------------------------------------------------------------------------
+// Small shared UI primitives
+// ---------------------------------------------------------------------------
+function Button({ variant = 'ghost', size = 'md', icon, children, ...props }) {
+  const base = {
+    primary: { background: COLORS.citron, color: COLORS.navyDeep, border: 'none' },
+    outline: { background: 'transparent', color: COLORS.chalk, border: `1px solid rgba(238,241,234,0.35)` },
+    outlineDark: { background: 'transparent', color: COLORS.ink, border: `1px solid #C9D0C6` },
+    danger: { background: 'transparent', color: '#B3453D', border: '1px solid #E3C3C0' },
+    ghost: { background: 'transparent', color: COLORS.inkMute, border: 'none' },
+  }[variant]
+
+  const sizing = {
+    sm: { padding: '7px 12px', fontSize: '13px' },
+    md: { padding: '11px 18px', fontSize: '14px' },
+    lg: { padding: '14px 24px', fontSize: '15px' },
+  }[size]
+
+  const hoverBg = {
+    primary: COLORS.citronHover,
+    outline: 'rgba(238,241,234,0.08)',
+    outlineDark: '#F2F4EF',
+    danger: '#FBEDEC',
+    ghost: '#EEF1EA',
+  }[variant]
+
+  return (
+    <button
+      {...props}
+      style={{
+        ...base,
+        ...sizing,
+        borderRadius: '4px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        transition: 'background 0.15s ease, opacity 0.15s ease',
+        whiteSpace: 'nowrap',
+        ...(props.disabled ? { opacity: 0.4, cursor: 'not-allowed' } : {}),
+        ...(props.style || {}),
+      }}
+      onMouseEnter={e => { if (!props.disabled) e.currentTarget.style.background = hoverBg }}
+      onMouseLeave={e => { if (!props.disabled) e.currentTarget.style.background = base.background }}
+    >
+      {icon}
+      {children}
+    </button>
+  )
+}
+
+function StatusPill({ status }) {
+  const map = {
+    waiting: { label: 'Waiting', bg: '#E7EEE9', fg: COLORS.teal },
+    playing: { label: 'Playing', bg: '#FBFAD9', fg: '#8A8F0E' },
+    resting: { label: 'Resting', bg: '#EEECEA', fg: COLORS.inkMute },
+  }[status]
+  return (
+    <span
+      style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: '10.5px',
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        padding: '3px 8px',
+        borderRadius: '999px',
+        background: map.bg,
+        color: map.fg,
+        fontWeight: 600,
+      }}
+    >
+      {map.label}
+    </span>
+  )
+}
+
+function Modal({ title, onClose, children, width = 420 }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(7,29,39,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#fff', borderRadius: '10px', width: '100%', maxWidth: `${width}px`,
+          padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+          <h3 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '20px', margin: 0, color: COLORS.ink }}>{title}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.inkMute, padding: '4px' }}>
+            <FaTimes size={16} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+const inputStyle = {
+  width: '100%',
+  padding: '10px 12px',
+  borderRadius: '6px',
+  border: '1px solid #D5DAD1',
+  fontSize: '14px',
+  fontFamily: "'Inter', sans-serif",
+  color: COLORS.ink,
+  outline: 'none',
+  boxSizing: 'border-box',
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+function QueueManager() {
+  const [players, setPlayers] = useState(() => loadState()?.players ?? [])
+  const [courts, setCourts] = useState(() => loadState()?.courts ?? emptyCourts())
+  const [search, setSearch] = useState('')
+  const [pairMode, setPairMode] = useState(false)
+  const [pairFirst, setPairFirst] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [replaceTarget, setReplaceTarget] = useState(null) // { courtId, team, slotIndex, outgoingId }
+  const history = useRef([])
+  const [, forceRender] = useState(0)
+
+  useEffect(() => { saveState(players, courts) }, [players, courts])
+
+  const commit = useCallback((mutator) => {
+    history.current.push({ players: clone(players), courts: clone(courts) })
+    if (history.current.length > 15) history.current.shift()
+    const draftPlayers = clone(players)
+    const draftCourts = clone(courts)
+    const result = mutator(draftPlayers, draftCourts)
+    setPlayers(result?.players ?? draftPlayers)
+    setCourts(result?.courts ?? draftCourts)
+  }, [players, courts])
+
+  const undo = () => {
+    const prev = history.current.pop()
+    if (!prev) return
+    setPlayers(prev.players)
+    setCourts(prev.courts)
+    forceRender(n => n + 1)
+  }
+
+  // ---- derived data ----------------------------------------------------
+  const waitingPlayers = useMemo(() => {
+    return players
+      .filter(p => p.status === 'waiting')
+      .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => a.gamesPlayed - b.gamesPlayed || a.joinedAt - b.joinedAt)
+  }, [players, search])
+
+  const restingPlayers = useMemo(
+    () => players.filter(p => p.status === 'resting').filter(p => p.name.toLowerCase().includes(search.toLowerCase())),
+    [players, search]
+  )
+
+  const playingCount = players.filter(p => p.status === 'playing').length
+  const activeCourts = courts.filter(c => c.teamA.length > 0).length
+  const byId = useMemo(() => Object.fromEntries(players.map(p => [p.id, p])), [players])
+
+  // ---- actions -----------------------------------------------------------
+  const addPlayer = (name, skill) => {
+    if (!name.trim()) return
+    commit((ps) => {
+      ps.push({
+        id: uid(),
+        name: name.trim(),
+        skill: skill || '',
+        gamesPlayed: 0,
+        timesRested: 0,
+        status: 'waiting',
+        joinedAt: Date.now(),
+        fixedPairId: null,
+        lastPartnerId: null,
+        partnerHistory: [],
+        courtId: null,
+      })
+      return { players: ps }
+    })
+    setShowAddModal(false)
+  }
+
+  const removePlayer = (id) => {
+    commit((ps, cs) => {
+      const idx = ps.findIndex(p => p.id === id)
+      if (idx !== -1) ps.splice(idx, 1)
+      for (const c of cs) {
+        c.teamA = c.teamA.filter(pid => pid !== id)
+        c.teamB = c.teamB.filter(pid => pid !== id)
+      }
+      return { players: ps, courts: cs }
+    })
+  }
+
+  const toggleRest = (id) => {
+    commit((ps) => {
+      const p = ps.find(pl => pl.id === id)
+      if (!p) return { players: ps }
+      if (p.status === 'resting') {
+        p.status = 'waiting'
+        p.joinedAt = Date.now()
+      } else if (p.status === 'waiting') {
+        p.status = 'resting'
+        p.timesRested += 1
+      }
+      return { players: ps }
+    })
+  }
+
+  const moveWaiting = (id, dir) => {
+    // manual override: nudge joinedAt so ordering shifts by one position
+    commit((ps) => {
+      const sorted = ps
+        .filter(p => p.status === 'waiting')
+        .sort((a, b) => a.gamesPlayed - b.gamesPlayed || a.joinedAt - b.joinedAt)
+      const idx = sorted.findIndex(p => p.id === id)
+      const swapIdx = idx + dir
+      if (idx === -1 || swapIdx < 0 || swapIdx >= sorted.length) return { players: ps }
+      const a = ps.find(p => p.id === sorted[idx].id)
+      const b = ps.find(p => p.id === sorted[swapIdx].id)
+      const tmp = a.joinedAt
+      a.joinedAt = b.joinedAt
+      b.joinedAt = tmp
+      const g = a.gamesPlayed
+      a.gamesPlayed = b.gamesPlayed
+      b.gamesPlayed = g
+      return { players: ps }
+    })
+  }
+
+  const handlePlayerClickForPairing = (id) => {
+    if (!pairMode) return
+    if (!pairFirst) {
+      setPairFirst(id)
+      return
+    }
+    if (pairFirst === id) {
+      setPairFirst(null)
+      return
+    }
+    commit((ps) => {
+      const a = ps.find(p => p.id === pairFirst)
+      const b = ps.find(p => p.id === id)
+      if (a && b) {
+        const pairId = uid()
+        a.fixedPairId = pairId
+        b.fixedPairId = pairId
+      }
+      return { players: ps }
+    })
+    setPairFirst(null)
+    setPairMode(false)
+  }
+
+  const removeFixedPair = (id) => {
+    commit((ps) => {
+      const p = ps.find(pl => pl.id === id)
+      if (!p?.fixedPairId) return { players: ps }
+      const pairId = p.fixedPairId
+      ps.forEach(pl => { if (pl.fixedPairId === pairId) pl.fixedPairId = null })
+      return { players: ps }
+    })
+  }
+
+  const toggleLockCourt = (courtId) => {
+    commit((ps, cs) => {
+      const c = cs.find(cc => cc.id === courtId)
+      if (c) c.locked = !c.locked
+      return { courts: cs }
+    })
+  }
+
+  const removeFromCourt = (courtId, team, playerId) => {
+    commit((ps, cs) => {
+      const c = cs.find(cc => cc.id === courtId)
+      if (!c) return { players: ps, courts: cs }
+      c[team] = c[team].filter(pid => pid !== playerId)
+      const p = ps.find(pl => pl.id === playerId)
+      if (p) {
+        p.status = 'waiting'
+        p.joinedAt = Date.now()
+        p.courtId = null
+      }
+      return { players: ps, courts: cs }
+    })
+  }
+
+  const confirmReplace = (incomingId, outgoingLeaves) => {
+    const { courtId, team, outgoingId } = replaceTarget
+    commit((ps, cs) => {
+      const c = cs.find(cc => cc.id === courtId)
+      const slotIdx = c[team].indexOf(outgoingId)
+      if (slotIdx !== -1) c[team][slotIdx] = incomingId
+
+      const outgoing = ps.find(p => p.id === outgoingId)
+      const incoming = ps.find(p => p.id === incomingId)
+      if (outgoing) {
+        if (outgoingLeaves) {
+          const idx = ps.findIndex(p => p.id === outgoingId)
+          ps.splice(idx, 1)
+        } else {
+          outgoing.status = 'waiting'
+          outgoing.joinedAt = Date.now()
+          outgoing.courtId = null
+        }
+      }
+      if (incoming) {
+        incoming.status = 'playing'
+        incoming.courtId = courtId
+      }
+      return { players: ps, courts: cs }
+    })
+    setReplaceTarget(null)
+  }
+
+  const randomizeOpenCourts = () => {
+    commit((ps, cs) => {
+      const result = generateMatches(ps, cs)
+      return result
+    })
+  }
+
+  const shuffleWaiting = () => {
+    commit((ps) => {
+      const waiting = ps.filter(p => p.status === 'waiting')
+      const now = Date.now()
+      const shuffled = [...waiting].sort(() => Math.random() - 0.5)
+      shuffled.forEach((p, i) => { p.joinedAt = now + i })
+      return { players: ps }
+    })
+  }
+
+  const resetQueue = () => {
+    if (!window.confirm('Reset the entire session? This clears all players and courts.')) return
+    history.current.push({ players: clone(players), courts: clone(courts) })
+    setPlayers([])
+    setCourts(emptyCourts())
+  }
+
+  const endRound = () => {
+    commit((ps, cs) => {
+      for (const c of cs) {
+        if (c.locked) continue
+        const ids = [...c.teamA, ...c.teamB]
+        for (const id of ids) {
+          const p = ps.find(pl => pl.id === id)
+          if (p) {
+            p.gamesPlayed += 1
+            p.status = 'waiting'
+            p.joinedAt = Date.now()
+            p.courtId = null
+          }
+        }
+        c.teamA = []
+        c.teamB = []
+      }
+      const result = generateMatches(ps, cs)
+      return result
+    })
+  }
+
+  const canEndRound = courts.some(c => !c.locked && c.teamA.length > 0)
+
+  // Finish a single court independently — increments games played for just
+  // that foursome, sends them to the back of the queue, and immediately
+  // pulls the next fair group into that one court without touching the others.
+  const endCourtRound = (courtId) => {
+    commit((ps, cs) => {
+      const c = cs.find(cc => cc.id === courtId)
+      if (!c || c.locked || (c.teamA.length === 0 && c.teamB.length === 0)) return { players: ps, courts: cs }
+      const ids = [...c.teamA, ...c.teamB]
+      for (const id of ids) {
+        const p = ps.find(pl => pl.id === id)
+        if (p) {
+          p.gamesPlayed += 1
+          p.status = 'waiting'
+          p.joinedAt = Date.now()
+          p.courtId = null
+        }
+      }
+      c.teamA = []
+      c.teamB = []
+      const result = generateMatches(ps, cs)
+      return result
+    })
+  }
+
+  // -------------------------------------------------------------------------
+  return (
+    <div style={{ minHeight: '100vh', background: COLORS.chalk, fontFamily: "'Inter', sans-serif" }}>
+      <style>{FONT_IMPORT}{`
+        .qm-btn:focus-visible { outline: 2px solid ${COLORS.citron}; outline-offset: 2px; }
+        .qm-grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+        .qm-courts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media (max-width: 1000px) {
+          .qm-grid { grid-template-columns: 1fr !important; }
+          .qm-courts { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 700px) {
+          .qm-header-stats { flex-wrap: wrap; }
+        }
+        .qm-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+      `}</style>
+
+      <Navbar />
+
+      {/* ================= HEADER ================= */}
+      <div style={{ background: COLORS.navy, padding: '40px 32px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+            <div>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', letterSpacing: '0.14em', textTransform: 'uppercase', color: COLORS.citron, margin: '0 0 8px' }}>
+                Open Play Session
+              </p>
+              <h1 style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 'clamp(32px, 4vw, 44px)', color: COLORS.chalk, margin: 0, textTransform: 'uppercase', lineHeight: 1 }}>
+                Queue Manager
+              </h1>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <Button className="qm-btn" variant="outline" size="lg" icon={<FaUserPlus size={13} />} onClick={() => setShowAddModal(true)}>
+                Add Player
+              </Button>
+              <Button className="qm-btn" variant="primary" size="lg" icon={<FaSyncAlt size={13} />} onClick={endRound} disabled={!canEndRound}>
+                End Round
+              </Button>
+            </div>
+          </div>
+
+          <div className="qm-header-stats" style={{ display: 'flex', gap: '0', marginTop: '36px', borderTop: '1px solid rgba(238,241,234,0.18)', paddingTop: '18px' }}>
+            {[
+              { value: players.length, label: 'TOTAL PLAYERS' },
+              { value: waitingPlayers.length, label: 'WAITING' },
+              { value: playingCount, label: 'ON COURT' },
+              { value: `${activeCourts}/${COURT_COUNT}`, label: 'ACTIVE COURTS' },
+            ].map((s, i) => (
+              <div key={s.label} style={{ paddingRight: '28px', marginRight: '28px', borderRight: i < 3 ? '1px solid rgba(238,241,234,0.18)' : 'none' }}>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '24px', fontWeight: 600, color: COLORS.chalk, margin: 0 }}>{s.value}</p>
+                <p style={{ fontSize: '11px', letterSpacing: '0.08em', color: '#7C8B85', margin: '4px 0 0' }}>{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ================= BODY ================= */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '28px 32px 60px' }}>
+        <div className="qm-grid">
+          {/* ---------- LEFT: WAITING QUEUE ---------- */}
+          <div>
+            <div style={{ background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.chalkDim}`, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 18px', borderBottom: `1px solid ${COLORS.chalkDim}` }}>
+                <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: '0 0 12px', color: COLORS.ink }}>
+                  Waiting Queue
+                </h2>
+                <div style={{ position: 'relative', marginBottom: '10px' }}>
+                  <FaSearch size={12} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.inkMute }} />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search player…"
+                    style={{ ...inputStyle, paddingLeft: '32px' }}
+                  />
+                </div>
+                <button
+                  className="qm-btn"
+                  onClick={() => { setPairMode(m => !m); setPairFirst(null) }}
+                  style={{
+                    background: pairMode ? '#FBFAD9' : 'transparent',
+                    border: `1px solid ${pairMode ? '#C9CC46' : '#D5DAD1'}`,
+                    borderRadius: '6px', padding: '7px 12px', fontSize: '12.5px', fontWeight: 600,
+                    color: pairMode ? '#7A7E10' : COLORS.inkMute, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', width: '100%', justifyContent: 'center',
+                  }}
+                >
+                  <FaLink size={11} />
+                  {pairMode ? (pairFirst ? 'Select second player…' : 'Select first player…') : 'Pair Two Players'}
+                </button>
+              </div>
+
+              <div style={{ maxHeight: '640px', overflowY: 'auto' }}>
+                {waitingPlayers.length === 0 && restingPlayers.length === 0 && (
+                  <p style={{ padding: '24px 18px', fontSize: '13px', color: COLORS.inkMute, textAlign: 'center' }}>
+                    No players waiting. Add players to get started.
+                  </p>
+                )}
+                {waitingPlayers.map((p, i) => (
+                  <QueueRow
+                    key={p.id}
+                    player={p}
+                    position={i + 1}
+                    pairMode={pairMode}
+                    isPairSelected={pairFirst === p.id}
+                    onSelectForPair={() => handlePlayerClickForPairing(p.id)}
+                    onRemove={() => removePlayer(p.id)}
+                    onRest={() => toggleRest(p.id)}
+                    onMoveUp={() => moveWaiting(p.id, -1)}
+                    onMoveDown={() => moveWaiting(p.id, 1)}
+                    onUnpair={() => removeFixedPair(p.id)}
+                    partnerName={p.fixedPairId ? players.find(q => q.fixedPairId === p.fixedPairId && q.id !== p.id)?.name : null}
+                  />
+                ))}
+                {restingPlayers.length > 0 && (
+                  <p style={{ padding: '14px 18px 6px', fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: COLORS.inkMute, margin: 0 }}>
+                    Resting
+                  </p>
+                )}
+                {restingPlayers.map(p => (
+                  <QueueRow
+                    key={p.id}
+                    player={p}
+                    resting
+                    onRemove={() => removePlayer(p.id)}
+                    onRest={() => toggleRest(p.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ---------- CENTER: COURTS ---------- */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+              <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: 0, color: COLORS.ink }}>
+                Active Courts
+              </h2>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaRandom size={11} />} onClick={randomizeOpenCourts}>
+                  Randomize Open Courts
+                </Button>
+                <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaSyncAlt size={11} />} onClick={shuffleWaiting}>
+                  Shuffle Waiting
+                </Button>
+                <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaUndo size={11} />} onClick={undo} disabled={history.current.length === 0}>
+                  Undo
+                </Button>
+                <Button className="qm-btn" variant="danger" size="sm" icon={<FaTrashAlt size={11} />} onClick={resetQueue}>
+                  Reset
+                </Button>
+              </div>
+            </div>
+
+            <div className="qm-courts">
+              {courts.map(court => (
+                <CourtCard
+                  key={court.id}
+                  court={court}
+                  byId={byId}
+                  onLockToggle={() => toggleLockCourt(court.id)}
+                  onRemove={(team, pid) => removeFromCourt(court.id, team, pid)}
+                  onReplace={(team, pid) => setReplaceTarget({ courtId: court.id, team, outgoingId: pid })}
+                  onFinish={() => endCourtRound(court.id)}
+                />
+              ))}
+            </div>
+
+            {/* ---------- STATS TABLE ---------- */}
+            <div style={{ marginTop: '32px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.chalkDim}`, overflow: 'hidden' }}>
+              <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: 0, padding: '16px 18px', borderBottom: `1px solid ${COLORS.chalkDim}`, color: COLORS.ink }}>
+                Player Statistics
+              </h2>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+                  <thead>
+                    <tr style={{ background: COLORS.chalk }}>
+                      {['Player', 'Games Played', 'Times Rested', 'Status', 'Fixed Pair'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', padding: '10px 18px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: COLORS.inkMute, fontWeight: 600 }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {players.length === 0 && (
+                      <tr><td colSpan={5} style={{ padding: '20px 18px', color: COLORS.inkMute, textAlign: 'center' }}>No players yet.</td></tr>
+                    )}
+                    {players
+                      .slice()
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map(p => (
+                        <tr key={p.id} style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>
+                          <td style={{ padding: '10px 18px', fontWeight: 600, color: COLORS.ink }}>{p.name}</td>
+                          <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace" }}>{p.gamesPlayed}</td>
+                          <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace" }}>{p.timesRested}</td>
+                          <td style={{ padding: '10px 18px' }}><StatusPill status={p.status} /></td>
+                          <td style={{ padding: '10px 18px', color: p.fixedPairId ? COLORS.teal : COLORS.inkMute, fontWeight: p.fixedPairId ? 600 : 400 }}>
+                            {p.fixedPairId ? 'Yes' : 'No'}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showAddModal && (
+        <AddPlayerModal onClose={() => setShowAddModal(false)} onAdd={addPlayer} />
+      )}
+
+      {replaceTarget && (
+        <ReplaceModal
+          waitingPlayers={waitingPlayers}
+          outgoingName={byId[replaceTarget.outgoingId]?.name}
+          onClose={() => setReplaceTarget(null)}
+          onConfirm={confirmReplace}
+        />
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Queue row
+// ---------------------------------------------------------------------------
+function QueueRow({ player, position, pairMode, isPairSelected, onSelectForPair, onRemove, onRest, onMoveUp, onMoveDown, onUnpair, partnerName, resting }) {
+  return (
+    <div
+      onClick={pairMode ? onSelectForPair : undefined}
+      className="qm-card"
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 18px',
+        borderBottom: `1px solid ${COLORS.chalkDim}`, cursor: pairMode ? 'pointer' : 'default',
+        background: isPairSelected ? '#FBFAD9' : resting ? '#FAFAF8' : 'transparent',
+        opacity: resting ? 0.7 : 1,
+      }}
+    >
+      {!resting && (
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.inkMute, width: '18px', flexShrink: 0 }}>
+          {String(position).padStart(2, '0')}
+        </span>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 600, fontSize: '14px', color: COLORS.ink }}>{player.name}</span>
+          {player.skill && (
+            <span style={{ fontSize: '10.5px', color: COLORS.inkMute, border: '1px solid #D5DAD1', borderRadius: '999px', padding: '1px 7px' }}>
+              {player.skill}
+            </span>
+          )}
+          {partnerName && (
+            <span style={{ fontSize: '10.5px', color: COLORS.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <FaLink size={9} /> {partnerName}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '3px' }}>
+          <span style={{ fontSize: '11.5px', color: COLORS.inkMute }}>{player.gamesPlayed} games played</span>
+          <StatusPill status={player.status} />
+        </div>
+      </div>
+
+      {!pairMode && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+          {!resting && onMoveUp && (
+            <>
+              <IconBtn title="Move up" onClick={onMoveUp}><FaChevronUp size={10} /></IconBtn>
+              <IconBtn title="Move down" onClick={onMoveDown}><FaChevronDown size={10} /></IconBtn>
+            </>
+          )}
+          {player.fixedPairId && (
+            <IconBtn title="Remove fixed pair" onClick={onUnpair}><FaUnlink size={11} /></IconBtn>
+          )}
+          <IconBtn title={resting ? 'Return to queue' : 'Rest'} onClick={onRest}>
+            {resting ? <FaPlay size={10} /> : <FaBed size={11} />}
+          </IconBtn>
+          <IconBtn title="Remove player" danger onClick={onRemove}><FaTimes size={12} /></IconBtn>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function IconBtn({ children, onClick, title, danger }) {
+  return (
+    <button
+      title={title}
+      onClick={onClick}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: '6px',
+        color: danger ? '#B3453D' : COLORS.inkMute, borderRadius: '5px', display: 'flex',
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = danger ? '#FBEDEC' : COLORS.chalk}
+      onMouseLeave={e => e.currentTarget.style.background = 'none'}
+    >
+      {children}
+    </button>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Court card
+// ---------------------------------------------------------------------------
+function CourtCard({ court, byId, onLockToggle, onRemove, onReplace, onFinish }) {
+  const hasPlayers = court.teamA.length > 0 || court.teamB.length > 0
+  return (
+    <div
+      className="qm-card"
+      style={{
+        background: hasPlayers ? COLORS.navy : '#fff',
+        border: `1px solid ${hasPlayers ? COLORS.navy : COLORS.chalkDim}`,
+        borderRadius: '10px', padding: '18px', minHeight: '220px',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+        <h3 style={{
+          fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '17px',
+          margin: 0, color: hasPlayers ? COLORS.chalk : COLORS.ink,
+        }}>
+          {court.name}
+        </h3>
+        <div style={{ display: 'flex', gap: '2px' }}>
+          <button
+            title={court.locked ? 'Unlock court' : 'Lock court'}
+            onClick={onLockToggle}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '5px',
+              color: court.locked ? COLORS.citron : (hasPlayers ? '#A9B7B2' : COLORS.inkMute),
+            }}
+          >
+            {court.locked ? <FaLock size={13} /> : <FaLockOpen size={13} />}
+          </button>
+        </div>
+      </div>
+
+      {!hasPlayers ? (
+        <p style={{ fontSize: '13px', color: COLORS.inkMute, textAlign: 'center', marginTop: '40px' }}>
+          Open court — waiting for players.
+        </p>
+      ) : (
+        <>
+          <TeamBlock label="Team A" ids={court.teamA} byId={byId} onRemove={pid => onRemove('teamA', pid)} onReplace={pid => onReplace('teamA', pid)} />
+          <div style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.citron, letterSpacing: '0.1em', margin: '10px 0' }}>VS</div>
+          <TeamBlock label="Team B" ids={court.teamB} byId={byId} onRemove={pid => onRemove('teamB', pid)} onReplace={pid => onReplace('teamB', pid)} />
+
+          <button
+            className="qm-btn"
+            onClick={onFinish}
+            disabled={court.locked}
+            title={court.locked ? 'Unlock this court to finish it' : 'Finish this court and pull in the next group'}
+            style={{
+              width: '100%', marginTop: '16px', padding: '10px', borderRadius: '5px',
+              background: court.locked ? 'rgba(238,241,234,0.06)' : COLORS.citron,
+              color: court.locked ? '#6B7975' : COLORS.navyDeep,
+              border: 'none', fontWeight: 700, fontSize: '13px', cursor: court.locked ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+            }}
+          >
+            <FaFlagCheckered size={12} />
+            Finish Court
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+function TeamBlock({ label, ids, byId, onRemove, onReplace }) {
+  return (
+    <div>
+      <p style={{ fontSize: '10.5px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7C8B85', margin: '0 0 6px' }}>{label}</p>
+      {ids.map(pid => {
+        const p = byId[pid]
+        if (!p) return null
+        return (
+          <div key={pid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
+            <span style={{ color: COLORS.chalk, fontSize: '13.5px', fontWeight: 600 }}>{p.name}</span>
+            <div style={{ display: 'flex', gap: '2px' }}>
+              <button
+                title="Replace player"
+                onClick={() => onReplace(pid)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A9B7B2', padding: '5px' }}
+                onMouseEnter={e => e.currentTarget.style.color = COLORS.citron}
+                onMouseLeave={e => e.currentTarget.style.color = '#A9B7B2'}
+              >
+                <FaExchangeAlt size={11} />
+              </button>
+              <button
+                title="Remove from court"
+                onClick={() => onRemove(pid)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A9B7B2', padding: '5px' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#E08E88'}
+                onMouseLeave={e => e.currentTarget.style.color = '#A9B7B2'}
+              >
+                <FaTimes size={12} />
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Modals
+// ---------------------------------------------------------------------------
+function AddPlayerModal({ onClose, onAdd }) {
+  const [name, setName] = useState('')
+  const [skill, setSkill] = useState('')
+
+  return (
+    <Modal title="Add Player" onClose={onClose}>
+      <form onSubmit={e => { e.preventDefault(); onAdd(name, skill) }}>
+        <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '6px' }}>Name</label>
+        <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Player name" style={{ ...inputStyle, marginBottom: '16px' }} />
+
+        <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '6px' }}>Skill level (optional)</label>
+        <select value={skill} onChange={e => setSkill(e.target.value)} style={{ ...inputStyle, marginBottom: '22px' }}>
+          <option value="">—</option>
+          {SKILL_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="primary" disabled={!name.trim()}>Add to Queue</Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function ReplaceModal({ waitingPlayers, outgoingName, onClose, onConfirm }) {
+  const [selected, setSelected] = useState('')
+  const [leaves, setLeaves] = useState(false)
+
+  return (
+    <Modal title="Replace Player" onClose={onClose}>
+      <p style={{ fontSize: '13.5px', color: COLORS.inkMute, marginBottom: '16px' }}>
+        Replacing <strong style={{ color: COLORS.ink }}>{outgoingName}</strong> on court.
+      </p>
+
+      <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '6px' }}>Bring in from queue</label>
+      <select value={selected} onChange={e => setSelected(e.target.value)} style={{ ...inputStyle, marginBottom: '16px' }}>
+        <option value="">Select a player…</option>
+        {waitingPlayers.map(p => (
+          <option key={p.id} value={p.id}>{p.name} — {p.gamesPlayed} games played</option>
+        ))}
+      </select>
+      {waitingPlayers.length === 0 && (
+        <p style={{ fontSize: '12.5px', color: '#B3453D', marginTop: '-8px', marginBottom: '16px' }}>No one is waiting right now.</p>
+      )}
+
+      <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '8px' }}>
+        {outgoingName} should…
+      </label>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '22px' }}>
+        <ChoiceCard active={!leaves} onClick={() => setLeaves(false)} label="Return to queue" />
+        <ChoiceCard active={leaves} onClick={() => setLeaves(true)} label="Leave session" />
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="primary" disabled={!selected} onClick={() => onConfirm(selected, leaves)}>Confirm Swap</Button>
+      </div>
+    </Modal>
+  )
+}
+
+function ChoiceCard({ active, onClick, label }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1, padding: '12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+        border: `1.5px solid ${active ? COLORS.teal : '#D5DAD1'}`,
+        background: active ? '#E7EEE9' : '#fff',
+        color: active ? COLORS.teal : COLORS.inkMute,
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+export default QueueManager

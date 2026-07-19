@@ -1,7 +1,8 @@
 import {
   FaSearch,
   FaBolt,
-  FaHistory
+  FaHistory,
+  FaUsers
 } from 'react-icons/fa'
 
 import { MdOutlineEventAvailable } from 'react-icons/md'
@@ -9,172 +10,409 @@ import { MdOutlineEventAvailable } from 'react-icons/md'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 
+// ---------------------------------------------------------------------------
+// Design tokens — grounded in the court itself: deep court navy, kitchen
+// teal, chalk-line white, and the citron of a pickleball. Display type reads
+// like stadium signage; stats read like a scoreboard.
+// ---------------------------------------------------------------------------
 const COLORS = {
-  primary: '#16a34a',
-  primaryHover: '#15803d',
-  outline: '#ffffff',
-  outlineHover: '#f3f4f6',
+  navy: '#0B2A38',        // court surface, dark sections
+  navyDeep: '#071D27',    // footer / deepest ink
+  teal: '#0F6B5C',        // secondary structural color
+  citron: '#D7E22B',      // the ball — primary accent, used sparingly
+  citronHover: '#C3CC1F',
+  chalk: '#EEF1EA',       // line-white background for light sections
+  chalkDim: '#DCE1D6',
+  ink: '#101817',         // body text on light backgrounds
+  inkMute: '#5B6864',
 }
+
+const FONT_IMPORT = `
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+`
 
 function HomePage() {
   const navigate = useNavigate()
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafafa' }}>
+    <div style={{ minHeight: '100vh', background: COLORS.chalk, fontFamily: "'Inter', sans-serif" }}>
+      <style>{FONT_IMPORT}{`
+        @keyframes drift {
+          0%, 100% { transform: translateX(-6px); }
+          50% { transform: translateX(6px); }
+        }
+        @media (max-width: 820px) {
+          .hb-hero { grid-template-columns: 1fr !important; padding: 56px 24px !important; }
+          .hb-hero-art { display: none !important; }
+          .hb-stats { flex-wrap: wrap; row-gap: 20px !important; }
+          .hb-features { grid-template-columns: 1fr !important; }
+        }
+        .hb-btn:focus-visible, .hb-link:focus-visible {
+          outline: 2px solid ${COLORS.citron};
+          outline-offset: 3px;
+        }
+      `}</style>
+
       <Navbar />
 
-      {/* Hero Section */}
-      <div style={{ maxWidth: '1024px', margin: '0 auto', padding: '80px 32px 60px', display: 'flex', alignItems: 'center', gap: '48px' }}>
-        
-        {/* Left: Text */}
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: '48px', fontWeight: '800', lineHeight: '1.1', marginBottom: '16px', color: '#111827' }}>
-            Book Your Court<br />
-            <span style={{ color: '#16a34a' }}>In Seconds.</span>
-          </h1>
-          <p style={{ fontSize: '16px', color: '#6b7280', lineHeight: '1.7', marginBottom: '32px', maxWidth: '420px' }}>
-            The high-performance platform for pickleball players. Real-time court availability, instant booking, and effortless schedule management. No fluff, just play.
-          </p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => navigate('/courts')}
-              onMouseEnter={e => e.currentTarget.style.background = COLORS.primaryHover}
-              onMouseLeave={e => e.currentTarget.style.background = COLORS.primary}
-              style={{ background: COLORS.primary, color: 'white', border: 'none', borderRadius: '8px', padding: '14px 28px', fontWeight: '600', fontSize: '15px', cursor: 'pointer', transition: 'background 0.15s ease' }}
+      {/* ================= HERO ================= */}
+      <div style={{ background: COLORS.navy, position: 'relative', overflow: 'hidden' }}>
+        <CourtLines />
+        <div
+          className="hb-hero"
+          style={{
+            position: 'relative',
+            maxWidth: '1100px',
+            margin: '0 auto',
+            padding: '96px 32px 64px',
+            display: 'grid',
+            gridTemplateColumns: '1.1fr 0.9fr',
+            gap: '48px',
+            alignItems: 'center',
+          }}
+        >
+          <div>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '12px',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: COLORS.citron,
+                marginBottom: '20px',
+              }}
             >
-             <>
-  <FaSearch style={{ marginRight: '8px' }} />
-  Find Courts
-</>
-            </button>
-            <button
-              onClick={() => navigate('/courts')}
-              onMouseEnter={e => e.currentTarget.style.background = COLORS.outlineHover}
-              onMouseLeave={e => e.currentTarget.style.background = COLORS.outline}
-              style={{ background: COLORS.outline, color: '#374151', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px 28px', fontWeight: '600', fontSize: '15px', cursor: 'pointer', transition: 'background 0.15s ease' }}
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: COLORS.citron, display: 'inline-block' }} />
+              Courts open now
+            </div>
+
+            <h1
+              style={{
+                fontFamily: "'Big Shoulders Display', sans-serif",
+                fontWeight: 800,
+                fontSize: 'clamp(44px, 6vw, 68px)',
+                lineHeight: 0.95,
+                letterSpacing: '-0.01em',
+                color: COLORS.chalk,
+                margin: '0 0 20px',
+                textTransform: 'uppercase',
+              }}
             >
-              Book Now
-            </button>
+              Book your court
+              <br />
+              <span style={{ color: COLORS.citron }}>in seconds.</span>
+            </h1>
+
+            <p style={{ fontSize: '16px', color: '#A9B7B2', lineHeight: '1.7', marginBottom: '32px', maxWidth: '420px' }}>
+              Real-time court availability, instant booking, and effortless schedule
+              management for pickleball players. No fluff — just play.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button
+                className="hb-btn"
+                onClick={() => navigate('/courts')}
+                onMouseEnter={e => e.currentTarget.style.background = COLORS.citronHover}
+                onMouseLeave={e => e.currentTarget.style.background = COLORS.citron}
+                style={{
+                  background: COLORS.citron,
+                  color: COLORS.navyDeep,
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '14px 26px',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '9px',
+                  transition: 'background 0.15s ease',
+                }}
+              >
+                <FaSearch size={13} />
+                Find Courts
+              </button>
+              <button
+                className="hb-btn"
+                onClick={() => navigate('/courts')}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(238,241,234,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                style={{
+                  background: 'transparent',
+                  color: COLORS.chalk,
+                  border: '1px solid rgba(238,241,234,0.35)',
+                  borderRadius: '4px',
+                  padding: '14px 26px',
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
+                }}
+              >
+                Book Now
+              </button>
+              <button
+                className="hb-btn"
+                onClick={() => navigate('/queue')}
+                onMouseEnter={e => e.currentTarget.style.color = COLORS.citron}
+                onMouseLeave={e => e.currentTarget.style.color = '#A9B7B2'}
+                style={{
+                  background: 'transparent',
+                  color: '#A9B7B2',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '14px 10px',
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '9px',
+                  transition: 'color 0.15s ease',
+                }}
+              >
+                <FaUsers size={13} />
+                Join Queue
+              </button>
+            </div>
+
+            {/* Scoreboard stats */}
+            <div
+              className="hb-stats"
+              style={{
+                display: 'flex',
+                gap: '0',
+                marginTop: '52px',
+                borderTop: `1px solid rgba(238,241,234,0.18)`,
+                paddingTop: '20px',
+              }}
+            >
+              {[
+                { value: '3+', label: 'ACTIVE COURTS' },
+                { value: '100%', label: 'REAL-TIME' },
+                { value: 'FREE', label: 'TO BROWSE' },
+              ].map((stat, i) => (
+                <div
+                  key={stat.label}
+                  style={{
+                    paddingRight: '28px',
+                    marginRight: '28px',
+                    borderRight: i < 2 ? '1px solid rgba(238,241,234,0.18)' : 'none',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '26px',
+                      fontWeight: 600,
+                      color: COLORS.chalk,
+                      margin: 0,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {stat.value}
+                  </p>
+                  <p style={{ fontSize: '11px', letterSpacing: '0.08em', color: '#7C8B85', margin: '4px 0 0' }}>
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Stats */}
-          <div style={{ display: 'flex', gap: '32px', marginTop: '48px' }}>
+          {/* Right: court photo, framed like a court card */}
+          <div
+            className="hb-hero-art"
+            style={{
+              borderRadius: '10px',
+              overflow: 'hidden',
+              height: '380px',
+              position: 'relative',
+              border: `1px solid rgba(238,241,234,0.15)`,
+            }}
+          >
+            <img
+              src="https://res.cloudinary.com/graham-media-group/image/upload/f_auto/q_auto/c_scale,w_640/v1/media/gmg/K475EAGIMRDPVJAUVCTSLLA55A?_a=DAJHqpDbZAAA"
+              alt="Pickleball court"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(180deg, rgba(11,42,56,0) 55%, rgba(11,42,56,0.55) 100%)',
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ================= FEATURES ================= */}
+      <div style={{ padding: '80px 32px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '520px', marginBottom: '48px' }}>
+            <p
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '12px',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: COLORS.teal,
+                marginBottom: '12px',
+              }}
+            >
+              The toolkit
+            </p>
+            <h2
+              style={{
+                fontFamily: "'Big Shoulders Display', sans-serif",
+                fontWeight: 700,
+                fontSize: '38px',
+                lineHeight: 1,
+                color: COLORS.ink,
+                margin: '0 0 12px',
+                textTransform: 'uppercase',
+              }}
+            >
+              Stripped to the essentials
+            </h2>
+            <p style={{ color: COLORS.inkMute, fontSize: '15px', lineHeight: '1.7', margin: 0 }}>
+              Everything you need to manage your game, nothing you don't.
+            </p>
+          </div>
+
+          <div className="hb-features" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', background: COLORS.chalkDim }}>
             {[
-              { value: '3+', label: 'Active Courts' },
-              { value: '100%', label: 'Real-time' },
-              { value: 'Free', label: 'To Browse' },
-            ].map(stat => (
-              <div key={stat.label}>
-                <p style={{ fontSize: '24px', fontWeight: '700', color: '#111827', margin: 0 }}>{stat.value}</p>
-                <p style={{ fontSize: '13px', color: '#9ca3af', margin: '2px 0 0' }}>{stat.label}</p>
+              {
+                icon: <FaBolt size={18} color={COLORS.navy} />,
+                title: 'Easy Booking',
+                desc: "A streamlined checkout flow built for speed. Select your time, confirm, and you're ready to hit the court.",
+              },
+              {
+                icon: <MdOutlineEventAvailable size={20} color={COLORS.navy} />,
+                title: 'Real-Time Availability',
+                desc: 'Live syncing with facility calendars. Never worry about double bookings or outdated schedules.',
+              },
+              {
+                icon: <FaHistory size={18} color={COLORS.navy} />,
+                title: 'Booking History',
+                desc: 'Access your past sessions and upcoming games in one place.',
+              },
+            ].map(f => (
+              <div
+                key={f.title}
+                style={{
+                  background: COLORS.chalk,
+                  padding: '32px 28px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    border: `1.5px solid ${COLORS.citron}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '20px',
+                  }}
+                >
+                  {f.icon}
+                </div>
+                <h3 style={{ fontWeight: 700, fontSize: '16px', margin: '0 0 8px', color: COLORS.ink }}>{f.title}</h3>
+                <p style={{ color: COLORS.inkMute, fontSize: '14px', lineHeight: '1.6', margin: 0 }}>{f.desc}</p>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Right: Image */}
-        <div style={{ flex: 1, borderRadius: '16px', overflow: 'hidden', height: '360px', background: '#e5e7eb' }}>
-          <img
-            src="https://res.cloudinary.com/graham-media-group/image/upload/f_auto/q_auto/c_scale,w_640/v1/media/gmg/K475EAGIMRDPVJAUVCTSLLA55A?_a=DAJHqpDbZAAA"
-            alt="Pickleball court"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        </div>
       </div>
 
-      {/* Features Section */}
-      <div style={{ background: '#f9fafb', padding: '60px 32px' }}>
-        <div style={{ maxWidth: '1024px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '28px', fontWeight: '700', textAlign: 'center', marginBottom: '8px' }}>Precision Performance Tools</h2>
-          <p style={{ color: '#6b7280', textAlign: 'center', marginBottom: '40px', fontSize: '15px' }}>
-            Stripped down to the essentials. Everything you need to manage your game, nothing you don't.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
-            {[
-  {
-    icon: <FaBolt color="#16a34a" />,
-    title: 'Easy Booking',
-    desc: 'A streamlined checkout flow designed for speed. Select your time, confirm, and you\'re ready to hit the court.'
-  },
-  {
-    icon: <MdOutlineEventAvailable color="#16a34a" />,
-    title: 'Real-Time Availability',
-    desc: 'Live syncing with facility calendars. Never worry about double bookings or outdated schedules.'
-  },
-  {
-    icon: <FaHistory color="#16a34a" />,
-    title: 'Booking History',
-    desc: 'Access your past sessions and upcoming games in one place.'
-  }
-].map(f => (
-              <div key={f.title} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px' }}>
-             <div
-  style={{
-    width: '56px',
-    height: '56px',
-    borderRadius: '14px',
-    background: '#f0fdf4',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '24px',
-    marginBottom: '18px'
-  }}
->
-  {f.icon}
-</div>
-                <h3 style={{ fontWeight: '700', fontSize: '16px', marginBottom: '8px' }}>{f.title}</h3>
-                <p style={{ color: '#6b7280', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div style={{ background: '#1a1a1a', padding: '60px 32px', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: '700', color: 'white', marginBottom: '12px' }}>Ready to secure your court?</h2>
-        <p style={{ color: '#9ca3af', marginBottom: '28px', fontSize: '15px' }}>
-          Join the high-performance pickleball community today. Simple, fast, and reliable.
+      {/* ================= CTA ================= */}
+      <div style={{ background: COLORS.navy, padding: '72px 32px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '1px',
+            height: '100%',
+            background: 'rgba(238,241,234,0.12)',
+          }}
+        />
+        <p
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '12px',
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: COLORS.citron,
+            marginBottom: '14px',
+          }}
+        >
+          Game on
+        </p>
+        <h2
+          style={{
+            fontFamily: "'Big Shoulders Display', sans-serif",
+            fontWeight: 700,
+            fontSize: '36px',
+            color: COLORS.chalk,
+            margin: '0 0 12px',
+            textTransform: 'uppercase',
+          }}
+        >
+          Ready to secure your court?
+        </h2>
+        <p style={{ color: '#A9B7B2', marginBottom: '32px', fontSize: '15px' }}>
+          Join the pickleball community today. Simple, fast, and reliable.
         </p>
         <button
-  onClick={() => navigate('/courts')}
-  onMouseEnter={e => e.currentTarget.style.background = COLORS.primaryHover}
-  onMouseLeave={e => e.currentTarget.style.background = COLORS.primary}
-  style={{
-    background: COLORS.primary,
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    padding: '14px 28px',
-    fontWeight: '600',
-    fontSize: '15px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    margin: '0 auto',
-    transition: 'background 0.15s ease'
-  }}
->
-  <FaSearch />
-  Find Courts
-</button>
+          className="hb-btn"
+          onClick={() => navigate('/courts')}
+          onMouseEnter={e => e.currentTarget.style.background = COLORS.citronHover}
+          onMouseLeave={e => e.currentTarget.style.background = COLORS.citron}
+          style={{
+            background: COLORS.citron,
+            color: COLORS.navyDeep,
+            border: 'none',
+            borderRadius: '4px',
+            padding: '14px 28px',
+            fontWeight: 700,
+            fontSize: '15px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '9px',
+            transition: 'background 0.15s ease',
+          }}
+        >
+          <FaSearch size={13} />
+          Find Courts
+        </button>
       </div>
 
-      {/* Footer */}
-      <div style={{ background: '#111827', padding: '24px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ================= FOOTER ================= */}
+      <div style={{ background: COLORS.navyDeep, padding: '28px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <p style={{ color: 'white', fontWeight: '700', fontSize: '16px', margin: 0 }}>PickleBook</p>
-          <p style={{ color: '#6b7280', fontSize: '12px', margin: '4px 0 0' }}>High-performance court management.</p>
+          <p style={{ color: COLORS.chalk, fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 700, fontSize: '18px', margin: 0, letterSpacing: '0.02em' }}>
+            PICKLEBOOK
+          </p>
+          <p style={{ color: '#5B6864', fontSize: '12px', margin: '4px 0 0' }}>High-performance court management.</p>
         </div>
         <div style={{ display: 'flex', gap: '24px' }}>
           {['Privacy Policy', 'Terms of Service', 'Contact Support'].map(link => (
             <span
               key={link}
-              onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
-              onMouseLeave={e => e.currentTarget.style.color = '#6b7280'}
-              style={{ color: '#6b7280', fontSize: '13px', cursor: 'pointer', transition: 'color 0.15s ease' }}
+              className="hb-link"
+              tabIndex={0}
+              onMouseEnter={e => e.currentTarget.style.color = COLORS.chalk}
+              onMouseLeave={e => e.currentTarget.style.color = '#5B6864'}
+              style={{ color: '#5B6864', fontSize: '13px', cursor: 'pointer', transition: 'color 0.15s ease' }}
             >
               {link}
             </span>
@@ -182,6 +420,26 @@ function HomePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Subtle line-drawing of a pickleball court, used as ambient hero texture.
+// Reads as a real court diagram (baselines, kitchen line, center line) at
+// low opacity, with one drifting dot standing in for the ball.
+function CourtLines() {
+  return (
+    <svg
+      viewBox="0 0 1100 480"
+      preserveAspectRatio="xMidYMid slice"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.14 }}
+    >
+      <rect x="60" y="40" width="980" height="400" fill="none" stroke="#EEF1EA" strokeWidth="2" />
+      <line x1="60" y1="167" x2="1040" y2="167" stroke="#EEF1EA" strokeWidth="2" />
+      <line x1="60" y1="313" x2="1040" y2="313" stroke="#EEF1EA" strokeWidth="2" />
+      <line x1="550" y1="40" x2="550" y2="167" stroke="#EEF1EA" strokeWidth="2" />
+      <line x1="550" y1="313" x2="550" y2="440" stroke="#EEF1EA" strokeWidth="2" />
+      <circle cx="550" cy="240" r="4" fill="#D7E22B" opacity="0.8" style={{ animation: 'drift 6s ease-in-out infinite' }} />
+    </svg>
   )
 }
 
