@@ -35,6 +35,7 @@ function EditCourtPage() {
         latitude: court.latitude || 0,
         longitude: court.longitude || 0,
         courtOwnerId: court.courtOwnerId,
+        paymentMethod: court.paymentMethod || 'PayAtVenue',
       })
       setAmenities(court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : [])
       setFetching(false)
@@ -165,6 +166,46 @@ function EditCourtPage() {
               <input type="number" value={form.pricePerHour} onChange={e => setForm({ ...form, pricePerHour: e.target.value })}
                 style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
             </div>
+          </div>
+        </div>
+
+        {/* Payment Method */}
+        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+          <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '4px' }}>Payment Method</h3>
+          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Choose how bookers pay for this court.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, paymentMethod: 'PayAtVenue' })}
+              style={{
+                textAlign: 'left', padding: '14px', borderRadius: '8px', cursor: 'pointer',
+                border: form.paymentMethod === 'PayAtVenue' ? '1px solid #16a34a' : '1px solid #e5e7eb',
+                background: form.paymentMethod === 'PayAtVenue' ? '#f0fdf4' : 'white',
+              }}
+            >
+              <span style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: form.paymentMethod === 'PayAtVenue' ? '#15803d' : '#111827' }}>
+                Pay at Venue
+              </span>
+              <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                Bookers reserve now, pay in person on arrival.
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, paymentMethod: 'PayMongo' })}
+              style={{
+                textAlign: 'left', padding: '14px', borderRadius: '8px', cursor: 'pointer',
+                border: form.paymentMethod === 'PayMongo' ? '1px solid #16a34a' : '1px solid #e5e7eb',
+                background: form.paymentMethod === 'PayMongo' ? '#f0fdf4' : 'white',
+              }}
+            >
+              <span style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: form.paymentMethod === 'PayMongo' ? '#15803d' : '#111827' }}>
+                Pay Online (PayMongo)
+              </span>
+              <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                Coming soon — bookings still default to pay-at-venue for now.
+              </span>
+            </button>
           </div>
         </div>
 

@@ -55,6 +55,7 @@ function AddCourtPage() {
     latitude: 0,
     longitude: 0,
     courtOwnerId: JSON.parse(localStorage.getItem('owner') || '{}').id,
+    paymentMethod: 'PayAtVenue',
   })
   const [amenities, setAmenities] = useState([])
   const [images, setImages] = useState([])
@@ -248,6 +249,49 @@ function AddCourtPage() {
             </div>
 
             {/* Amenities */}
+            {/* Payment method */}
+            <div className="p-8 bg-white rounded-xl outline outline-1 outline-offset-[-1px] outline-neutral-200 flex flex-col gap-6">
+              <div>
+                <h2 className="text-stone-900 text-xl font-semibold leading-6">Payment Method</h2>
+                <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">
+                  Choose how bookers pay for this court.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, paymentMethod: 'PayAtVenue' })}
+                  className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${
+                    form.paymentMethod === 'PayAtVenue'
+                      ? 'outline-emerald-700 bg-emerald-50'
+                      : 'outline-neutral-200 bg-white hover:bg-stone-50'
+                  }`}
+                >
+                  <span className={`text-sm font-semibold block ${form.paymentMethod === 'PayAtVenue' ? 'text-emerald-800' : 'text-stone-900'}`}>
+                    Pay at Venue
+                  </span>
+                  <span className="text-xs text-zinc-600 block mt-1">
+                    Bookers reserve now, pay in person on arrival.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, paymentMethod: 'PayMongo' })}
+                  className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${
+                    form.paymentMethod === 'PayMongo'
+                      ? 'outline-emerald-700 bg-emerald-50'
+                      : 'outline-neutral-200 bg-white hover:bg-stone-50'
+                  }`}
+                >
+                  <span className={`text-sm font-semibold block ${form.paymentMethod === 'PayMongo' ? 'text-emerald-800' : 'text-stone-900'}`}>
+                    Pay Online (PayMongo)
+                  </span>
+                  <span className="text-xs text-zinc-600 block mt-1">
+                    Bookers pay online at checkout. Coming soon — bookings currently still default to pay-at-venue regardless of this setting.
+                  </span>
+                </button>
+              </div>
+            </div>
             <div className="p-8 bg-white rounded-xl outline outline-1 outline-offset-[-1px] outline-neutral-200 flex flex-col gap-6">
               <h2 className="text-stone-900 text-xl font-semibold leading-6">Facility Amenities</h2>
               <div className="grid grid-cols-4 gap-4">
