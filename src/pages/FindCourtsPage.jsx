@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin } from 'lucide-react'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 
@@ -106,6 +109,45 @@ const inputStyle = {
   boxSizing: 'border-box',
 }
 
+// Default center when no courts have coordinates yet — Metro Manila.
+const DEFAULT_CENTER = [14.5995, 120.9842]
+
+// Navy teardrop pin with a citron rim, built as a divIcon so no external
+// marker image assets are needed (avoids the classic Leaflet/webpack
+// "missing marker icon" issue).
+const courtPinIcon = L.divIcon({
+  className: 'court-pin',
+  html: `
+    <div style="
+      width: 30px;
+      height: 30px;
+      background: ${COLORS.navy};
+      border: 3px solid ${COLORS.citron};
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 3px 8px rgba(11,42,56,0.45);
+    "></div>
+  `,
+  iconSize: [30, 30],
+  iconAnchor: [15, 30],
+  popupAnchor: [0, -30],
+})
+
+// Fits the map viewport to every plotted court whenever the filtered list
+// changes, so switching filters while in Map view re-frames automatically.
+function FitBounds({ points }) {
+  const map = useMap()
+  useEffect(() => {
+    if (points.length === 0) return
+    if (points.length === 1) {
+      map.setView(points[0], 14)
+    } else {
+      map.fitBounds(points, { padding: [48, 48] })
+    }
+  }, [points, map])
+  return null
+}
+
 function FindCourtsPage() {
   const navigate = useNavigate()
   const [courts, setCourts] = useState([])
@@ -154,6 +196,10 @@ function FindCourtsPage() {
     return matchSearch && matchType && matchMin && matchMax
   })
 
+  const mappableCourts = filteredCourts.filter(c => c.latitude != null && c.longitude != null)
+  const unmappedCount = filteredCourts.length - mappableCourts.length
+  const mapPoints = mappableCourts.map(c => [c.latitude, c.longitude])
+
   return (
     <div className="min-h-screen" style={{ background: COLORS.chalk, fontFamily: "'Inter', sans-serif" }}>
       <style>{FONT_IMPORT}{`
@@ -165,7 +211,11 @@ function FindCourtsPage() {
         .fc-slot-btn:not(:disabled):hover { background: ${COLORS.teal}; color: #fff; }
         .fc-book-btn:hover { background: ${COLORS.citronHover} !important; }
         .fc-book-btn:active { transform: scale(0.98); }
+        .fc-map-book-btn:hover { background: ${COLORS.citronHover} !important; }
         input[type="checkbox"] { accent-color: ${COLORS.teal}; }
+        .leaflet-popup-content-wrapper { border-radius: 10px; padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0; width: 220px !important; }
+        .leaflet-container { font-family: 'Inter', sans-serif; }
       `}</style>
 
       <Navbar />
@@ -283,90 +333,172 @@ function FindCourtsPage() {
             </div>
           </div>
 
-          {/* Court cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredCourts.map(court => (
+          {viewMode === 'Grid' ? (
+            /* ================= GRID VIEW ================= */
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredCourts.map(court => (
+                <div
+                  key={court.id}
+                  className="fc-card rounded-2xl overflow-hidden transition-all duration-200"
+                  style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}` }}
+                >
+                  {/* Image */}
+                  <div className="fc-card-img h-56 relative overflow-hidden" style={{ background: COLORS.chalkDim }}>
+                    {court.images?.length > 0 ? (
+                      <img
+                        src={court.images[0].imageUrl}
+                        alt={court.name}
+                        className="w-full h-full object-cover transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full" style={{ color: COLORS.inkMute }}>
+                        No Image
+                      </div>
+                    )}
+
+                    {/* Type */}
+                    <div
+                      className="absolute top-4 right-4 px-3 py-1 rounded-full font-bold text-xs"
+                      style={court.type === 'Indoor' ? { background: '#E7EEE9', color: COLORS.teal } : { background: COLORS.chalkDim, color: COLORS.inkMute }}
+                    >
+                      {court.type}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-6">
+                    <div className="flex justify-between items-start gap-3">
+                      <div>
+                        <h2 className="font-semibold" style={{ color: COLORS.ink }}>{court.name}</h2>
+                        <p className="text-sm mt-1 flex items-center gap-1" style={{ color: COLORS.inkMute }}>
+                          <MapPin size={13} /> {court.address}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold" style={{ ...monoStyle, color: COLORS.ink }}>₱{court.pricePerHour}</p>
+                        <p className="text-xs" style={{ color: COLORS.inkMute }}>per hour</p>
+                      </div>
+                    </div>
+
+                    {/* Available today? */}
+                    <div className="mt-5">
+                      {(() => {
+                        const slots = computeTodaySlots(court, bookingsByCourtId[court.id] || [])
+                        const hasAvailability = slots.length > 0
+                        return (
+                          <span
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide"
+                            style={
+                              hasAvailability
+                                ? { background: '#E7EEE9', color: COLORS.teal }
+                                : { background: COLORS.chalkDim, color: COLORS.inkMute }
+                            }
+                          >
+                            {hasAvailability ? 'Available slots today' : 'No available slots today'}
+                          </span>
+                        )
+                      })()}
+                    </div>
+
+                    {/* Book button */}
+                    <button
+                      onClick={() => navigate(`/courts/${court.id}`)}
+                      className="fc-book-btn mt-6 w-full py-3.5 rounded-xl font-semibold transition-all duration-150"
+                      style={{ background: COLORS.citron, color: COLORS.navyDeep }}
+                    >
+                      Book Now
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {filteredCourts.length === 0 && (
+                <div className="md:col-span-2 rounded-2xl p-12 text-center" style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}`, color: COLORS.inkMute }}>
+                  No courts match your filters.
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ================= MAP VIEW ================= */
+            <div className="flex flex-col gap-3">
               <div
-                key={court.id}
-                className="fc-card rounded-2xl overflow-hidden transition-all duration-200"
-                style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}` }}
+                className="rounded-2xl overflow-hidden"
+                style={{
+                  border: `1px solid ${COLORS.chalkDim}`,
+                  height: '640px',
+                  width: '100%',
+                  boxShadow: '0 12px 30px rgba(11,42,56,0.08)',
+                }}
               >
-                {/* Image */}
-                <div className="fc-card-img h-56 relative overflow-hidden" style={{ background: COLORS.chalkDim }}>
-                  {court.images?.length > 0 ? (
-                    <img
-                      src={court.images[0].imageUrl}
-                      alt={court.name}
-                      className="w-full h-full object-cover transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full" style={{ color: COLORS.inkMute }}>
-                      No Image
-                    </div>
-                  )}
-
-                  {/* Type */}
+                {mapPoints.length === 0 ? (
                   <div
-                    className="absolute top-4 right-4 px-3 py-1 rounded-full font-bold text-xs"
-                    style={court.type === 'Indoor' ? { background: '#E7EEE9', color: COLORS.teal } : { background: COLORS.chalkDim, color: COLORS.inkMute }}
+                    className="w-full h-full flex items-center justify-center text-center px-8"
+                    style={{ background: '#fff', color: COLORS.inkMute }}
                   >
-                    {court.type}
+                    No courts with map locations match your filters yet.
                   </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-6">
-                  <div className="flex justify-between items-start gap-3">
-                    <div>
-                      <h2 className="font-semibold" style={{ color: COLORS.ink }}>{court.name}</h2>
-                      <p className="text-sm mt-1 flex items-center gap-1" style={{ color: COLORS.inkMute }}>
-                        <MapPin size={13} /> {court.address}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-bold" style={{ ...monoStyle, color: COLORS.ink }}>₱{court.pricePerHour}</p>
-                      <p className="text-xs" style={{ color: COLORS.inkMute }}>per hour</p>
-                    </div>
-                  </div>
-
-                  {/* Available today? */}
-                  <div className="mt-5">
-                    {(() => {
-                      const slots = computeTodaySlots(court, bookingsByCourtId[court.id] || [])
-                      const hasAvailability = slots.length > 0
-                      return (
-                        <span
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide"
-                          style={
-                            hasAvailability
-                              ? { background: '#E7EEE9', color: COLORS.teal }
-                              : { background: COLORS.chalkDim, color: COLORS.inkMute }
-                          }
-                        >
-                          {hasAvailability ? 'Available slots today' : 'No available slots today'}
-                        </span>
-                      )
-                    })()}
-                  </div>
-
-                  {/* Book button */}
-                  <button
-                    onClick={() => navigate(`/courts/${court.id}`)}
-                    className="fc-book-btn mt-6 w-full py-3.5 rounded-xl font-semibold transition-all duration-150"
-                    style={{ background: COLORS.citron, color: COLORS.navyDeep }}
+                ) : (
+                  <MapContainer
+                    center={DEFAULT_CENTER}
+                    zoom={12}
+                    style={{ height: '100%', width: '100%' }}
+                    scrollWheelZoom
                   >
-                    Book Now
-                  </button>
-                </div>
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <FitBounds points={mapPoints} />
+                    {mappableCourts.map(court => (
+                      <Marker
+                        key={court.id}
+                        position={[court.latitude, court.longitude]}
+                        icon={courtPinIcon}
+                      >
+                        <Popup>
+                          <div style={{ padding: '14px' }}>
+                            <p style={{ ...headingStyle, fontSize: '16px', fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>
+                              {court.name}
+                            </p>
+                            <p style={{ fontSize: '12px', color: COLORS.inkMute, display: 'flex', alignItems: 'center', gap: '4px', margin: '0 0 10px' }}>
+                              <MapPin size={12} /> {court.address}
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <p style={{ ...monoStyle, fontSize: '14px', fontWeight: 600, color: COLORS.teal, margin: 0 }}>
+                                ₱{court.pricePerHour}<span style={{ fontSize: '11px', color: COLORS.inkMute, fontWeight: 500 }}>/hr</span>
+                              </p>
+                              <button
+                                onClick={() => navigate(`/courts/${court.id}`)}
+                                className="fc-map-book-btn"
+                                style={{
+                                  background: COLORS.citron,
+                                  color: COLORS.navyDeep,
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '6px 12px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                Book
+                              </button>
+                            </div>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MapContainer>
+                )}
               </div>
-            ))}
 
-            {filteredCourts.length === 0 && (
-              <div className="md:col-span-2 rounded-2xl p-12 text-center" style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}`, color: COLORS.inkMute }}>
-                No courts match your filters.
-              </div>
-            )}
-          </div>
+              {unmappedCount > 0 && (
+                <p className="text-xs" style={{ color: COLORS.inkMute }}>
+                  {unmappedCount} court{unmappedCount === 1 ? '' : 's'} without a saved location can't be shown on the map.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
