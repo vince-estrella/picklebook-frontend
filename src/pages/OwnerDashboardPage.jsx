@@ -38,7 +38,7 @@ function OwnerDashboardPage() {
   const [courts, setCourts] = useState([])
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState({
-    totalUsers: 0,
+    usersCurrentlyBooked: 0,
     activeBookings: 0,
     monthlyRevenue: 0,
     weeklyRevenue: [],
@@ -202,8 +202,8 @@ function OwnerDashboardPage() {
                 </div>
               </div>
               <div className="pt-8 flex flex-col gap-1">
-                <span className="text-slate-500 text-xs font-medium uppercase leading-4 tracking-wide">Total Users</span>
-                <span className="text-slate-800 text-3xl font-bold leading-10">—</span>
+                <span className="text-slate-500 text-xs font-medium uppercase leading-4 tracking-wide">Users Booked Now</span>
+                <span className="text-slate-800 text-3xl font-bold leading-10">{stats.usersCurrentlyBooked}</span>
               </div>
             </div>
 
