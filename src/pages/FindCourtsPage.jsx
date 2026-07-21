@@ -47,8 +47,10 @@ function getTodayHours(court) {
   return { open: court.monFriOpen, close: court.monFriClose }
 }
 
-// Builds today's slot grid for a court and marks each slot available/booked
-// based on that court's existing (non-cancelled) bookings for today.
+// Builds today's slot grid for a court, returning only the next genuinely
+// available (unbooked, not-yet-passed) slots — booked/past ones are skipped
+// entirely rather than shown disabled, so the card either lists real openings
+// or reports none.
 function computeTodaySlots(court, bookingsToday) {
   const { open, close } = getTodayHours(court)
   const openMin = timeStrToMinutes(open)
@@ -61,6 +63,7 @@ function computeTodaySlots(court, bookingsToday) {
   const slots = []
   for (let start = openMin; start + SLOT_MINUTES <= closeMin; start += SLOT_MINUTES) {
     if (start < nowMin) continue // already passed today
+    if (slots.length >= SLOTS_TO_SHOW) break
 
     const end = start + SLOT_MINUTES
     const overlapsBooking = bookingsToday.some(b => {
@@ -69,10 +72,12 @@ function computeTodaySlots(court, bookingsToday) {
       return bStart != null && bEnd != null && start < bEnd && end > bStart
     })
 
-    slots.push({ label: minutesToLabel(start), available: !overlapsBooking })
+    if (!overlapsBooking) {
+      slots.push({ label: minutesToLabel(start) })
+    }
   }
 
-  return slots.slice(0, SLOTS_TO_SHOW)
+  return slots
 }
 
 // ── Design tokens — shared with HomePage / QueueManager / CourtDetailPage ──
@@ -340,31 +345,20 @@ function FindCourtsPage() {
                       if (slots.length === 0) {
                         return (
                           <p className="text-sm" style={{ color: COLORS.inkMute }}>
-                            No slots available today.
+                            No available court today.
                           </p>
                         )
                       }
                       return (
                         <div className="flex gap-2 flex-wrap">
                           {slots.map(slot => (
-                            slot.available ? (
-                              <button
-                                key={slot.label}
-                                className="fc-slot-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150"
-                                style={{ border: `1px solid ${COLORS.teal}`, color: COLORS.teal }}
-                              >
-                                {slot.label}
-                              </button>
-                            ) : (
-                              <button
-                                key={slot.label}
-                                disabled
-                                className="px-4 py-2 rounded-lg text-sm line-through cursor-not-allowed"
-                                style={{ background: COLORS.chalkDim, color: '#93A29C' }}
-                              >
-                                {slot.label}
-                              </button>
-                            )
+                            <button
+                              key={slot.label}
+                              className="fc-slot-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150"
+                              style={{ border: `1px solid ${COLORS.teal}`, color: COLORS.teal }}
+                            >
+                              {slot.label}
+                            </button>
                           ))}
                         </div>
                       )
