@@ -4,10 +4,10 @@ import { MapPin } from 'lucide-react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 
-// Slot length shown in the "Next Available Slots" row. Matches how the
-// design mocks spaced them out (04:00, 05:30, 07:00 => 90 min apart).
+// Slot length used when checking whether a court has any opening left today.
 const SLOT_MINUTES = 90
-// How many upcoming slots (available or not) to show per card.
+// Stop scanning once we've found this many available slots (we only need to
+// know "some" exist, not the full list).
 const SLOTS_TO_SHOW = 3
 
 function timeStrToMinutes(t) {
@@ -27,15 +27,6 @@ function getLocalDateString(date) {
   return `${year}-${month}-${day}`
 }
 
-function minutesToLabel(mins) {
-  const h24 = Math.floor(mins / 60) % 24
-  const m = mins % 60
-  const period = h24 >= 12 ? 'PM' : 'AM'
-  let h12 = h24 % 12
-  if (h12 === 0) h12 = 12
-  return `${h12}:${String(m).padStart(2, '0')} ${period}`
-}
-
 // Picks the right open/close pair for today's day of week. Note: this uses
 // the browser's local clock, same simplification the rest of the booking
 // flow doesn't have to worry about since the backend anchors to Asia/Manila
@@ -47,11 +38,10 @@ function getTodayHours(court) {
   return { open: court.monFriOpen, close: court.monFriClose }
 }
 
-// Builds today's slot grid for a court, returning only the next genuinely
-// available (unbooked, not-yet-passed) slots — booked/past ones are skipped
-// entirely rather than shown disabled, so the card either lists real openings
-// or reports none. A "00:00:00" open/close value is treated as "not set"
-// (same convention CourtDetailPage already uses) and falls back to a
+// Returns up to SLOTS_TO_SHOW genuinely available (unbooked, not-yet-passed)
+// slots today — used only to check "does at least one exist", not to
+// display exact times. A "00:00:00" open/close value is treated as "not set"
+// (same convention CourtDetailPage already uses) so it falls back to a
 // sensible default range instead of collapsing the whole day to zero slots.
 function computeTodaySlots(court, bookingsToday) {
   const { open, close } = getTodayHours(court)
@@ -77,7 +67,7 @@ function computeTodaySlots(court, bookingsToday) {
     })
 
     if (!overlapsBooking) {
-      slots.push({ label: minutesToLabel(start) })
+      slots.push({ start })
     }
   }
 
@@ -339,32 +329,22 @@ function FindCourtsPage() {
                     </div>
                   </div>
 
-                  {/* Available slots */}
+                  {/* Available today? */}
                   <div className="mt-5">
-                    <h3 className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: COLORS.inkMute }}>
-                      Next Available Slots
-                    </h3>
                     {(() => {
                       const slots = computeTodaySlots(court, bookingsByCourtId[court.id] || [])
-                      if (slots.length === 0) {
-                        return (
-                          <p className="text-sm" style={{ color: COLORS.inkMute }}>
-                            No available time slots today.
-                          </p>
-                        )
-                      }
+                      const hasAvailability = slots.length > 0
                       return (
-                        <div className="flex gap-2 flex-wrap">
-                          {slots.map(slot => (
-                            <button
-                              key={slot.label}
-                              className="fc-slot-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150"
-                              style={{ border: `1px solid ${COLORS.teal}`, color: COLORS.teal }}
-                            >
-                              {slot.label}
-                            </button>
-                          ))}
-                        </div>
+                        <span
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide"
+                          style={
+                            hasAvailability
+                              ? { background: '#E7EEE9', color: COLORS.teal }
+                              : { background: COLORS.chalkDim, color: COLORS.inkMute }
+                          }
+                        >
+                          {hasAvailability ? 'Available slots today' : 'No available slots today'}
+                        </span>
                       )
                     })()}
                   </div>
