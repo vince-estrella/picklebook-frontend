@@ -50,11 +50,15 @@ function getTodayHours(court) {
 // Builds today's slot grid for a court, returning only the next genuinely
 // available (unbooked, not-yet-passed) slots — booked/past ones are skipped
 // entirely rather than shown disabled, so the card either lists real openings
-// or reports none.
+// or reports none. A "00:00:00" open/close value is treated as "not set"
+// (same convention CourtDetailPage already uses) and falls back to a
+// sensible default range instead of collapsing the whole day to zero slots.
 function computeTodaySlots(court, bookingsToday) {
   const { open, close } = getTodayHours(court)
-  const openMin = timeStrToMinutes(open)
-  const closeMin = timeStrToMinutes(close)
+  const resolvedOpen = (!open || open === '00:00:00') ? '06:00' : open
+  const resolvedClose = (!close || close === '00:00:00') ? '22:00' : close
+  const openMin = timeStrToMinutes(resolvedOpen)
+  const closeMin = timeStrToMinutes(resolvedClose)
   if (openMin == null || closeMin == null || openMin >= closeMin) return []
 
   const now = new Date()
@@ -345,7 +349,7 @@ function FindCourtsPage() {
                       if (slots.length === 0) {
                         return (
                           <p className="text-sm" style={{ color: COLORS.inkMute }}>
-                            No available court today.
+                            No available time slots today.
                           </p>
                         )
                       }
