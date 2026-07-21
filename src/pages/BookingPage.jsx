@@ -14,10 +14,12 @@ function BookingPage() {
   const navigate = useNavigate()
 const { court, selectedDate, selectedSlots } = state || {}
 
+  const player = JSON.parse(localStorage.getItem('player') || 'null')
+
   const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    phone: '',
+    firstName: player?.firstName || '',
+    lastName: player?.lastName || '',
+    phone: player?.phone || '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -44,6 +46,7 @@ if (!court || !selectedSlots || selectedSlots.length === 0) {
 endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
         bookerName: `${form.firstName} ${form.lastName}`,
         bookerPhone: form.phone,
+        userId: player?.id ?? null,
       })
 
       navigate('/booking/confirmed', { state: { booking: res.data, court } })
