@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://picklebook-api-production.up.railway.app/api',
 })
 
 // Owner and Player accounts are separate token types, stored under separate
@@ -26,7 +26,6 @@ api.interceptors.request.use((config) => {
 
   return config
 })
-
 
 api.interceptors.request.use(config => {
   if (config.method === 'get') {
