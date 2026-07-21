@@ -82,10 +82,61 @@ const totalPrice = duration * court.pricePerHour
         <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Confirm Your Booking</h1>
         <p style={{ color: '#6b7280', marginBottom: '32px' }}>Complete your details below to reserve your court. No prepayment required today.</p>
 
-        <div style={{ display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+        <div className="flex flex-col md:flex-row gap-8 items-start">
 
-          {/* Left: Form */}
-          <div style={{ flex: 1 }}>
+          {/* Right: Summary — shown first on mobile, second on desktop */}
+          <div className="w-full order-first md:order-last md:w-[280px] md:min-w-[280px]" style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
+            {court.images && court.images.length > 0 ? (
+              <img
+                src={court.images[0].imageUrl}
+                style={{ width: '100%', height: '140px', objectFit: 'cover' }}
+                alt="court"
+              />
+            ) : (
+              <div style={{ width: '100%', height: '140px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
+                No image
+              </div>
+            )}
+            <div style={{ padding: '16px' }}>
+              <h3 style={{ fontWeight: '700', fontSize: '16px', marginBottom: '4px' }}>{court.name}</h3>
+              <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>📍 {court.address}</p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', marginBottom: '16px' }}>
+                <div>
+                  <p style={{ color: '#9ca3af', marginBottom: '2px' }}>DATE</p>
+                  <p style={{ fontWeight: '600' }}>{selectedDate}</p>
+                </div>
+                <div>
+                  <p style={{ color: '#9ca3af', marginBottom: '2px' }}>TIME</p>
+                  <p style={{ fontWeight: '600' }}>
+  {selectedSlots[0].start} – {selectedSlots[selectedSlots.length - 1].end}
+</p>
+                </div>
+                <div>
+                  <p style={{ color: '#9ca3af', marginBottom: '2px' }}>DURATION</p>
+                 <p style={{ fontWeight: '600' }}>
+  {duration * 60} Minutes
+</p>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                  <span style={{ color: '#6b7280' }}>Standard Rate</span>
+  <span>₱{totalPrice}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', marginTop: '8px' }}>
+                  <span>Total to Pay</span>
+               <span style={{ color: '#16a34a' }}>
+  ₱{totalPrice}
+</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Left: Form — shown second on mobile, first on desktop */}
+          <div className="w-full order-last md:order-first md:flex-1">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>First Name</label>
@@ -156,57 +207,6 @@ const totalPrice = duration * court.pricePerHour
             >
               {loading ? 'Confirming...' : 'Confirm Booking'}
             </button>
-          </div>
-
-          {/* Right: Summary */}
-          <div style={{ width: '280px', minWidth: '280px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden' }}>
-            {court.images && court.images.length > 0 ? (
-              <img
-                src={court.images[0].imageUrl}
-                style={{ width: '100%', height: '140px', objectFit: 'cover' }}
-                alt="court"
-              />
-            ) : (
-              <div style={{ width: '100%', height: '140px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9ca3af' }}>
-                No image
-              </div>
-            )}
-            <div style={{ padding: '16px' }}>
-              <h3 style={{ fontWeight: '700', fontSize: '16px', marginBottom: '4px' }}>{court.name}</h3>
-              <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>📍 {court.address}</p>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', marginBottom: '16px' }}>
-                <div>
-                  <p style={{ color: '#9ca3af', marginBottom: '2px' }}>DATE</p>
-                  <p style={{ fontWeight: '600' }}>{selectedDate}</p>
-                </div>
-                <div>
-                  <p style={{ color: '#9ca3af', marginBottom: '2px' }}>TIME</p>
-                  <p style={{ fontWeight: '600' }}>
-  {selectedSlots[0].start} – {selectedSlots[selectedSlots.length - 1].end}
-</p>
-                </div>
-                <div>
-                  <p style={{ color: '#9ca3af', marginBottom: '2px' }}>DURATION</p>
-                 <p style={{ fontWeight: '600' }}>
-  {duration * 60} Minutes
-</p>
-                </div>
-              </div>
-
-              <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
-                  <span style={{ color: '#6b7280' }}>Standard Rate</span>
-  <span>₱{totalPrice}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', marginTop: '8px' }}>
-                  <span>Total to Pay</span>
-               <span style={{ color: '#16a34a' }}>
-  ₱{totalPrice}
-</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

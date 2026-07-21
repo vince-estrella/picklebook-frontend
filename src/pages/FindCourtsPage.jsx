@@ -16,6 +16,17 @@ function timeStrToMinutes(t) {
   return h * 60 + m
 }
 
+// UTC-based date strings (e.g. new Date().toISOString()) drift a day behind
+// local time for anyone in a timezone ahead of UTC (like PH, UTC+8) during
+// the early morning hours — this instead reads the date from the browser's
+// local clock, matching how CourtDetailPage resolves "today".
+function getLocalDateString(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function minutesToLabel(mins) {
   const h24 = Math.floor(mins / 60) % 24
   const m = mins % 60
@@ -117,7 +128,7 @@ function FindCourtsPage() {
 
   useEffect(() => {
     if (courts.length === 0) return
-    const todayStr = new Date().toISOString().slice(0, 10)
+    const todayStr = getLocalDateString(new Date())
 
     Promise.all(
       courts.map(c =>
