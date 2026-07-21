@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+﻿import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 
 function Navbar() {
@@ -18,13 +18,6 @@ function Navbar() {
       </Link>
 
       <div className="flex items-center gap-6">
-        <Link
-          to="/courts"
-          className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors"
-        >
-          Find Courts
-        </Link>
-
         {player ? (
           <>
             <Link
@@ -51,10 +44,10 @@ function Navbar() {
         )}
 
         <Link
-          to="/owner/login"
+          to="/courts"
           className="text-sm font-medium bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
         >
-          Book Now
+          Find Courts
         </Link>
       </div>
     </nav>
