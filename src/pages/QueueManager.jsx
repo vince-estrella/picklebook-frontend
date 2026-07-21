@@ -43,6 +43,7 @@ const FONT_IMPORT = `
 const STORAGE_KEY = 'picklebook_queue_state_v1'
 const COURT_COUNT = 3
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Pro']
+const DEFAULT_SKILL = 'Beginner'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -91,6 +92,31 @@ function shuffle(arr) {
     ;[a[i], a[j]] = [a[j], a[i]]
   }
   return a
+}
+
+/**
+ * Parses bulk textarea input into { name, skill } entries.
+ * Each line is one player. A line may optionally include a skill after a
+ * comma or dash (e.g. "Jane Smith, Intermediate" or "Jane Smith - Pro").
+ * Lines with no recognizable skill fall back to the modal's default skill,
+ * and an empty/unrecognized skill ultimately resolves to "Beginner" when
+ * the player is created.
+ */
+function parseBulkInput(text, defaultSkill) {
+  return text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const parts = line.split(/,| - /).map(s => s.trim()).filter(Boolean)
+      if (parts.length >= 2) {
+        const matchedSkill = SKILL_LEVELS.find(s => s.toLowerCase() === parts[1].toLowerCase())
+        if (matchedSkill) {
+          return { name: parts[0], skill: matchedSkill }
+        }
+      }
+      return { name: line, skill: defaultSkill || '' }
+    })
 }
 
 /**
@@ -162,38 +188,61 @@ function splitIntoTeams(fourInput) {
 }
 
 /**
- * Pulls the next fair group of 4 off the front of a priority-sorted queue,
- * keeping a fixed pair together whenever both members are available.
+ * Selects up to 4 players from a candidate list (already in priority order),
+ * keeping a fixed pair together whenever both members are present in the
+ * candidate list. Returns null if fewer than 4 could be assembled.
  */
-function pickGroup(queue) {
+function selectGroupFrom(candidates) {
   const selected = []
   const used = new Set()
-  for (let i = 0; i < queue.length && selected.length < 4; i++) {
-    const p = queue[i]
+  for (let i = 0; i < candidates.length && selected.length < 4; i++) {
+    const p = candidates[i]
     if (used.has(p.id)) continue
     if (p.fixedPairId && selected.length === 3) {
       // adding this player's partner would overflow the group — skip for now,
       // they'll anchor the next group instead.
-      const partnerAvailable = queue.some(q => q.fixedPairId === p.fixedPairId && q.id !== p.id && !used.has(q.id))
+      const partnerAvailable = candidates.some(q => q.fixedPairId === p.fixedPairId && q.id !== p.id && !used.has(q.id))
       if (partnerAvailable) continue
     }
     selected.push(p)
     used.add(p.id)
     if (p.fixedPairId) {
-      const partner = queue.find(q => q.fixedPairId === p.fixedPairId && q.id !== p.id && !used.has(q.id))
+      const partner = candidates.find(q => q.fixedPairId === p.fixedPairId && q.id !== p.id && !used.has(q.id))
       if (partner && selected.length < 4) {
         selected.push(partner)
         used.add(partner.id)
       }
     }
   }
-  if (selected.length < 4) return null
-  return selected
+  return selected.length === 4 ? selected : null
+}
+
+/**
+ * Pulls the next fair group of 4 off the front of a priority-sorted queue.
+ * Skill-aware: tries first to build a group made entirely of players who
+ * share the front-of-queue player's skill level (so Beginners get matched
+ * with Beginners, Advanced with Advanced, etc). If there aren't enough
+ * same-skill players waiting to fill a foursome, it falls back to filling
+ * the group from the full mixed queue instead of leaving the court empty.
+ */
+function pickGroup(queue) {
+  if (queue.length === 0) return null
+
+  const anchor = queue[0]
+  const anchorSkill = anchor.skill || DEFAULT_SKILL
+  const sameSkill = queue.filter(p => (p.skill || DEFAULT_SKILL) === anchorSkill)
+
+  const sameSkillGroup = selectGroupFrom(sameSkill)
+  if (sameSkillGroup) return sameSkillGroup
+
+  // Not enough players of the same skill waiting — mix in others so play
+  // doesn't stall.
+  return selectGroupFrom(queue)
 }
 
 /**
  * Fills every open (unlocked, empty) court from the waiting queue —
- * prioritizing fewest games played, then longest wait.
+ * prioritizing fewest games played, then longest wait, then skill match.
  */
 function generateMatches(players, courts) {
   const queue = priorityQueue(players)
@@ -268,6 +317,7 @@ function Button({ variant = 'ghost', size = 'md', icon, children, ...props }) {
         cursor: 'pointer',
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '8px',
         transition: 'background 0.15s ease, opacity 0.15s ease',
         whiteSpace: 'nowrap',
@@ -314,14 +364,16 @@ function Modal({ title, onClose, children, width = 420 }) {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, background: 'rgba(7,29,39,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px',
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
+        className="qm-modal"
         style={{
           background: '#fff', borderRadius: '10px', width: '100%', maxWidth: `${width}px`,
           padding: '24px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+          maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
@@ -400,22 +452,29 @@ function QueueManager() {
   const byId = useMemo(() => Object.fromEntries(players.map(p => [p.id, p])), [players])
 
   // ---- actions -----------------------------------------------------------
-  const addPlayer = (name, skill) => {
-    if (!name.trim()) return
+  // Adds one or many players at once. `entries` is an array of
+  // { name, skill }. Any entry with no skill (or an unrecognized one)
+  // automatically defaults to "Beginner".
+  const addPlayers = (entries) => {
+    const valid = (entries || []).filter(e => e.name && e.name.trim())
+    if (valid.length === 0) return
     commit((ps) => {
-      ps.push({
-        id: uid(),
-        name: name.trim(),
-        skill: skill || '',
-        gamesPlayed: 0,
-        timesRested: 0,
-        status: 'waiting',
-        joinedAt: Date.now(),
-        fixedPairId: null,
-        lastPartnerId: null,
-        partnerHistory: [],
-        courtId: null,
-      })
+      for (const e of valid) {
+        const skill = SKILL_LEVELS.includes(e.skill) ? e.skill : DEFAULT_SKILL
+        ps.push({
+          id: uid(),
+          name: e.name.trim(),
+          skill,
+          gamesPlayed: 0,
+          timesRested: 0,
+          status: 'waiting',
+          joinedAt: Date.now(),
+          fixedPairId: null,
+          lastPartnerId: null,
+          partnerHistory: [],
+          courtId: null,
+        })
+      }
       return { players: ps }
     })
     setShowAddModal(false)
@@ -633,33 +692,55 @@ function QueueManager() {
         .qm-btn:focus-visible { outline: 2px solid ${COLORS.citron}; outline-offset: 2px; }
         .qm-grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
         .qm-courts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .qm-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+
         @media (max-width: 1000px) {
           .qm-grid { grid-template-columns: 1fr !important; }
           .qm-courts { grid-template-columns: 1fr !important; }
         }
+
         @media (max-width: 700px) {
           .qm-header-stats { flex-wrap: wrap; }
         }
-        .qm-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+
+        /* --- Mobile tightening --- */
+        @media (max-width: 640px) {
+          .qm-header-wrap { padding: 24px 16px !important; }
+          .qm-body-wrap { padding: 20px 16px 40px !important; }
+          .qm-header-top { flex-direction: column; align-items: stretch !important; gap: 14px !important; }
+          .qm-header-actions { width: 100%; }
+          .qm-header-actions .qm-btn { flex: 1; }
+          .qm-header-stats { display: grid !important; grid-template-columns: 1fr 1fr; gap: 14px 10px; row-gap: 16px; margin-top: 24px !important; }
+          .qm-header-stats > div { border-right: none !important; padding-right: 0 !important; margin-right: 0 !important; }
+          .qm-courts-header { flex-direction: column; align-items: stretch !important; }
+          .qm-courts-actions { width: 100%; display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
+          .qm-courts-actions .qm-btn { width: 100%; }
+        }
+
+        @media (max-width: 420px) {
+          .qm-header-stats { grid-template-columns: 1fr 1fr; }
+          .qm-courts-actions { grid-template-columns: 1fr; }
+          .qm-modal { padding: 18px !important; }
+        }
       `}</style>
 
       <Navbar />
 
       {/* ================= HEADER ================= */}
-      <div style={{ background: COLORS.navy, padding: '40px 32px' }}>
+      <div className="qm-header-wrap" style={{ background: COLORS.navy, padding: '40px 32px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+          <div className="qm-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
             <div>
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', letterSpacing: '0.14em', textTransform: 'uppercase', color: COLORS.citron, margin: '0 0 8px' }}>
                 Open Play Session
               </p>
-              <h1 style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 'clamp(32px, 4vw, 44px)', color: COLORS.chalk, margin: 0, textTransform: 'uppercase', lineHeight: 1 }}>
+              <h1 style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 'clamp(28px, 8vw, 44px)', color: COLORS.chalk, margin: 0, textTransform: 'uppercase', lineHeight: 1 }}>
                 Queue Manager
               </h1>
             </div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div className="qm-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <Button className="qm-btn" variant="outline" size="lg" icon={<FaUserPlus size={13} />} onClick={() => setShowAddModal(true)}>
-                Add Player
+                Add Players
               </Button>
               <Button className="qm-btn" variant="primary" size="lg" icon={<FaSyncAlt size={13} />} onClick={endRound} disabled={!canEndRound}>
                 End Round
@@ -684,7 +765,7 @@ function QueueManager() {
       </div>
 
       {/* ================= BODY ================= */}
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '28px 32px 60px' }}>
+      <div className="qm-body-wrap" style={{ maxWidth: '1280px', margin: '0 auto', padding: '28px 32px 60px' }}>
         <div className="qm-grid">
           {/* ---------- LEFT: WAITING QUEUE ---------- */}
           <div>
@@ -759,11 +840,11 @@ function QueueManager() {
 
           {/* ---------- CENTER: COURTS ---------- */}
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+            <div className="qm-courts-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
               <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: 0, color: COLORS.ink }}>
                 Active Courts
               </h2>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="qm-courts-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaRandom size={11} />} onClick={randomizeOpenCourts}>
                   Randomize Open Courts
                 </Button>
@@ -802,8 +883,8 @@ function QueueManager() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
                   <thead>
                     <tr style={{ background: COLORS.chalk }}>
-                      {['Player', 'Games Played', 'Times Rested', 'Status', 'Fixed Pair'].map(h => (
-                        <th key={h} style={{ textAlign: 'left', padding: '10px 18px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: COLORS.inkMute, fontWeight: 600 }}>
+                      {['Player', 'Skill', 'Games Played', 'Times Rested', 'Status', 'Fixed Pair'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', padding: '10px 18px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: COLORS.inkMute, fontWeight: 600, whiteSpace: 'nowrap' }}>
                           {h}
                         </th>
                       ))}
@@ -811,14 +892,15 @@ function QueueManager() {
                   </thead>
                   <tbody>
                     {players.length === 0 && (
-                      <tr><td colSpan={5} style={{ padding: '20px 18px', color: COLORS.inkMute, textAlign: 'center' }}>No players yet.</td></tr>
+                      <tr><td colSpan={6} style={{ padding: '20px 18px', color: COLORS.inkMute, textAlign: 'center' }}>No players yet.</td></tr>
                     )}
                     {players
                       .slice()
                       .sort((a, b) => a.name.localeCompare(b.name))
                       .map(p => (
                         <tr key={p.id} style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>
-                          <td style={{ padding: '10px 18px', fontWeight: 600, color: COLORS.ink }}>{p.name}</td>
+                          <td style={{ padding: '10px 18px', fontWeight: 600, color: COLORS.ink, whiteSpace: 'nowrap' }}>{p.name}</td>
+                          <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>{p.skill || DEFAULT_SKILL}</td>
                           <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace" }}>{p.gamesPlayed}</td>
                           <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace" }}>{p.timesRested}</td>
                           <td style={{ padding: '10px 18px' }}><StatusPill status={p.status} /></td>
@@ -836,7 +918,7 @@ function QueueManager() {
       </div>
 
       {showAddModal && (
-        <AddPlayerModal onClose={() => setShowAddModal(false)} onAdd={addPlayer} />
+        <AddPlayerModal onClose={() => setShowAddModal(false)} onAdd={addPlayers} />
       )}
 
       {replaceTarget && (
@@ -874,11 +956,9 @@ function QueueRow({ player, position, pairMode, isPairSelected, onSelectForPair,
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 600, fontSize: '14px', color: COLORS.ink }}>{player.name}</span>
-          {player.skill && (
-            <span style={{ fontSize: '10.5px', color: COLORS.inkMute, border: '1px solid #D5DAD1', borderRadius: '999px', padding: '1px 7px' }}>
-              {player.skill}
-            </span>
-          )}
+          <span style={{ fontSize: '10.5px', color: COLORS.inkMute, border: '1px solid #D5DAD1', borderRadius: '999px', padding: '1px 7px' }}>
+            {player.skill || DEFAULT_SKILL}
+          </span>
           {partnerName && (
             <span style={{ fontSize: '10.5px', color: COLORS.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <FaLink size={9} /> {partnerName}
@@ -1037,24 +1117,45 @@ function TeamBlock({ label, ids, byId, onRemove, onReplace }) {
 // Modals
 // ---------------------------------------------------------------------------
 function AddPlayerModal({ onClose, onAdd }) {
-  const [name, setName] = useState('')
-  const [skill, setSkill] = useState('')
+  const [namesText, setNamesText] = useState('')
+  const [skill, setSkill] = useState(DEFAULT_SKILL)
+
+  const entries = useMemo(() => parseBulkInput(namesText, skill), [namesText, skill])
+  const validCount = entries.filter(e => e.name.trim()).length
 
   return (
-    <Modal title="Add Player" onClose={onClose}>
-      <form onSubmit={e => { e.preventDefault(); onAdd(name, skill) }}>
-        <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '6px' }}>Name</label>
-        <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="Player name" style={{ ...inputStyle, marginBottom: '16px' }} />
+    <Modal title="Add Players" onClose={onClose} width={460}>
+      <form onSubmit={e => { e.preventDefault(); onAdd(entries) }}>
+        <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '6px' }}>
+          Player names
+        </label>
+        <p style={{ fontSize: '11.5px', color: COLORS.inkMute, margin: '0 0 8px' }}>
+          One player per line. Add a skill per line too, like "Jane Smith, Intermediate" — otherwise the default below is used.
+        </p>
+        <textarea
+          autoFocus
+          rows={6}
+          value={namesText}
+          onChange={e => setNamesText(e.target.value)}
+          placeholder={'Jane Smith\nJohn Doe, Intermediate\nAlex Rivera'}
+          style={{ ...inputStyle, resize: 'vertical', marginBottom: '16px', lineHeight: 1.5 }}
+        />
 
-        <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '6px' }}>Skill level (optional)</label>
-        <select value={skill} onChange={e => setSkill(e.target.value)} style={{ ...inputStyle, marginBottom: '22px' }}>
-          <option value="">—</option>
+        <label style={{ fontSize: '12.5px', fontWeight: 600, color: COLORS.inkMute, display: 'block', marginBottom: '6px' }}>
+          Default skill level
+        </label>
+        <select value={skill} onChange={e => setSkill(e.target.value)} style={{ ...inputStyle, marginBottom: '6px' }}>
           {SKILL_LEVELS.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        <p style={{ fontSize: '11.5px', color: COLORS.inkMute, margin: '0 0 20px' }}>
+          Applied to any name above that doesn't already specify a skill.
+        </p>
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
           <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!name.trim()}>Add to Queue</Button>
+          <Button type="submit" variant="primary" disabled={validCount === 0}>
+            Add {validCount > 0 ? `${validCount} Player${validCount > 1 ? 's' : ''}` : 'Players'}
+          </Button>
         </div>
       </form>
     </Modal>
