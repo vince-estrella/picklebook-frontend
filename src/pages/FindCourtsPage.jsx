@@ -1,8 +1,68 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Star } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
+
+// Slot length shown in the "Next Available Slots" row. Matches how the
+// design mocks spaced them out (04:00, 05:30, 07:00 => 90 min apart).
+const SLOT_MINUTES = 90
+// How many upcoming slots (available or not) to show per card.
+const SLOTS_TO_SHOW = 3
+
+function timeStrToMinutes(t) {
+  if (!t) return null
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+
+function minutesToLabel(mins) {
+  const h24 = Math.floor(mins / 60) % 24
+  const m = mins % 60
+  const period = h24 >= 12 ? 'PM' : 'AM'
+  let h12 = h24 % 12
+  if (h12 === 0) h12 = 12
+  return `${h12}:${String(m).padStart(2, '0')} ${period}`
+}
+
+// Picks the right open/close pair for today's day of week. Note: this uses
+// the browser's local clock, same simplification the rest of the booking
+// flow doesn't have to worry about since the backend anchors to Asia/Manila
+// for its own comparisons — fine as long as users are booking from PH time.
+function getTodayHours(court) {
+  const day = new Date().getDay() // 0 = Sunday, 6 = Saturday
+  if (day === 0) return { open: court.sunOpen, close: court.sunClose }
+  if (day === 6) return { open: court.satOpen, close: court.satClose }
+  return { open: court.monFriOpen, close: court.monFriClose }
+}
+
+// Builds today's slot grid for a court and marks each slot available/booked
+// based on that court's existing (non-cancelled) bookings for today.
+function computeTodaySlots(court, bookingsToday) {
+  const { open, close } = getTodayHours(court)
+  const openMin = timeStrToMinutes(open)
+  const closeMin = timeStrToMinutes(close)
+  if (openMin == null || closeMin == null || openMin >= closeMin) return []
+
+  const now = new Date()
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+
+  const slots = []
+  for (let start = openMin; start + SLOT_MINUTES <= closeMin; start += SLOT_MINUTES) {
+    if (start < nowMin) continue // already passed today
+
+    const end = start + SLOT_MINUTES
+    const overlapsBooking = bookingsToday.some(b => {
+      const bStart = timeStrToMinutes(b.startTime)
+      const bEnd = timeStrToMinutes(b.endTime)
+      return bStart != null && bEnd != null && start < bEnd && end > bStart
+    })
+
+    slots.push({ label: minutesToLabel(start), available: !overlapsBooking })
+  }
+
+  return slots.slice(0, SLOTS_TO_SHOW)
+}
 
 // ── Design tokens — shared with HomePage / QueueManager / CourtDetailPage ──
 const COLORS = {
@@ -44,6 +104,7 @@ function FindCourtsPage() {
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [viewMode, setViewMode] = useState('Grid')
+  const [bookingsByCourtId, setBookingsByCourtId] = useState({})
 
   useEffect(() => {
     api.get('/courts')
@@ -53,6 +114,23 @@ function FindCourtsPage() {
         setCourts([])
       })
   }, [])
+
+  useEffect(() => {
+    if (courts.length === 0) return
+    const todayStr = new Date().toISOString().slice(0, 10)
+
+    Promise.all(
+      courts.map(c =>
+        api.get(`/bookings/court/${c.id}`, { params: { date: todayStr } })
+          .then(res => ({ id: c.id, bookings: Array.isArray(res.data) ? res.data : [] }))
+          .catch(() => ({ id: c.id, bookings: [] }))
+      )
+    ).then(results => {
+      const map = {}
+      results.forEach(r => { map[r.id] = r.bookings })
+      setBookingsByCourtId(map)
+    })
+  }, [courts])
 
   const filteredCourts = courts.filter(court => {
     const text = search.toLowerCase()
@@ -217,12 +295,6 @@ function FindCourtsPage() {
                     </div>
                   )}
 
-                  {/* Rating */}
-                  <div className="absolute top-4 left-4 rounded-full px-3 py-1 flex items-center gap-1 shadow" style={{ background: 'rgba(255,255,255,0.92)' }}>
-                    <Star size={13} className="fill-amber-500 text-amber-500" />
-                    <span className="text-sm font-bold" style={{ color: COLORS.ink }}>4.9</span>
-                  </div>
-
                   {/* Type */}
                   <div
                     className="absolute top-4 right-4 px-3 py-1 rounded-full font-bold text-xs"
@@ -252,17 +324,40 @@ function FindCourtsPage() {
                     <h3 className="text-xs font-bold uppercase tracking-wide mb-3" style={{ color: COLORS.inkMute }}>
                       Next Available Slots
                     </h3>
-                    <div className="flex gap-2 flex-wrap">
-                      <button className="fc-slot-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150" style={{ border: `1px solid ${COLORS.teal}`, color: COLORS.teal }}>
-                        04:00 PM
-                      </button>
-                      <button className="fc-slot-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150" style={{ border: `1px solid ${COLORS.teal}`, color: COLORS.teal }}>
-                        05:30 PM
-                      </button>
-                      <button disabled className="px-4 py-2 rounded-lg text-sm line-through cursor-not-allowed" style={{ background: COLORS.chalkDim, color: '#93A29C' }}>
-                        07:00 PM
-                      </button>
-                    </div>
+                    {(() => {
+                      const slots = computeTodaySlots(court, bookingsByCourtId[court.id] || [])
+                      if (slots.length === 0) {
+                        return (
+                          <p className="text-sm" style={{ color: COLORS.inkMute }}>
+                            No slots available today.
+                          </p>
+                        )
+                      }
+                      return (
+                        <div className="flex gap-2 flex-wrap">
+                          {slots.map(slot => (
+                            slot.available ? (
+                              <button
+                                key={slot.label}
+                                className="fc-slot-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150"
+                                style={{ border: `1px solid ${COLORS.teal}`, color: COLORS.teal }}
+                              >
+                                {slot.label}
+                              </button>
+                            ) : (
+                              <button
+                                key={slot.label}
+                                disabled
+                                className="px-4 py-2 rounded-lg text-sm line-through cursor-not-allowed"
+                                style={{ background: COLORS.chalkDim, color: '#93A29C' }}
+                              >
+                                {slot.label}
+                              </button>
+                            )
+                          ))}
+                        </div>
+                      )
+                    })()}
                   </div>
 
                   {/* Book button */}
