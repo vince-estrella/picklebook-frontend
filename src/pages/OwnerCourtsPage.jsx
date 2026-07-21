@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Pencil, Eye } from 'lucide-react'
+import { Search, Plus, Pencil, Eye, Trash2 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
 
@@ -9,6 +9,8 @@ function OwnerCourtsPage() {
   const [courts, setCourts] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
+  const [deleteError, setDeleteError] = useState(null)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -25,6 +27,27 @@ function OwnerCourtsPage() {
         navigate('/owner/login')
       })
   }, [])
+
+  const handleDelete = async (court) => {
+    const confirmed = window.confirm(
+      `Delete "${court.name}"? This can't be undone.`
+    )
+    if (!confirmed) return
+
+    setDeleteError(null)
+    setDeletingId(court.id)
+    try {
+      await api.delete(`/courts/${court.id}`)
+      setCourts((prev) => prev.filter((c) => c.id !== court.id))
+    } catch (err) {
+      const message =
+        err?.response?.data ||
+        'Failed to delete court. Please try again.'
+      setDeleteError(typeof message === 'string' ? message : 'Failed to delete court. Please try again.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   const filteredCourts = courts.filter((c) => {
     const q = search.trim().toLowerCase()
@@ -77,6 +100,12 @@ function OwnerCourtsPage() {
           <p className="text-slate-500 text-sm">
             {filteredCourts.length} of {courts.length} court{courts.length === 1 ? '' : 's'}
           </p>
+
+          {deleteError && (
+            <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {deleteError}
+            </div>
+          )}
 
           <div className="bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden">
             <table className="w-full border-collapse">
@@ -142,6 +171,14 @@ function OwnerCourtsPage() {
                             title="View Bookings"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(court)}
+                            disabled={deletingId === court.id}
+                            className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-red-700 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Delete Court"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>

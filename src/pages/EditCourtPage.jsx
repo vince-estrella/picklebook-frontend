@@ -10,7 +10,10 @@ function EditCourtPage() {
   const [form, setForm] = useState(null)
   const [amenities, setAmenities] = useState([])
   const [images, setImages] = useState([])
+  const [existingImages, setExistingImages] = useState([])
+  const [deletingImageId, setDeletingImageId] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [deletingCourt, setDeletingCourt] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState(null)
 
@@ -38,12 +41,47 @@ function EditCourtPage() {
         paymentMethod: court.paymentMethod || 'PayAtVenue',
       })
       setAmenities(court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : [])
+      setExistingImages(court.images || [])
       setFetching(false)
     }).catch(() => navigate('/owner/dashboard'))
   }, [id])
 
   const toggleAmenity = (a) => {
     setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
+  }
+
+  const handleDeleteImage = async (imageId) => {
+    const confirmed = window.confirm('Delete this photo? This can\'t be undone.')
+    if (!confirmed) return
+
+    setDeletingImageId(imageId)
+    try {
+      await api.delete(`/courts/${id}/images/${imageId}`)
+      setExistingImages(prev => prev.filter(img => img.id !== imageId))
+    } catch {
+      setError('Failed to delete image. Please try again.')
+    } finally {
+      setDeletingImageId(null)
+    }
+  }
+
+  const handleDeleteCourt = async () => {
+    const confirmed = window.confirm(
+      `Delete "${form?.name || 'this court'}"? This can't be undone. Courts with pending or confirmed bookings can't be deleted.`
+    )
+    if (!confirmed) return
+
+    setDeletingCourt(true)
+    setError(null)
+    try {
+      await api.delete(`/courts/${id}`)
+      navigate('/owner/courts')
+    } catch (err) {
+      const message = err?.response?.data
+      setError(typeof message === 'string' ? message : 'Failed to delete court. Please try again.')
+    } finally {
+      setDeletingCourt(false)
+    }
   }
 
   const handleSubmit = async () => {
@@ -110,6 +148,34 @@ function EditCourtPage() {
 
         <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>Edit Court</h1>
         <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '32px' }}>Update your court details.</p>
+
+        {/* Existing Images */}
+        {existingImages.length > 0 && (
+          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+            <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '16px' }}>Current Photos</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+              {existingImages.map(img => (
+                <div key={img.id} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', background: '#f3f4f6' }}>
+                  <img src={img.imageUrl} alt="Court" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteImage(img.id)}
+                    disabled={deletingImageId === img.id}
+                    title="Delete photo"
+                    style={{
+                      position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px',
+                      borderRadius: '999px', border: 'none', background: 'rgba(0,0,0,0.6)', color: 'white',
+                      fontSize: '14px', lineHeight: '24px', textAlign: 'center', cursor: deletingImageId === img.id ? 'not-allowed' : 'pointer',
+                      opacity: deletingImageId === img.id ? 0.5 : 1,
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Image Upload */}
         <div style={{ border: '2px dashed #e5e7eb', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '24px', background: 'white' }}>
@@ -264,15 +330,21 @@ function EditCourtPage() {
 
         {error && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button onClick={() => navigate('/owner/dashboard')}
-            style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151' }}>
-            Cancel
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
+          <button onClick={handleDeleteCourt} disabled={deletingCourt}
+            style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: '1px solid #fca5a5', background: 'white', cursor: deletingCourt ? 'not-allowed' : 'pointer', color: '#dc2626', opacity: deletingCourt ? 0.5 : 1 }}>
+            {deletingCourt ? 'Deleting...' : 'Delete Court'}
           </button>
-          <button onClick={handleSubmit} disabled={loading}
-            style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: 'none', background: '#16a34a', color: 'white', cursor: loading ? 'not-allowed' : 'pointer' }}>
-            {loading ? 'Saving...' : 'Save Changes'}
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button onClick={() => navigate('/owner/dashboard')}
+              style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151' }}>
+              Cancel
+            </button>
+            <button onClick={handleSubmit} disabled={loading}
+              style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: 'none', background: '#16a34a', color: 'white', cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
