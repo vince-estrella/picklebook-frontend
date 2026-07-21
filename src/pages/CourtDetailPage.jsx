@@ -158,7 +158,11 @@ const [selectedDate, setSelectedDate] = useState(getDefaultDate())
     (!closeTime || closeTime === '00:00:00') ? '22:00' : closeTime
   )
 
-const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) === slot.start)
+const isBooked = (slot) => bookedSlots.some(b => {
+  const bStart = b.startTime.substring(0, 5)
+  const bEnd = b.endTime.substring(0, 5)
+  return slot.start >= bStart && slot.start < bEnd
+})
   const isPast = (slot) => {
   const now = new Date()
   const todayStr = getLocalDateString(now)

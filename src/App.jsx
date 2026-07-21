@@ -22,10 +22,15 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import OwnerReportsPage from './pages/OwnerReportsPage'
 import OwnerSettingsPage from './pages/OwnerSettingsPage'
-
+import PlayerLoginPage from './pages/PlayerLoginPage'
+import PlayerRegisterPage from './pages/PlayerRegisterPage'
+import MyBookingsPage from './pages/MyBookingsPage'
 function App() {
   return (
     <Routes>
+      <Route path="/my-bookings" element={<MyBookingsPage />} />
+      <Route path="/login" element={<PlayerLoginPage />} />
+      <Route path="/register" element={<PlayerRegisterPage />} />
       <Route path="/owner/courts/:id/edit" element={<EditCourtPage />} />
       <Route path="/owner/register" element={<OwnerRegisterPage />} />
       <Route path="/owner/courts/add" element={<AddCourtPage />} />
