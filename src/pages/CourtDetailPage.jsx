@@ -65,6 +65,21 @@ function formatCurrency(n) {
   return `₱${Number(n).toFixed(2)}`
 }
 
+// Converts a "HH:MM" 24-hour string into a compact 12-hour label, e.g.
+// "11:00" -> "11AM", "13:00" -> "1PM", "13:30" -> "1:30PM".
+function formatHour12(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number)
+  const period = h >= 12 ? 'PM' : 'AM'
+  let hour12 = h % 12
+  if (hour12 === 0) hour12 = 12
+  return m ? `${hour12}:${String(m).padStart(2, '0')}${period}` : `${hour12}${period}`
+}
+
+// Builds the "11AM – 12PM" style label shown on each bookable slot button.
+function formatSlotRangeLabel(slot) {
+  return `${formatHour12(slot.start)} – ${formatHour12(slot.end)}`
+}
+
 function generateSlots(open, close) {
   const slots = []
   let [startH] = open.split(':').map(Number)
@@ -144,13 +159,6 @@ const [selectedDate, setSelectedDate] = useState(getDefaultDate())
   )
 
 const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) === slot.start)
-  const toggleSlot = (slot) => {
-    setSelectedSlots(prev => {
-      const exists = prev.some(s => s.start === slot.start)
-      if (exists) return prev.filter(s => s.start !== slot.start)
-      return [...prev, slot].sort((a, b) => a.start.localeCompare(b.start))
-    })
-  }
   const isPast = (slot) => {
   const now = new Date()
   const todayStr = getLocalDateString(now)
@@ -158,6 +166,42 @@ const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) ===
   const slotHour = parseInt(slot.start.split(':')[0])
   return slotHour <= now.getHours()
 }
+  const isSlotDisabled = (slot) => isBooked(slot) || isPast(slot)
+
+  // Click-to-click range selection: the first click sets the anchor/start,
+  // the next click extends the selection to that slot (inclusive of every
+  // hour in between), the same way a calendar date-range picker works.
+  // Clicking the sole selected slot again clears the selection, and clicking
+  // a fresh slot after a range is already selected starts a brand new range.
+  const toggleSlot = (slot) => {
+    setSelectedSlots(prev => {
+      if (prev.length === 1 && prev[0].start === slot.start) {
+        return []
+      }
+      if (prev.length === 0) {
+        return [slot]
+      }
+
+      const anchor = prev[0]
+      const anchorIdx = slots.findIndex(s => s.start === anchor.start)
+      const clickedIdx = slots.findIndex(s => s.start === slot.start)
+      if (anchorIdx === -1 || clickedIdx === -1 || anchorIdx === clickedIdx) {
+        return [slot]
+      }
+
+      const from = Math.min(anchorIdx, clickedIdx)
+      const to = Math.max(anchorIdx, clickedIdx)
+      const range = slots.slice(from, to + 1)
+
+      // If any hour inside the requested range is booked or in the past,
+      // treat this click as the start of a fresh selection instead.
+      if (range.some(isSlotDisabled)) {
+        return [slot]
+      }
+
+      return range.sort((a, b) => a.start.localeCompare(b.start))
+    })
+  }
 
   const amenitiesList = court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : []
   const images = court.images && court.images.length > 0 ? court.images : []
@@ -393,7 +437,9 @@ const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) ===
               ].map(([label, open, close]) => (
                 <div key={label} className="py-2 flex justify-between" style={{ borderBottom: `1px solid ${COLORS.chalkDim}` }}>
                   <span className="text-base" style={{ color: COLORS.inkMute }}>{label}</span>
-                  <span className="text-base font-medium" style={{ ...monoStyle, color: COLORS.ink }}>{open} – {close}</span>
+                  <span className="text-base font-medium" style={{ ...monoStyle, color: COLORS.ink }}>
+                    {open ? formatHour12(open.substring(0, 5)) : open} – {close ? formatHour12(close.substring(0, 5)) : close}
+                  </span>
                 </div>
               ))}
             </div>
@@ -446,6 +492,7 @@ const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) ===
 
             <div className="flex flex-col gap-2">
               <span className="text-xs font-medium uppercase tracking-wide" style={{ color: COLORS.ink }}>Available times</span>
+              <p className="text-xs" style={{ color: COLORS.inkMute }}>Tap a start time, then tap an end time to select the whole range.</p>
               <div className="grid grid-cols-2 gap-2">
                 {slots.map(slot => {
                   const booked = isBooked(slot)
@@ -457,7 +504,7 @@ const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) ===
                       key={slot.start}
                       disabled={disabled}
                       onClick={() => toggleSlot(slot)}
-                      className="cd-slot px-3 py-2 rounded-lg text-sm text-center transition-all duration-150"
+                      className="cd-slot px-2 py-2 rounded-lg text-xs text-center leading-tight transition-all duration-150"
                       style={
                         disabled
                           ? { background: COLORS.chalkDim, color: '#93A29C', textDecoration: 'line-through', cursor: 'not-allowed', outline: `1px solid ${COLORS.chalkDim}` }
@@ -466,7 +513,7 @@ const isBooked = (slot) => bookedSlots.some(b => b.startTime.substring(0, 5) ===
                             : { outline: `1px solid ${COLORS.chalkDim}`, color: COLORS.ink }
                       }
                     >
-                      {slot.start}
+                      {formatSlotRangeLabel(slot)}
                     </button>
                   )
                 })}

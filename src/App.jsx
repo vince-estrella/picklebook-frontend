@@ -20,6 +20,8 @@ import QueueManager from './pages/QueueManager'
 import ContactSupportPage from './pages/ContactSupportPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
+import OwnerReportsPage from './pages/OwnerReportsPage'
+import OwnerSettingsPage from './pages/OwnerSettingsPage'
 
 function App() {
   return (
@@ -41,6 +43,8 @@ function App() {
       <Route path="/owner/bookings" element={<BookingsListPage />} />
       <Route path="/owner/support" element={<OwnerSupportPage />} />
       <Route path="/owner/messages" element={<OwnerMessagesPage />} />
+      <Route path="/owner/reports" element={<OwnerReportsPage />} />
+      <Route path="/owner/settings" element={<OwnerSettingsPage />} />
       <Route path="/queue" element={<QueueManager />} />
       <Route path="/contact" element={<ContactSupportPage />} />
        <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

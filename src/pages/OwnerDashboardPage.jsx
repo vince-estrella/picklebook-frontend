@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -12,10 +12,26 @@ import {
   Users,
   MapPin,
   CalendarCheck,
+  Check,
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
 import ChatHeadWidget from '../components/ChatHeadWidget'
+
+// Turns a timestamp into a short "5m ago" / "3h ago" / "2d ago" style label.
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return ''
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  if (diffMin < 1) return 'Just now'
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHr = Math.floor(diffMin / 60)
+  if (diffHr < 24) return `${diffHr}h ago`
+  const diffDay = Math.floor(diffHr / 24)
+  return `${diffDay}d ago`
+}
 
 function OwnerDashboardPage() {
   const navigate = useNavigate()
@@ -28,6 +44,11 @@ function OwnerDashboardPage() {
     weeklyRevenue: [],
   })
   const [loading, setLoading] = useState(true)
+
+  const [notifications, setNotifications] = useState([])
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [notificationsLoading, setNotificationsLoading] = useState(true)
+  const notificationsRef = useRef(null)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -46,7 +67,35 @@ function OwnerDashboardPage() {
     }).catch(() => {
       navigate('/owner/login')
     })
+
+    api.get('/owner/notifications')
+      .then(res => setNotifications(res.data))
+      .catch(() => setNotifications([]))
+      .finally(() => setNotificationsLoading(false))
   }, [])
+
+  // Close the notification dropdown when clicking anywhere outside it.
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
+        setShowNotifications(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  const markNotificationRead = (notifId) => {
+    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n))
+    api.patch(`/owner/notifications/${notifId}/read`).catch(() => {})
+  }
+
+  const markAllNotificationsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    api.post('/owner/notifications/read-all').catch(() => {})
+  }
 
   if (loading) {
     return (
@@ -78,10 +127,59 @@ function OwnerDashboardPage() {
               />
             </div>
             <div className="flex items-center gap-4">
-              <button className="relative px-2 pt-2 pb-3.5 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-gray-200">
-                <Bell className="w-4 h-5 text-neutral-700" />
-                <span className="w-2 h-2 bg-red-500 rounded-full absolute top-1.5 right-1.5" />
-              </button>
+              <div className="relative" ref={notificationsRef}>
+                <button
+                  onClick={() => setShowNotifications(s => !s)}
+                  className="relative px-2 pt-2 pb-3.5 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-gray-200"
+                >
+                  <Bell className="w-4 h-5 text-neutral-700" />
+                  {unreadCount > 0 && (
+                    <span className="w-2 h-2 bg-red-500 rounded-full absolute top-1.5 right-1.5" />
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden z-20">
+                    <div className="px-4 py-3 border-b border-stone-200 flex justify-between items-center">
+                      <span className="text-slate-800 text-sm font-semibold">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button
+                          onClick={markAllNotificationsRead}
+                          className="flex items-center gap-1 text-green-800 text-xs font-medium transition-colors duration-150 hover:text-green-900"
+                        >
+                          <Check className="w-3 h-3" /> Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto">
+                      {notificationsLoading ? (
+                        <p className="px-4 py-6 text-center text-slate-500 text-sm">Loading...</p>
+                      ) : notifications.length === 0 ? (
+                        <p className="px-4 py-6 text-center text-slate-500 text-sm">You're all caught up.</p>
+                      ) : (
+                        notifications.map(n => (
+                          <button
+                            key={n.id}
+                            onClick={() => markNotificationRead(n.id)}
+                            className="w-full text-left px-4 py-3 border-b border-stone-100 last:border-b-0 flex items-start gap-3 transition-colors duration-150 hover:bg-gray-100"
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read ? 'bg-transparent' : 'bg-green-700'}`}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm leading-5 ${n.read ? 'text-slate-500 font-normal' : 'text-slate-800 font-medium'}`}>
+                                {n.message}
+                              </p>
+                              <p className="text-slate-400 text-xs mt-0.5">{formatRelativeTime(n.createdAt)}</p>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => navigate('/owner/courts/add')}
                 className="px-6 py-2 bg-green-800 hover:bg-green-900 active:scale-95 rounded-full flex items-center gap-2 text-white text-base font-normal leading-6 transition-all duration-150"
@@ -335,9 +433,24 @@ function OwnerDashboardPage() {
           <div className="px-12 flex justify-between items-center flex-wrap gap-4">
             <span className="text-green-300 text-2xl font-bold leading-8">PickleBook Admin</span>
             <div className="flex gap-6">
-              <span className="text-zinc-200 text-base font-normal leading-6 cursor-pointer transition-colors duration-150 hover:text-white">Privacy Policy</span>
-              <span className="text-zinc-200 text-base font-normal leading-6 cursor-pointer transition-colors duration-150 hover:text-white">Terms of Service</span>
-              <span className="text-zinc-200 text-base font-normal leading-6 cursor-pointer transition-colors duration-150 hover:text-white">Help Center</span>
+              <span
+                onClick={() => navigate('/privacy-policy')}
+                className="text-zinc-200 text-base font-normal leading-6 cursor-pointer transition-colors duration-150 hover:text-white"
+              >
+                Privacy Policy
+              </span>
+              <span
+                onClick={() => navigate('/terms')}
+                className="text-zinc-200 text-base font-normal leading-6 cursor-pointer transition-colors duration-150 hover:text-white"
+              >
+                Terms of Service
+              </span>
+              <span
+                onClick={() => navigate('/contact')}
+                className="text-zinc-200 text-base font-normal leading-6 cursor-pointer transition-colors duration-150 hover:text-white"
+              >
+                Help Center
+              </span>
             </div>
             <span className="text-zinc-200 text-sm font-normal leading-5">© 2026 PickleBook. All rights reserved.</span>
           </div>

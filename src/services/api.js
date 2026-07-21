@@ -1,9 +1,9 @@
 import axios from 'axios'
-
+ 
 const api = axios.create({
-  baseURL: 'https://picklebook-api-production.up.railway.app/api',
+  baseURL: '/api',
 })
-
+ 
 // Automatically attach JWT token to every request if it exists
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -12,5 +12,6 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
-
+ 
 export default api
+ 
