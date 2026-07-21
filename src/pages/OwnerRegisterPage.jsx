@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Phone, Lock, ArrowRight, CalendarCheck, Users as UsersIcon } from 'lucide-react'
+import { User, Mail, Phone, Lock, ArrowRight, ArrowLeft, BarChart3, Building2 } from 'lucide-react'
 import api from '../services/api'
 
 function OwnerRegisterPage() {
@@ -50,6 +50,16 @@ function OwnerRegisterPage() {
       <div className="w-96 h-96 -left-20 top-0 absolute bg-green-300/20 rounded-full blur-[50px] pointer-events-none" />
       <div className="w-[512px] h-[506px] right-0 bottom-0 absolute bg-rose-200/10 rounded-full blur-3xl pointer-events-none" />
 
+      {/* Back to home */}
+      <button
+        type="button"
+        onClick={() => navigate('/')}
+        className="absolute left-8 top-8 z-10 flex items-center gap-1.5 text-neutral-600 text-sm font-semibold hover:text-green-800 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Home
+      </button>
+
       {/* Right-side promo panel (desktop only) */}
       <div className="hidden lg:flex w-96 h-full absolute right-0 top-0 flex-col justify-center overflow-hidden">
         <div className="flex-1 relative flex flex-col justify-center">
@@ -58,23 +68,23 @@ function OwnerRegisterPage() {
           <div className="absolute left-12 bottom-24 pr-8 flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 bg-green-300 rounded-sm" />
-              <span className="text-white text-sm font-semibold uppercase leading-4 tracking-wider">Member Perks</span>
+              <span className="text-white text-sm font-semibold uppercase leading-4 tracking-wider">Owner Perks</span>
             </div>
             <p className="text-white text-3xl font-bold leading-10">
-              Book courts in seconds, find local clubs, and track your game.
+              Manage your courts, track bookings, and grow your facility.
             </p>
             <div className="pt-2 flex flex-col gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full backdrop-blur-md flex justify-center items-center shrink-0">
-                  <CalendarCheck className="w-4 h-5 text-white" />
+                  <Building2 className="w-4 h-5 text-white" />
                 </div>
-                <span className="text-white text-base font-normal leading-6">Instant Court Reservations</span>
+                <span className="text-white text-base font-normal leading-6">Manage Your Facilities</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 rounded-full backdrop-blur-md flex justify-center items-center shrink-0">
-                  <UsersIcon className="w-6 h-3 text-white" />
+                  <BarChart3 className="w-4 h-5 text-white" />
                 </div>
-                <span className="text-white text-base font-normal leading-6">Connect with Players</span>
+                <span className="text-white text-base font-normal leading-6">Track Performance</span>
               </div>
             </div>
           </div>
@@ -86,11 +96,28 @@ function OwnerRegisterPage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-center text-green-800 text-3xl font-bold leading-10">PickleBook</h1>
           <p className="text-center text-neutral-700 text-base font-normal leading-6">
-            Join the fastest-growing pickleball community
+            Set up your facility on PickleBook
           </p>
         </div>
 
         <div className="px-8 pt-10 pb-8 bg-white/95 rounded-xl shadow-[0px_4px_20px_0px_rgba(15,23,42,0.05)] outline outline-1 outline-offset-[-1px] outline-slate-200 backdrop-blur-md flex flex-col gap-6">
+
+          {/* Player / Owner role pill */}
+          <div className="p-1 bg-gray-100 rounded-lg flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              className="flex-1 px-4 py-2 text-center text-neutral-700 text-sm font-semibold leading-4 tracking-wide rounded-md"
+            >
+              Player
+            </button>
+            <button
+              type="button"
+              className="flex-1 px-4 py-2 bg-white rounded-md shadow-sm text-center text-green-800 text-sm font-bold leading-4 tracking-wide"
+            >
+              Owner
+            </button>
+          </div>
 
           {/* Log In / Register tabs */}
           <div className="p-1 bg-gray-100 rounded-lg flex justify-between items-center">
@@ -146,7 +173,7 @@ function OwnerRegisterPage() {
                   <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
-                    placeholder="rheyalbert@example.com"
+                    placeholder="name@facility.com"
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                     className="pl-10 pr-4 py-3 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 text-base font-normal text-slate-800 placeholder:text-gray-400 focus:outline-green-700 focus:outline-2"
