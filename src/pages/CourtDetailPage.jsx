@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Star, MapPin, Share2, Heart, ShieldCheck, KeyRound, Droplets,
-  Sun, Fan, Wifi, ParkingCircle, ShowerHead, Flag, ChevronRight, Check
+  Sun, Fan, Wifi, ParkingCircle, ShowerHead, Flag, ChevronRight, Check, MessageCircle
 } from 'lucide-react'
 import CourtMap from '../components/CourtMap'
+import MessageOwnerModal from '../components/MessageOwnerModal'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 
@@ -128,6 +129,7 @@ const [selectedDate, setSelectedDate] = useState(getDefaultDate())
   const [showFullDescription, setShowFullDescription] = useState(false)
   const [saved, setSaved] = useState(false)
   const [showAllReviews, setShowAllReviews] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
 
   useEffect(() => {
     api.get(`/courts/${id}`).then(res => setCourt(res.data))
@@ -364,8 +366,17 @@ const isBooked = (slot) => bookedSlots.some(b => {
                 {court.type || 'Outdoor venue'} • Max {court.maxPlayers || 4} players • {court.surfaceType || 'Standard surface'}
               </p>
             </div>
-            <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-sm" style={{ outline: `1px solid ${COLORS.chalkDim}`, background: COLORS.chalkDim, color: COLORS.inkMute }}>
-              {hostAvatarUrl ? <img src={hostAvatarUrl} className="w-full h-full object-cover" alt={hostName} /> : hostName.charAt(0).toUpperCase()}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowMessageModal(true)}
+                className="cd-icon-btn flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-150"
+                style={{ outline: `1px solid ${COLORS.chalkDim}`, color: COLORS.ink }}
+              >
+                <MessageCircle size={16} /> Message Owner
+              </button>
+              <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-sm shrink-0" style={{ outline: `1px solid ${COLORS.chalkDim}`, background: COLORS.chalkDim, color: COLORS.inkMute }}>
+                {hostAvatarUrl ? <img src={hostAvatarUrl} className="w-full h-full object-cover" alt={hostName} /> : hostName.charAt(0).toUpperCase()}
+              </div>
             </div>
           </div>
 
@@ -601,6 +612,14 @@ const isBooked = (slot) => bookedSlots.some(b => {
           )}
         </div>
       </div>
+
+      {showMessageModal && (
+        <MessageOwnerModal
+          courtId={court.id}
+          ownerName={hostName}
+          onClose={() => setShowMessageModal(false)}
+        />
+      )}
     </div>
   )
 }

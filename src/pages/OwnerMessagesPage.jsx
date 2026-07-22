@@ -35,7 +35,7 @@ function OwnerMessagesPage() {
   const scrollRef = useRef(null)
 
   const loadConversations = useCallback(() => {
-    api.get('/support/conversations', { params: { category: 'owner' } })
+    api.get('/messages/owner/conversations')
       .then(res => {
         const data = res.data || []
         setConversations(data)
@@ -53,12 +53,12 @@ function OwnerMessagesPage() {
     if (!activeId) return
     setMessages([])
     setThreadError(false)
-    api.get(`/support/conversations/${activeId}/messages`)
+    api.get(`/messages/owner/conversations/${activeId}/messages`)
       .then(res => setMessages(res.data || []))
       .catch(() => setThreadError(true))
 
     setConversations(prev => prev.map(c => c.id === activeId ? { ...c, unreadCount: 0 } : c))
-    api.patch(`/support/conversations/${activeId}/read`).catch(() => {})
+    api.patch(`/messages/owner/conversations/${activeId}/read`).catch(() => {})
   }, [activeId])
 
   useEffect(() => {
@@ -77,7 +77,7 @@ function OwnerMessagesPage() {
     setMessages(prev => [...prev, optimistic])
     setDraft('')
     setSending(true)
-    api.post(`/support/conversations/${activeId}/messages`, { text })
+    api.post(`/messages/owner/conversations/${activeId}/messages`, { text })
       .then(res => {
         setMessages(prev => prev.map(m => m.id === optimistic.id ? (res.data || { ...optimistic, pending: false }) : m))
         setConversations(prev => prev.map(c => c.id === activeId ? { ...c, lastMessage: text, lastMessageAt: new Date().toISOString() } : c))
@@ -140,8 +140,12 @@ function OwnerMessagesPage() {
                       c.id === activeId ? 'bg-green-50' : 'hover:bg-gray-100'
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-green-100 text-green-800 flex items-center justify-center text-sm font-semibold shrink-0">
-                      {initials(c.customerName)}
+                    <div className="w-10 h-10 rounded-full bg-green-100 text-green-800 flex items-center justify-center text-sm font-semibold shrink-0 overflow-hidden">
+                      {c.customerAvatarUrl ? (
+                        <img src={c.customerAvatarUrl} alt={c.customerName} className="w-full h-full object-cover" />
+                      ) : (
+                        initials(c.customerName)
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
@@ -150,7 +154,9 @@ function OwnerMessagesPage() {
                         </p>
                         <span className="text-[11px] text-slate-400 shrink-0">{formatTimestamp(c.lastMessageAt)}</span>
                       </div>
-                      <p className={`text-xs truncate ${c.unreadCount ? 'text-slate-700' : 'text-slate-500'}`}>{c.lastMessage || 'No messages yet'}</p>
+                      <p className={`text-xs truncate ${c.unreadCount ? 'text-slate-700' : 'text-slate-500'}`}>
+                        {c.courtName ? `${c.courtName} · ` : ''}{c.lastMessage || 'No messages yet'}
+                      </p>
                     </div>
                     {c.unreadCount > 0 && (
                       <span className="w-5 h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
@@ -172,12 +178,16 @@ function OwnerMessagesPage() {
               ) : (
                 <>
                   <div className="px-6 py-4 border-b border-stone-200 flex items-center gap-3 shrink-0">
-                    <div className="w-9 h-9 rounded-full bg-green-100 text-green-800 flex items-center justify-center text-sm font-semibold">
-                      {initials(active.customerName)}
+                    <div className="w-9 h-9 rounded-full bg-green-100 text-green-800 flex items-center justify-center text-sm font-semibold overflow-hidden">
+                      {active.customerAvatarUrl ? (
+                        <img src={active.customerAvatarUrl} alt={active.customerName} className="w-full h-full object-cover" />
+                      ) : (
+                        initials(active.customerName)
+                      )}
                     </div>
                     <div>
                       <p className="text-slate-800 text-sm font-semibold leading-4">{active.customerName}</p>
-                      <p className="text-slate-500 text-xs">Court owner inbox</p>
+                      <p className="text-slate-500 text-xs">{active.courtName ? `About ${active.courtName}` : 'Court owner inbox'}</p>
                     </div>
                   </div>
 
