@@ -238,33 +238,6 @@ function OwnerRegisterPage() {
               {!loading && <ArrowRight className="w-4 h-4" />}
             </button>
           </div>
-
-          <div className="pt-8 border-t border-stone-300 flex flex-col gap-4">
-            <p className="text-center text-neutral-700 text-sm font-normal leading-5">Or register with</p>
-            <div className="flex justify-start items-start gap-4">
-              <button
-                type="button"
-                className="flex-1 px-6 py-3 rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex justify-center items-center gap-2 hover:bg-gray-50"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 20 20">
-                  <path fill="#4285F4" d="M19.6 10.23c0-.68-.06-1.36-.17-2H10v3.79h5.4a4.6 4.6 0 0 1-2 3.02v2.5h3.23c1.9-1.75 2.97-4.33 2.97-7.31z"/>
-                  <path fill="#34A853" d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.22-2.5c-.9.6-2.05.96-3.4.96-2.6 0-4.8-1.76-5.6-4.12H1.1v2.6A10 10 0 0 0 10 20z"/>
-                  <path fill="#FBBC05" d="M4.4 11.9a6 6 0 0 1 0-3.8v-2.6H1.1a10 10 0 0 0 0 9l3.3-2.6z"/>
-                  <path fill="#EA4335" d="M10 3.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.6 9.6 0 0 0 10 0 10 10 0 0 0 1.1 5.5l3.3 2.6C5.2 5.74 7.4 3.98 10 3.98z"/>
-                </svg>
-                <span className="text-center text-slate-800 text-sm font-semibold leading-4 tracking-wide">Google</span>
-              </button>
-              <button
-                type="button"
-                className="flex-1 px-6 py-3 rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex justify-center items-center gap-2 hover:bg-gray-50"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 20 20">
-                  <path fill="#1877F2" d="M20 10a10 10 0 1 0-11.56 9.88v-6.99H5.9V10h2.54V7.8c0-2.5 1.5-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V10h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 20 10z"/>
-                </svg>
-                <span className="text-center text-slate-800 text-sm font-semibold leading-4 tracking-wide">Facebook</span>
-              </button>
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-neutral-700 text-sm font-normal leading-5">

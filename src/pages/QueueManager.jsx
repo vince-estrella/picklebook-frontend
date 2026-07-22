@@ -17,8 +17,19 @@ import {
   FaBed,
   FaPlay,
   FaFlagCheckered,
+  FaQrcode,
+  FaCopy,
+  FaCheck,
+  FaWifi,
 } from 'react-icons/fa'
 import Navbar from '../components/Navbar'
+import {
+  makeRoomCode,
+  publishState,
+  subscribeJoinRequests,
+  clearJoinRequest,
+  closeRoom,
+} from '../lib/roomSync'
 
 // ---------------------------------------------------------------------------
 // Design tokens — shared with HomePage so this page reads as the same
@@ -41,9 +52,13 @@ const FONT_IMPORT = `
 `
 
 const STORAGE_KEY = 'picklebook_queue_state_v1'
+const ROOM_KEY = 'picklebook_room_code_v1'
 const COURT_COUNT = 3
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Pro']
 const DEFAULT_SKILL = 'Beginner'
+
+// Set this to wherever JoinQueuePage is mounted in your router, e.g. '/join'
+const JOIN_PATH = '/join'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -411,10 +426,19 @@ function QueueManager() {
   const [pairFirst, setPairFirst] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [replaceTarget, setReplaceTarget] = useState(null) // { courtId, team, slotIndex, outgoingId }
+  const [roomCode, setRoomCode] = useState(() => sessionStorage.getItem(ROOM_KEY) || null)
+  const [showJoinPanel, setShowJoinPanel] = useState(false)
+  const [joinedCount, setJoinedCount] = useState(0)
   const history = useRef([])
   const [, forceRender] = useState(0)
 
   useEffect(() => { saveState(players, courts) }, [players, courts])
+
+  // Publish every local change up to Firebase so joined players see it live.
+  useEffect(() => {
+    if (!roomCode) return
+    publishState(roomCode, players, courts).catch(() => {})
+  }, [roomCode, players, courts])
 
   const commit = useCallback((mutator) => {
     history.current.push({ players: clone(players), courts: clone(courts) })
@@ -453,8 +477,10 @@ function QueueManager() {
 
   // ---- actions -----------------------------------------------------------
   // Adds one or many players at once. `entries` is an array of
-  // { name, skill }. Any entry with no skill (or an unrecognized one)
-  // automatically defaults to "Beginner".
+  // { name, skill, joinRequestId? }. Any entry with no skill (or an
+  // unrecognized one) automatically defaults to "Beginner". joinRequestId,
+  // when present, tags the created player so a joined participant's device
+  // can recognize itself in the live queue.
   const addPlayers = (entries) => {
     const valid = (entries || []).filter(e => e.name && e.name.trim())
     if (valid.length === 0) return
@@ -473,11 +499,50 @@ function QueueManager() {
           lastPartnerId: null,
           partnerHistory: [],
           courtId: null,
+          joinRequestId: e.joinRequestId || null,
         })
       }
       return { players: ps }
     })
     setShowAddModal(false)
+  }
+
+  // ---- live "Join Game" session -------------------------------------------
+  // While a room is open, players' devices push join requests to Firebase;
+  // the host (this page) is the only writer of the canonical queue, so it
+  // picks up each request, adds the player normally, then clears the
+  // request. This keeps the queue's matchmaking logic single-threaded even
+  // though many phones are pointed at it.
+  useEffect(() => {
+    if (!roomCode) return
+    const unsubscribe = subscribeJoinRequests(roomCode, (requests) => {
+      if (requests.length === 0) return
+      const known = new Set(players.map(p => p.joinRequestId).filter(Boolean))
+      const fresh = requests.filter(r => !known.has(r.id))
+      if (fresh.length > 0) {
+        addPlayers(fresh.map(r => ({ name: r.name, skill: r.skill, joinRequestId: r.id })))
+      }
+      requests.forEach(r => clearJoinRequest(roomCode, r.id).catch(() => {}))
+      setJoinedCount(c => c + fresh.length)
+    })
+    return unsubscribe
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomCode])
+
+  const startJoinSession = () => {
+    const code = makeRoomCode()
+    sessionStorage.setItem(ROOM_KEY, code)
+    setRoomCode(code)
+    setJoinedCount(0)
+    setShowJoinPanel(true)
+  }
+
+  const endJoinSession = () => {
+    if (!roomCode) return
+    closeRoom(roomCode).catch(() => {})
+    sessionStorage.removeItem(ROOM_KEY)
+    setRoomCode(null)
+    setShowJoinPanel(false)
   }
 
   const removePlayer = (id) => {
@@ -739,6 +804,15 @@ function QueueManager() {
               </h1>
             </div>
             <div className="qm-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {roomCode ? (
+                <Button className="qm-btn" variant="outline" size="lg" icon={<FaWifi size={13} color={COLORS.citron} />} onClick={() => setShowJoinPanel(true)}>
+                  Join Session Live
+                </Button>
+              ) : (
+                <Button className="qm-btn" variant="outline" size="lg" icon={<FaQrcode size={13} />} onClick={startJoinSession}>
+                  Join Game
+                </Button>
+              )}
               <Button className="qm-btn" variant="outline" size="lg" icon={<FaUserPlus size={13} />} onClick={() => setShowAddModal(true)}>
                 Add Players
               </Button>
@@ -929,7 +1003,72 @@ function QueueManager() {
           onConfirm={confirmReplace}
         />
       )}
+
+      {showJoinPanel && roomCode && (
+        <JoinGamePanel
+          code={roomCode}
+          joinedCount={joinedCount}
+          onClose={() => setShowJoinPanel(false)}
+          onEndSession={endJoinSession}
+        />
+      )}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Join Game panel (host side) — shows the code/link players use to join
+// ---------------------------------------------------------------------------
+function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
+  const [copied, setCopied] = useState(false)
+  const link = `${typeof window !== 'undefined' ? window.location.origin : ''}${JOIN_PATH}?code=${code}`
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1800)
+    } catch {
+      // clipboard blocked — user can still select & copy the text manually
+    }
+  }
+
+  return (
+    <Modal title="Join Game" onClose={onClose} width={420}>
+      <p style={{ fontSize: '13.5px', color: COLORS.inkMute, margin: '0 0 20px' }}>
+        Players scan or type this code on their own phone to add themselves to the queue and follow it live.
+      </p>
+
+      <div style={{
+        background: COLORS.navy, borderRadius: '10px', padding: '24px', textAlign: 'center', marginBottom: '16px',
+      }}>
+        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: COLORS.citron, margin: '0 0 10px' }}>
+          Room Code
+        </p>
+        <p style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: '46px', letterSpacing: '0.12em', color: COLORS.chalk, margin: 0 }}>
+          {code}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <input readOnly value={link} style={{ ...inputStyle, fontSize: '12.5px', color: COLORS.inkMute }} onFocus={e => e.target.select()} />
+        <Button variant="outlineDark" size="md" onClick={copyLink} icon={copied ? <FaCheck size={12} /> : <FaCopy size={12} />}>
+          {copied ? 'Copied' : 'Copy'}
+        </Button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#E7EEE9', borderRadius: '6px', marginBottom: '20px' }}>
+        <FaWifi size={13} color={COLORS.teal} />
+        <span style={{ fontSize: '13px', color: COLORS.teal, fontWeight: 600 }}>
+          {joinedCount} player{joinedCount === 1 ? '' : 's'} joined this way so far
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between' }}>
+        <Button variant="danger" size="sm" onClick={onEndSession}>End Join Session</Button>
+        <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
+      </div>
+    </Modal>
   )
 }
 
@@ -962,6 +1101,11 @@ function QueueRow({ player, position, pairMode, isPairSelected, onSelectForPair,
           {partnerName && (
             <span style={{ fontSize: '10.5px', color: COLORS.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <FaLink size={9} /> {partnerName}
+            </span>
+          )}
+          {player.joinRequestId && (
+            <span title="Joined via Join Game" style={{ fontSize: '10.5px', color: COLORS.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <FaWifi size={9} />
             </span>
           )}
         </div>
