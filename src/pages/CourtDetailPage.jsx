@@ -215,8 +215,8 @@ const isBooked = (slot) => bookedSlots.some(b => {
   const longitude = court.longitude ?? 123.8854
 
   // ── Fields the backend doesn't provide yet — sensible, clearly-marked fallbacks ──
-  const hostName = court.hostName || 'the PickleBook team'
-  const hostAvatarUrl = court.hostAvatarUrl || null
+const hostName = court.ownerName || 'the PickleBook team'
+const hostAvatarUrl = court.ownerProfileImageUrl || null
   const rating = typeof court.rating === 'number' ? court.rating : null
   const reviewCount = typeof court.reviewCount === 'number' ? court.reviewCount : 0
   const reviews = Array.isArray(court.reviews) ? court.reviews : []
