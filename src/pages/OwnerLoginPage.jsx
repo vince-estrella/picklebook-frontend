@@ -34,15 +34,15 @@ function OwnerLoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full px-12 py-16 relative bg-slate-50 flex flex-col justify-center items-center overflow-hidden">
+    <div className="min-h-screen w-full px-4 py-10 sm:px-8 sm:py-16 lg:px-12 relative bg-slate-50 flex flex-col justify-center items-center overflow-x-hidden">
 
-      <div className="w-96 h-96 -left-20 top-0 absolute bg-green-300/20 rounded-full blur-[50px] pointer-events-none" />
-      <div className="w-[512px] h-[506px] right-0 bottom-0 absolute bg-rose-200/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="w-64 h-64 sm:w-96 sm:h-96 -left-20 top-0 absolute bg-green-300/20 rounded-full blur-[50px] pointer-events-none" />
+      <div className="w-72 h-72 sm:w-[512px] sm:h-[506px] right-0 bottom-0 absolute bg-rose-200/10 rounded-full blur-3xl pointer-events-none" />
 
       <button
         type="button"
         onClick={() => navigate('/')}
-        className="absolute left-8 top-8 z-10 flex items-center gap-1.5 text-neutral-600 text-sm font-semibold hover:text-green-800 transition-colors"
+        className="absolute left-4 top-4 sm:left-8 sm:top-8 z-10 flex items-center gap-1.5 text-neutral-600 text-sm font-semibold hover:text-green-800 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Home
@@ -78,28 +78,28 @@ function OwnerLoginPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-[672px] flex flex-col gap-6 relative z-10">
+      <div className="w-full max-w-[672px] flex flex-col gap-5 sm:gap-6 relative z-10 mt-10 sm:mt-0">
         <div className="flex flex-col gap-1">
-          <h1 className="text-center text-green-800 text-3xl font-bold leading-10">PickleBook</h1>
-          <p className="text-center text-neutral-700 text-base font-normal leading-6">
+          <h1 className="text-center text-green-800 text-2xl sm:text-3xl font-bold leading-9 sm:leading-10">PickleBook</h1>
+          <p className="text-center text-neutral-700 text-sm sm:text-base font-normal leading-6 px-2">
             Welcome back — log in to manage your courts
           </p>
         </div>
 
-        <div className="px-8 pt-10 pb-8 bg-white/95 rounded-xl shadow-[0px_4px_20px_0px_rgba(15,23,42,0.05)] outline outline-1 outline-offset-[-1px] outline-slate-200 backdrop-blur-md flex flex-col gap-6">
+        <div className="px-5 pt-8 pb-6 sm:px-8 sm:pt-10 sm:pb-8 bg-white/95 rounded-xl shadow-[0px_4px_20px_0px_rgba(15,23,42,0.05)] outline outline-1 outline-offset-[-1px] outline-slate-200 backdrop-blur-md flex flex-col gap-6">
 
           {/* Player / Owner role pill */}
           <div className="p-1 bg-gray-100 rounded-lg flex justify-between items-center">
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="flex-1 px-4 py-2 text-center text-neutral-700 text-sm font-semibold leading-4 tracking-wide rounded-md"
+              className="flex-1 px-3 sm:px-4 py-2 text-center text-neutral-700 text-sm font-semibold leading-4 tracking-wide rounded-md"
             >
               Player
             </button>
             <button
               type="button"
-              className="flex-1 px-4 py-2 bg-white rounded-md shadow-sm text-center text-green-800 text-sm font-bold leading-4 tracking-wide"
+              className="flex-1 px-3 sm:px-4 py-2 bg-white rounded-md shadow-sm text-center text-green-800 text-sm font-bold leading-4 tracking-wide"
             >
               Owner
             </button>
@@ -109,14 +109,14 @@ function OwnerLoginPage() {
           <div className="p-1 bg-gray-100 rounded-lg flex justify-between items-center">
             <button
               type="button"
-              className="flex-1 px-4 py-2 bg-white rounded-md shadow-sm text-center text-green-800 text-sm font-bold leading-4 tracking-wide"
+              className="flex-1 px-3 sm:px-4 py-2 bg-white rounded-md shadow-sm text-center text-green-800 text-sm font-bold leading-4 tracking-wide"
             >
               Log In
             </button>
             <button
               type="button"
               onClick={() => navigate('/owner/register')}
-              className="flex-1 px-4 py-2 text-center text-neutral-700 text-sm font-semibold leading-4 tracking-wide rounded-md"
+              className="flex-1 px-3 sm:px-4 py-2 text-center text-neutral-700 text-sm font-semibold leading-4 tracking-wide rounded-md"
             >
               Register
             </button>
