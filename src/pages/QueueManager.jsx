@@ -22,6 +22,7 @@ import {
   FaCheck,
   FaWifi,
 } from 'react-icons/fa'
+import { QRCodeSVG } from 'qrcode.react'
 import Navbar from '../components/Navbar'
 import {
   makeRoomCode,
@@ -1045,8 +1046,14 @@ function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
         <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: COLORS.citron, margin: '0 0 10px' }}>
           Room Code
         </p>
-        <p style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: '46px', letterSpacing: '0.12em', color: COLORS.chalk, margin: 0 }}>
+        <p style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: '46px', letterSpacing: '0.12em', color: COLORS.chalk, margin: '0 0 18px' }}>
           {code}
+        </p>
+        <div style={{ background: COLORS.chalk, borderRadius: '8px', padding: '14px', display: 'inline-block' }}>
+          <QRCodeSVG value={link} size={168} bgColor={COLORS.chalk} fgColor={COLORS.navyDeep} level="M" />
+        </div>
+        <p style={{ fontSize: '11.5px', color: '#A9B7B2', margin: '10px 0 0' }}>
+          Scan to join instantly
         </p>
       </div>
 

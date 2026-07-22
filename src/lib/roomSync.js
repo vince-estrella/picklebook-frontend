@@ -3,19 +3,8 @@
 // Syncs an open-play queue session across devices using Firebase Realtime
 // Database. No custom server — just a free Firebase project.
 //
-// ONE-TIME SETUP (~5 minutes):
-//   1. Go to https://console.firebase.google.com -> "Add project" (free,
-//      no credit card needed).
-//   2. In the project: Build -> Realtime Database -> Create Database.
-//      Pick any region, start in "test mode" (or paste the rules below).
-//   3. Project settings (gear icon) -> General -> "Your apps" -> Web (</>)
-//      -> register an app -> copy the `firebaseConfig` object it shows you.
-//   4. Paste that config into FIREBASE_CONFIG below.
-//   5. npm install firebase
-//
-// SECURITY RULES (Realtime Database -> Rules tab). Test mode expires after
-// 30 days — replace it with this so it keeps working and stays scoped to
-// just the queue rooms:
+// SECURITY RULES (Realtime Database -> Rules tab). Make sure these are
+// published so reads/writes to a room actually work:
 //   {
 //     "rules": {
 //       "rooms": {
@@ -37,10 +26,10 @@ import {
 } from 'firebase/database'
 
 const FIREBASE_CONFIG = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  databaseURL: 'https://YOUR_PROJECT-default-rtdb.firebaseio.com',
-  projectId: 'YOUR_PROJECT',
+  apiKey: 'AIzaSyA0RvDvB3uU3KRaeU0I7c43ZM9SwMw-FYQ',
+  authDomain: 'picklebook-659d3.firebaseapp.com',
+  databaseURL: 'https://picklebook-659d3-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId: 'picklebook-659d3',
 }
 
 function app() {
