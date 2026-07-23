@@ -3,11 +3,7 @@ import { Search, Send, AlertCircle, MessagesSquare, Menu } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
 
-// See ChatHeadWidget.jsx for the expected backend contract this page relies on:
-//   GET   /support/conversations?category=owner
-//   GET   /support/conversations/:id/messages
-//   POST  /support/conversations/:id/messages
-//   PATCH /support/conversations/:id/read
+// Owner/player messaging uses the backend /messages owner conversation endpoints.
 
 function initials(name = '') {
   return name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0].toUpperCase()).join('') || '?'

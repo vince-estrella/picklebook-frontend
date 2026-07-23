@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Camera, Loader2, Check, AlertCircle, Menu } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
-import ChatHeadWidget from '../components/ChatHeadWidget'
 
 // Small inline status line shown under each form once it's submitted.
 function StatusMessage({ status }) {
@@ -332,8 +331,6 @@ function OwnerSettingsPage() {
           </section>
         </main>
       </div>
-
-      <ChatHeadWidget />
     </div>
   )
 }

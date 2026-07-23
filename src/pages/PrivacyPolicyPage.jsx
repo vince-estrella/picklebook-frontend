@@ -48,7 +48,7 @@ const SECTIONS = [
     list: [
       'To create and manage your account and bookings.',
       'To process payments and send booking confirmations.',
-      'To route your support messages to the right team (Admin/Developer or Court Owner) and let them reply.',
+      'To respond to app issues you report through Facebook.',
       'To operate features like the Queue Manager, including tracking games played and match history.',
       'To improve the app, troubleshoot issues, and develop new features.',
       'To send important updates about your bookings or account — we don\u2019t send marketing emails unless you opt in.',
@@ -113,7 +113,7 @@ const SECTIONS = [
     id: 'contact',
     title: '11. Contact Us',
     body: [
-      'If you have questions about this Privacy Policy or how your information is handled, reach out at support@picklebook.app, call 0976 316 9029, or use the chat on our Contact Support page.',
+      'If you have questions about this Privacy Policy or how your information is handled, use the Contact Support page and message one of the listed team members on Facebook.',
     ],
   },
 ]

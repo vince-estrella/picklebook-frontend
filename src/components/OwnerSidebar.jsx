@@ -4,7 +4,6 @@ import {
   MapPin,
   CalendarCheck,
   Users,
-  CreditCard,
   FileText,
   MessageCircle,
   LifeBuoy,
@@ -17,7 +16,6 @@ export const NAV_ITEMS = [
   { label: 'Manage Courts', path: '/owner/courts', icon: MapPin },
   { label: 'Bookings', path: '/owner/bookings', icon: CalendarCheck },
   { label: 'Users', path: '/owner/users', icon: Users },
-  { label: 'Payments', path: '/owner/payments', icon: CreditCard },
   { label: 'Reports', path: '/owner/reports', icon: FileText },
   { label: 'Messages', path: '/owner/messages', icon: MessageCircle },
 ]

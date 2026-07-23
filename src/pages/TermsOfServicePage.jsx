@@ -74,13 +74,13 @@ const SECTIONS = [
       'Use the app for any unlawful purpose or in violation of these Terms.',
       'Interfere with or disrupt the app, its servers, or other users\u2019 sessions.',
       'Attempt to gain unauthorized access to accounts, courts, or systems that aren\u2019t yours.',
-      'Harass, abuse, or send inappropriate content to other users, court owners, or our support team through the chat feature.',
+      'Harass, abuse, or send inappropriate content to other users, court owners, or our support team.',
       'Misrepresent your identity or impersonate someone else.',
     ],
   },
   {
     id: 'support-chat',
-    title: '8. Support Chat',
+    title: '8. Support',
     body: [
       'Messages sent through Contact Support (to Admin/Developer or a Court Owner) are used only to respond to your request and improve our support process. Please don\u2019t share sensitive information (like full payment card numbers) through chat.',
     ],
@@ -131,7 +131,7 @@ const SECTIONS = [
     id: 'contact',
     title: '15. Contact Us',
     body: [
-      'Questions about these Terms? Reach us at support@picklebook.app, call 0976 316 9029, or use the chat on our Contact Support page.',
+      'Questions about these Terms? Use the Contact Support page and message one of the listed team members on Facebook.',
     ],
   },
 ]

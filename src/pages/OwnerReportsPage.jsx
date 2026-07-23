@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
-import ChatHeadWidget from '../components/ChatHeadWidget'
 
 const RANGE_OPTIONS = [
   { value: 'all', label: 'All time' },
@@ -297,8 +296,6 @@ function OwnerReportsPage() {
           </div>
         </main>
       </div>
-
-      <ChatHeadWidget />
     </div>
   )
 }
