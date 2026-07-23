@@ -49,7 +49,12 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
         userId: player?.id ?? null,
       })
 
-      navigate('/booking/confirmed', { state: { booking: res.data, court } })
+
+      if (res.data.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl
+      } else {
+        navigate('/booking/confirmed', { state: { booking: res.data.booking, court } })
+      }
     } catch (err) {
       if (err.response?.data === 'This time slot is already booked.') {
        navigate('/booking/unavailable', { 
