@@ -145,26 +145,26 @@ function OwnerSettingsPage() {
   const displayedAvatar = avatarPreview || profile.profileImageUrl
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex">
+    <div className="w-full min-h-screen bg-slate-50 flex flex-col lg:flex-row">
       <OwnerSidebar />
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
 
         {/* Topbar */}
-        <header className="px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10">
-          <h1 className="text-green-800 text-2xl font-bold leading-8">Account Settings</h1>
+        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10">
+          <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8">Account Settings</h1>
         </header>
 
-        <main className="p-12 max-w-3xl flex flex-col gap-8">
+        <main className="p-4 sm:p-6 lg:p-12 max-w-3xl flex flex-col gap-6 lg:gap-8">
 
           {/* Profile picture */}
-          <section className="p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">
+          <section className="p-4 sm:p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">
             <div>
               <h2 className="text-slate-800 text-lg font-semibold leading-7">Profile picture</h2>
               <p className="text-slate-500 text-sm font-normal leading-5">Shown to players across the courts you manage.</p>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-6 text-center sm:text-left">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -188,8 +188,8 @@ function OwnerSettingsPage() {
                 className="hidden"
               />
 
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
+              <div className="flex flex-col gap-2 items-center sm:items-start w-full sm:w-auto">
+                <div className="flex flex-col xs:flex-row sm:flex-row gap-2 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -201,7 +201,7 @@ function OwnerSettingsPage() {
                     type="button"
                     disabled={!avatarFile || avatarStatus === 'saving'}
                     onClick={handleAvatarSave}
-                    className="px-4 py-2 rounded-lg bg-green-800 text-white text-sm font-medium transition-colors duration-150 hover:bg-green-900 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-4 py-2 rounded-lg bg-green-800 text-white text-sm font-medium transition-colors duration-150 hover:bg-green-900 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {avatarStatus === 'saving' && <Loader2 className="w-4 h-4 animate-spin" />}
                     Save photo
@@ -213,15 +213,15 @@ function OwnerSettingsPage() {
           </section>
 
           {/* Email */}
-          <section className="p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">
+          <section className="p-4 sm:p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">
             <div>
               <h2 className="text-slate-800 text-lg font-semibold leading-7">Email address</h2>
-              <p className="text-slate-500 text-sm font-normal leading-5">
+              <p className="text-slate-500 text-sm font-normal leading-5 break-words">
                 Currently <span className="font-medium text-slate-700">{profile.email || 'not set'}</span>
               </p>
             </div>
 
-            <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4 max-w-sm">
+            <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4 w-full sm:max-w-sm">
               <div className="flex flex-col gap-1">
                 <label className="text-slate-500 text-xs font-medium uppercase tracking-wide">New email</label>
                 <input
@@ -243,7 +243,7 @@ function OwnerSettingsPage() {
                 />
               </div>
               {emailError && <p className="text-red-600 text-sm font-medium">{emailError}</p>}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col xs:flex-row sm:flex-row items-start sm:items-center gap-3">
                 <button
                   type="submit"
                   disabled={emailStatus === 'saving'}
@@ -258,13 +258,13 @@ function OwnerSettingsPage() {
           </section>
 
           {/* Password */}
-          <section className="p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">
+          <section className="p-4 sm:p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">
             <div>
               <h2 className="text-slate-800 text-lg font-semibold leading-7">Password</h2>
               <p className="text-slate-500 text-sm font-normal leading-5">Use at least 8 characters.</p>
             </div>
 
-            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4 max-w-sm">
+            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4 w-full sm:max-w-sm">
               <div className="flex flex-col gap-1">
                 <label className="text-slate-500 text-xs font-medium uppercase tracking-wide">Current password</label>
                 <input
@@ -293,7 +293,7 @@ function OwnerSettingsPage() {
                 />
               </div>
               {passwordError && <p className="text-red-600 text-sm font-medium">{passwordError}</p>}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col xs:flex-row sm:flex-row items-start sm:items-center gap-3">
                 <button
                   type="submit"
                   disabled={passwordStatus === 'saving'}
