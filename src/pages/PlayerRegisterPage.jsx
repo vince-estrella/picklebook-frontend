@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User, Mail, Phone, Lock, ArrowRight, ArrowLeft, CalendarCheck, Users as UsersIcon } from 'lucide-react'
 import api from '../services/api'
+import playerLoginHero from '../assets/player-login-hero.jpg'
 
 function PlayerRegisterPage() {
   const navigate = useNavigate()
@@ -63,7 +64,7 @@ function PlayerRegisterPage() {
       {/* Right-side promo panel (desktop only) */}
       <div className="hidden lg:flex w-96 h-full absolute right-0 top-0 flex-col justify-center overflow-hidden">
         <div className="flex-1 relative flex flex-col justify-center">
-          <img className="flex-1 w-full h-full object-cover" src="https://placehold.co/427x1013" alt="" />
+          <img className="flex-1 w-full h-full object-cover" src={playerLoginHero} alt="" />
           <div className="w-96 h-full absolute inset-0 bg-gradient-to-l from-green-800/0 to-green-800/20" />
           <div className="absolute left-12 bottom-24 pr-8 flex flex-col gap-2">
             <div className="flex items-center gap-2">

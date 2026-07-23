@@ -514,20 +514,40 @@ function QueueManager() {
   // picks up each request, adds the player normally, then clears the
   // request. This keeps the queue's matchmaking logic single-threaded even
   // though many phones are pointed at it.
+  //
+  // knownJoinIdsRef tracks which join requests have already been turned
+  // into players. It's a ref (not the `players` state) on purpose: the
+  // subscription callback below is set up once per room and its closure
+  // would otherwise capture a stale snapshot of `players`, so a second
+  // Firebase update arriving before React re-renders could see an
+  // already-added player as "unknown" again and re-process their request —
+  // which is what caused a newly-joining player to knock out one that was
+  // still connecting.
+  const knownJoinIdsRef = useRef(new Set())
+
+  // Keep the ref in sync with the canonical player list (e.g. on reload,
+  // where players — and their joinRequestId — come back from localStorage).
+  useEffect(() => {
+    const ids = new Set(players.map(p => p.joinRequestId).filter(Boolean))
+    knownJoinIdsRef.current = ids
+  }, [players])
+
   useEffect(() => {
     if (!roomCode) return
     const unsubscribe = subscribeJoinRequests(roomCode, (requests) => {
       if (requests.length === 0) return
-      const known = new Set(players.map(p => p.joinRequestId).filter(Boolean))
-      const fresh = requests.filter(r => !known.has(r.id))
+      const fresh = requests.filter(r => !knownJoinIdsRef.current.has(r.id))
       if (fresh.length > 0) {
+        // Mark these as known immediately (synchronously), before addPlayers
+        // triggers a re-render — closes the race where a second snapshot
+        // fires while the first is still in flight.
+        fresh.forEach(r => knownJoinIdsRef.current.add(r.id))
         addPlayers(fresh.map(r => ({ name: r.name, skill: r.skill, joinRequestId: r.id })))
       }
       requests.forEach(r => clearJoinRequest(roomCode, r.id).catch(() => {}))
       setJoinedCount(c => c + fresh.length)
     })
     return unsubscribe
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomCode])
 
   const startJoinSession = () => {
@@ -771,16 +791,31 @@ function QueueManager() {
 
         /* --- Mobile tightening --- */
         @media (max-width: 640px) {
-          .qm-header-wrap { padding: 24px 16px !important; }
-          .qm-body-wrap { padding: 20px 16px 40px !important; }
+          .qm-header-wrap { padding: 20px 16px !important; }
+          .qm-body-wrap { padding: 16px 12px 40px !important; }
           .qm-header-top { flex-direction: column; align-items: stretch !important; gap: 14px !important; }
           .qm-header-actions { width: 100%; }
-          .qm-header-actions .qm-btn { flex: 1; }
-          .qm-header-stats { display: grid !important; grid-template-columns: 1fr 1fr; gap: 14px 10px; row-gap: 16px; margin-top: 24px !important; }
+          .qm-header-actions .qm-btn { flex: 1 1 auto; }
+          .qm-header-actions .qm-primary-cta { flex-basis: 100%; order: 3; }
+          .qm-header-stats { display: grid !important; grid-template-columns: 1fr 1fr; gap: 14px 10px; row-gap: 16px; margin-top: 20px !important; }
           .qm-header-stats > div { border-right: none !important; padding-right: 0 !important; margin-right: 0 !important; }
           .qm-courts-header { flex-direction: column; align-items: stretch !important; }
           .qm-courts-actions { width: 100%; display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
           .qm-courts-actions .qm-btn { width: 100%; }
+          .qm-courts { gap: 12px !important; }
+
+          /* Prevent iOS Safari from zooming the page when a form field is focused */
+          input, select, textarea { font-size: 16px !important; }
+
+          /* Bigger, thumb-friendly tap targets everywhere on small screens */
+          .qm-btn { padding: 11px 14px !important; font-size: 13.5px !important; }
+          .qm-icon-btn { padding: 10px !important; }
+
+          /* Let the waiting list flow with page scroll instead of scrolling
+             inside its own box — avoids a scroll-within-scroll on phones */
+          .qm-queue-scroll { max-height: none !important; overflow: visible !important; }
+
+          .qm-court-card { min-height: 0 !important; padding: 14px !important; }
         }
 
         @media (max-width: 420px) {
@@ -817,7 +852,7 @@ function QueueManager() {
               <Button className="qm-btn" variant="outline" size="lg" icon={<FaUserPlus size={13} />} onClick={() => setShowAddModal(true)}>
                 Add Players
               </Button>
-              <Button className="qm-btn" variant="primary" size="lg" icon={<FaSyncAlt size={13} />} onClick={endRound} disabled={!canEndRound}>
+              <Button className="qm-btn qm-primary-cta" variant="primary" size="lg" icon={<FaSyncAlt size={13} />} onClick={endRound} disabled={!canEndRound}>
                 End Round
               </Button>
             </div>
@@ -873,7 +908,7 @@ function QueueManager() {
                 </button>
               </div>
 
-              <div style={{ maxHeight: '640px', overflowY: 'auto' }}>
+              <div className="qm-queue-scroll" style={{ maxHeight: '640px', overflowY: 'auto' }}>
                 {waitingPlayers.length === 0 && restingPlayers.length === 0 && (
                   <p style={{ padding: '24px 18px', fontSize: '13px', color: COLORS.inkMute, textAlign: 'center' }}>
                     No players waiting. Add players to get started.
@@ -1147,6 +1182,7 @@ function IconBtn({ children, onClick, title, danger }) {
   return (
     <button
       title={title}
+      className="qm-icon-btn"
       onClick={onClick}
       style={{
         background: 'none', border: 'none', cursor: 'pointer', padding: '6px',
@@ -1167,7 +1203,7 @@ function CourtCard({ court, byId, onLockToggle, onRemove, onReplace, onFinish })
   const hasPlayers = court.teamA.length > 0 || court.teamB.length > 0
   return (
     <div
-      className="qm-card"
+      className="qm-card qm-court-card"
       style={{
         background: hasPlayers ? COLORS.navy : '#fff',
         border: `1px solid ${hasPlayers ? COLORS.navy : COLORS.chalkDim}`,
@@ -1184,6 +1220,7 @@ function CourtCard({ court, byId, onLockToggle, onRemove, onReplace, onFinish })
         <div style={{ display: 'flex', gap: '2px' }}>
           <button
             title={court.locked ? 'Unlock court' : 'Lock court'}
+            className="qm-icon-btn"
             onClick={onLockToggle}
             style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: '5px',
@@ -1235,11 +1272,12 @@ function TeamBlock({ label, ids, byId, onRemove, onReplace }) {
         const p = byId[pid]
         if (!p) return null
         return (
-          <div key={pid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0' }}>
-            <span style={{ color: COLORS.chalk, fontSize: '13.5px', fontWeight: 600 }}>{p.name}</span>
-            <div style={{ display: 'flex', gap: '2px' }}>
+          <div key={pid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', gap: '8px' }}>
+            <span style={{ color: COLORS.chalk, fontSize: '13.5px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{p.name}</span>
+            <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
               <button
                 title="Replace player"
+                className="qm-icon-btn"
                 onClick={() => onReplace(pid)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A9B7B2', padding: '5px' }}
                 onMouseEnter={e => e.currentTarget.style.color = COLORS.citron}
@@ -1249,6 +1287,7 @@ function TeamBlock({ label, ids, byId, onRemove, onReplace }) {
               </button>
               <button
                 title="Remove from court"
+                className="qm-icon-btn"
                 onClick={() => onRemove(pid)}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A9B7B2', padding: '5px' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#E08E88'}

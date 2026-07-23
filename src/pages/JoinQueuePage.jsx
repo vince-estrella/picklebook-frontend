@@ -34,7 +34,11 @@ const inputStyle = {
   boxSizing: 'border-box',
 }
 
-function localStorageKey(code) {
+// sessionStorage (not localStorage) on purpose: it's scoped to this one tab,
+// so joining as a second "player" in another tab/window on the same device
+// can't overwrite the first player's saved identity. It still survives a
+// reload of *this* tab, which is all "remember me if I refresh" needs.
+function joinStorageKey(code) {
   return `picklebook_join_${code}`
 }
 
@@ -70,7 +74,7 @@ function JoinQueuePage() {
   const [codeError, setCodeError] = useState('')
 
   const [roomState, setRoomState] = useState(null) // { players, courts }
-  const [myRequestId, setMyRequestId] = useState(() => (code ? localStorage.getItem(localStorageKey(code)) : null))
+  const [myRequestId, setMyRequestId] = useState(() => (code ? sessionStorage.getItem(joinStorageKey(code)) : null))
   const [nameInput, setNameInput] = useState('')
   const [skillInput, setSkillInput] = useState(DEFAULT_SKILL)
   const [submitting, setSubmitting] = useState(false)
@@ -142,7 +146,7 @@ function JoinQueuePage() {
       const url = new URL(window.location.href)
       url.searchParams.set('code', clean)
       window.history.replaceState({}, '', url)
-      setMyRequestId(localStorage.getItem(localStorageKey(clean)))
+      setMyRequestId(sessionStorage.getItem(joinStorageKey(clean)))
     } catch {
       setCodeError('Something went wrong checking that code — try again.')
     }
@@ -155,7 +159,7 @@ function JoinQueuePage() {
     setSubmitting(true)
     try {
       const requestId = await submitJoinRequest(code, { name: nameInput.trim(), skill: skillInput })
-      localStorage.setItem(localStorageKey(code), requestId)
+      sessionStorage.setItem(joinStorageKey(code), requestId)
       setMyRequestId(requestId)
     } catch {
       setCodeError('Could not submit your name — check your connection and try again.')
