@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, Send, AlertCircle, MessagesSquare } from 'lucide-react'
+import { Search, Send, AlertCircle, MessagesSquare, Menu } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
 
@@ -32,6 +32,8 @@ function OwnerMessagesPage() {
   const [convError, setConvError] = useState(false)
   const [threadError, setThreadError] = useState(false)
   const [sending, setSending] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showMobileList, setShowMobileList] = useState(true)
   const scrollRef = useRef(null)
 
   const loadConversations = useCallback(() => {
@@ -95,20 +97,38 @@ function OwnerMessagesPage() {
     }
   }
 
+  const selectConversation = (id) => {
+    setActiveId(id)
+    setShowMobileList(false) // on mobile, jump into the thread view
+  }
+
   return (
     <div className="w-full min-h-screen bg-slate-50 flex">
-      <OwnerSidebar />
+      <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col">
-        <header className="px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10">
-          <h1 className="text-green-800 text-2xl font-bold leading-8">Messages</h1>
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-lg text-neutral-700 hover:bg-gray-200 shrink-0"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8">Messages</h1>
+          </div>
         </header>
 
-        <main className="p-12 pt-6 flex-1 min-h-0">
-          <div className="h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden flex">
+        <main className="p-4 sm:p-6 lg:p-12 lg:pt-6 flex-1 min-h-0">
+          <div className="h-[calc(100vh-132px)] sm:h-[calc(100vh-140px)] bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden flex">
 
             {/* Conversation list */}
-            <div className="w-80 min-w-[20rem] border-r border-stone-200 flex flex-col">
+            <div
+              className={`w-full sm:w-80 sm:min-w-[20rem] border-r border-stone-200 flex-col ${
+                showMobileList ? 'flex' : 'hidden sm:flex'
+              }`}
+            >
               <div className="p-4 border-b border-stone-200">
                 <div className="relative">
                   <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -135,7 +155,7 @@ function OwnerMessagesPage() {
                 {filtered.map(c => (
                   <button
                     key={c.id}
-                    onClick={() => setActiveId(c.id)}
+                    onClick={() => selectConversation(c.id)}
                     className={`w-full px-4 py-3 flex items-center gap-3 text-left border-b border-stone-100 transition-colors duration-150 ${
                       c.id === activeId ? 'bg-green-50' : 'hover:bg-gray-100'
                     }`}
@@ -169,7 +189,7 @@ function OwnerMessagesPage() {
             </div>
 
             {/* Thread */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className={`flex-1 flex-col min-w-0 ${showMobileList ? 'hidden sm:flex' : 'flex'}`}>
               {!active ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
                   <MessagesSquare className="w-10 h-10" />
@@ -177,7 +197,14 @@ function OwnerMessagesPage() {
                 </div>
               ) : (
                 <>
-                  <div className="px-6 py-4 border-b border-stone-200 flex items-center gap-3 shrink-0">
+                  <div className="px-4 sm:px-6 py-4 border-b border-stone-200 flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => setShowMobileList(true)}
+                      className="sm:hidden p-1 -ml-1 rounded-lg text-neutral-700 hover:bg-gray-200"
+                      aria-label="Back to conversations"
+                    >
+                      <ChevronLeftIcon />
+                    </button>
                     <div className="w-9 h-9 rounded-full bg-green-100 text-green-800 flex items-center justify-center text-sm font-semibold overflow-hidden">
                       {active.customerAvatarUrl ? (
                         <img src={active.customerAvatarUrl} alt={active.customerName} className="w-full h-full object-cover" />
@@ -191,7 +218,7 @@ function OwnerMessagesPage() {
                     </div>
                   </div>
 
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-3 bg-slate-50">
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-3 bg-slate-50">
                     {threadError && (
                       <div className="m-auto flex flex-col items-center text-center gap-2 text-slate-500 text-sm">
                         <AlertCircle className="w-5 h-5 text-amber-500" />
@@ -204,7 +231,7 @@ function OwnerMessagesPage() {
                     {messages.map(m => (
                       <div key={m.id} className={`flex flex-col ${m.sender === 'owner' ? 'items-end' : 'items-start'}`}>
                         <div
-                          className={`max-w-[60%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                          className={`max-w-[85%] sm:max-w-[60%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                             m.sender === 'owner'
                               ? `bg-green-800 text-white ${m.failed ? 'opacity-50' : ''} rounded-br-sm`
                               : 'bg-white text-slate-800 outline outline-1 outline-stone-200 rounded-bl-sm'
@@ -219,7 +246,7 @@ function OwnerMessagesPage() {
                     ))}
                   </div>
 
-                  <div className="p-4 border-t border-stone-200 flex items-end gap-3 shrink-0">
+                  <div className="p-3 sm:p-4 border-t border-stone-200 flex items-end gap-2 sm:gap-3 shrink-0">
                     <textarea
                       value={draft}
                       onChange={e => setDraft(e.target.value)}
@@ -231,12 +258,12 @@ function OwnerMessagesPage() {
                     <button
                       onClick={sendReply}
                       disabled={!draft.trim() || sending}
-                      className={`px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors duration-150 ${
+                      className={`px-4 sm:px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors duration-150 ${
                         draft.trim() ? 'bg-green-800 text-white hover:bg-green-900' : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                       }`}
                     >
                       <Send className="w-4 h-4" />
-                      Send
+                      <span className="hidden sm:inline">Send</span>
                     </button>
                   </div>
                 </>
@@ -246,6 +273,15 @@ function OwnerMessagesPage() {
         </main>
       </div>
     </div>
+  )
+}
+
+// tiny inline back-arrow so we don't need another lucide import for one icon
+function ChevronLeftIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
   )
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Loader2, Check, AlertCircle } from 'lucide-react'
+import { Camera, Loader2, Check, AlertCircle, Menu } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
 import ChatHeadWidget from '../components/ChatHeadWidget'
@@ -27,6 +27,7 @@ function StatusMessage({ status }) {
 function OwnerSettingsPage() {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const [profile, setProfile] = useState({ email: '', profileImageUrl: '' })
   const [loading, setLoading] = useState(true)
@@ -145,14 +146,37 @@ function OwnerSettingsPage() {
   const displayedAvatar = avatarPreview || profile.profileImageUrl
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col lg:flex-row">
-      <OwnerSidebar />
+    <div className="w-full min-h-screen bg-slate-50 flex">
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — hidden off-canvas on phones, toggled by the header menu button */}
+      <div
+        className={`fixed lg:sticky top-0 h-screen z-40 transition-transform duration-200 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } lg:translate-x-0`}
+      >
+        <OwnerSidebar />
+      </div>
 
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Topbar */}
-        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10">
-          <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8">Account Settings</h1>
+        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex items-center gap-3 sticky top-0 z-10">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden p-2 -ml-2 rounded-lg text-neutral-700 hover:bg-gray-200 shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Account Settings</h1>
         </header>
 
         <main className="p-4 sm:p-6 lg:p-12 max-w-3xl flex flex-col gap-6 lg:gap-8">

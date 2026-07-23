@@ -9,13 +9,14 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Check,
+  Menu,
   Users,
   MapPin,
   CalendarCheck,
-  Check,
 } from 'lucide-react'
-import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import api from '../services/api'
 
 // Turns a timestamp into a short "5m ago" / "3h ago" / "2d ago" style label.
 function formatRelativeTime(timestamp) {
@@ -34,6 +35,7 @@ function formatRelativeTime(timestamp) {
 
 function OwnerDashboardPage() {
   const navigate = useNavigate()
+  const owner = JSON.parse(localStorage.getItem('owner') || '{}')
   const [courts, setCourts] = useState([])
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState({
@@ -48,6 +50,7 @@ function OwnerDashboardPage() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const notificationsRef = useRef(null)
 
   useEffect(() => {
@@ -108,8 +111,8 @@ function OwnerDashboardPage() {
   const totalCourts = courts.length
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col lg:flex-row">
-      <OwnerSidebar />
+    <div className="w-full min-h-screen bg-slate-50 flex">
+      <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -117,7 +120,16 @@ function OwnerDashboardPage() {
         {/* Topbar */}
         <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md sticky top-0 z-10">
           <div className="flex justify-between items-center gap-3">
-            <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Admin Overview</h1>
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 rounded-lg text-neutral-700 hover:bg-gray-200 shrink-0"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Admin Overview</h1>
+            </div>
             <div className="flex items-center gap-2 sm:gap-4 lg:gap-8">
               {/* Search: full input on desktop, icon toggle on mobile */}
               <div className="relative hidden sm:block">

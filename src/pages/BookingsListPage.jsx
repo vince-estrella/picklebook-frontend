@@ -8,6 +8,7 @@ import {
   Eye,
   X,
   Filter,
+  Menu,
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
@@ -30,6 +31,7 @@ function BookingsListPage() {
   const [statusFilter, setStatusFilter] = useState('All')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -90,15 +92,24 @@ function BookingsListPage() {
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex">
-      <OwnerSidebar />
+      <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main column */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <header className="px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10">
-          <h1 className="text-green-800 text-2xl font-bold leading-8">Bookings</h1>
-          <div className="flex items-center gap-8">
-            <div className="relative">
+        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10 gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 -ml-2 rounded-lg text-neutral-700 hover:bg-gray-200 shrink-0"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Bookings</h1>
+          </div>
+          <div className="flex items-center gap-3 sm:gap-8">
+            <div className="relative hidden sm:block">
               <Search className="w-4 h-4 text-neutral-700 absolute left-4 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -108,21 +119,36 @@ function BookingsListPage() {
                   setPage(1)
                 }}
                 placeholder="Search by user or court..."
-                className="w-64 pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+                className="w-48 md:w-64 pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
               />
             </div>
-            <button className="relative px-2 pt-2 pb-3.5 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-gray-200">
+            <button className="relative px-2 pt-2 pb-3.5 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-gray-200 shrink-0">
               <Bell className="w-4 h-5 text-neutral-700" />
               <span className="w-2 h-2 bg-red-500 rounded-full absolute top-1.5 right-1.5" />
             </button>
           </div>
         </header>
 
-        <main className="p-12 flex flex-col gap-6">
+        <main className="p-4 sm:p-6 lg:p-12 flex flex-col gap-6">
+          {/* Mobile search */}
+          <div className="relative sm:hidden">
+            <Search className="w-4 h-4 text-neutral-700 absolute left-4 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              placeholder="Search by user or court..."
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+            />
+          </div>
+
           {/* Filter bar */}
           <div className="flex justify-between items-center flex-wrap gap-4">
             <div className="flex items-center gap-2">
-              <div className="p-2 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex items-center justify-center">
+              <div className="p-2 bg-white rounded-lg outline outline-1 outline-offset-[-1px] outline-stone-300 flex items-center justify-center shrink-0">
                 <Filter className="w-4 h-4 text-neutral-700" />
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -151,95 +177,97 @@ function BookingsListPage() {
 
           {/* Bookings table */}
           <div className="bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-100 border-b border-stone-300">
-                  <th className="px-6 py-4 text-left text-slate-500 text-sm font-semibold uppercase leading-4 tracking-wide">
-                    User
-                  </th>
-                  <th className="px-6 py-4 text-left text-slate-500 text-sm font-semibold uppercase leading-4 tracking-wide">
-                    Court
-                  </th>
-                  <th className="px-6 py-4 text-left text-slate-500 text-sm font-semibold uppercase leading-4 tracking-wide">
-                    Date &amp; Time
-                  </th>
-                  <th className="px-6 py-4 text-left text-slate-500 text-sm font-semibold uppercase leading-4 tracking-wide">
-                    Amount
-                  </th>
-                  <th className="px-6 py-4 text-left text-slate-500 text-sm font-semibold uppercase leading-4 tracking-wide">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-right text-slate-500 text-sm font-semibold uppercase leading-4 tracking-wide">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageBookings.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-slate-500 text-sm font-normal">
-                      No bookings match your filters.
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse min-w-[720px]">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-stone-300">
+                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">
+                      User
+                    </th>
+                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">
+                      Court
+                    </th>
+                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">
+                      Date &amp; Time
+                    </th>
+                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">
+                      Amount
+                    </th>
+                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">
+                      Status
+                    </th>
+                    <th className="px-4 sm:px-6 py-4 text-right text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">
+                      Actions
+                    </th>
                   </tr>
-                ) : (
-                  pageBookings.map((b) => (
-                    <tr
-                      key={b.id}
-                      className="border-t border-stone-200 transition-colors duration-150 hover:bg-gray-200"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-800 text-xs font-semibold shrink-0">
-                            {b.bookerName?.[0] || '?'}
-                          </div>
-                          <span className="text-slate-800 text-sm font-medium leading-5">{b.bookerName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-neutral-700 text-sm font-normal leading-5">
-                        {b.courtName}
-                      </td>
-                      <td className="px-6 py-4 text-neutral-700 text-sm font-normal leading-5">
-                        {new Date(b.date).toLocaleDateString('en-PH')} • {b.startTime?.slice(0, 5)}–{b.endTime?.slice(0, 5)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-slate-800 text-sm font-bold leading-5">₱{b.amount}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-[2.5px] rounded-full inline-block text-xs font-bold leading-4 ${
-                            STATUS_STYLES[b.status] || 'bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {b.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => navigate(`/owner/bookings/${b.id}`)}
-                            className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-green-800 hover:bg-green-100"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          {b.status === 'Pending' && (
-                            <button
-                              onClick={() => handleCancelBooking(b.id)}
-                              className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-red-600 hover:bg-red-100"
-                              title="Cancel Booking"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
+                </thead>
+                <tbody>
+                  {pageBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-10 text-center text-slate-500 text-sm font-normal">
+                        No bookings match your filters.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    pageBookings.map((b) => (
+                      <tr
+                        key={b.id}
+                        className="border-t border-stone-200 transition-colors duration-150 hover:bg-gray-200"
+                      >
+                        <td className="px-4 sm:px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-800 text-xs font-semibold shrink-0">
+                              {b.bookerName?.[0] || '?'}
+                            </div>
+                            <span className="text-slate-800 text-sm font-medium leading-5">{b.bookerName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-neutral-700 text-sm font-normal leading-5">
+                          {b.courtName}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-neutral-700 text-sm font-normal leading-5 whitespace-nowrap">
+                          {new Date(b.date).toLocaleDateString('en-PH')} • {b.startTime?.slice(0, 5)}–{b.endTime?.slice(0, 5)}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4">
+                          <span className="text-slate-800 text-sm font-bold leading-5">₱{b.amount}</span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4">
+                          <span
+                            className={`px-3 py-[2.5px] rounded-full inline-block text-xs font-bold leading-4 ${
+                              STATUS_STYLES[b.status] || 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {b.status}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => navigate(`/owner/bookings/${b.id}`)}
+                              className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-green-800 hover:bg-green-100"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            {b.status === 'Pending' && (
+                              <button
+                                onClick={() => handleCancelBooking(b.id)}
+                                className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-red-600 hover:bg-red-100"
+                                title="Cancel Booking"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-            <div className="p-4 bg-gray-100 border-t border-stone-300 flex justify-between items-center">
+            <div className="p-4 bg-gray-100 border-t border-stone-300 flex flex-col sm:flex-row justify-between items-center gap-3">
               <span className="text-slate-500 text-sm font-normal leading-5">
                 Showing {pageBookings.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}-
                 {Math.min(page * PAGE_SIZE, filteredBookings.length)} of {filteredBookings.length} bookings
@@ -275,7 +303,7 @@ function BookingsListPage() {
 
         {/* Footer */}
         <footer className="mt-auto py-6 bg-zinc-800">
-          <div className="px-12 flex justify-between items-center flex-wrap gap-4">
+          <div className="px-4 sm:px-6 lg:px-12 flex justify-between items-center flex-wrap gap-4">
             <span className="text-green-300 text-2xl font-bold leading-8">PickleBook Admin</span>
             <div className="flex gap-6">
               <span className="text-zinc-200 text-base font-normal leading-6 cursor-pointer transition-colors duration-150 hover:text-white">

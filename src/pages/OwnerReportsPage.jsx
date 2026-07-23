@@ -6,6 +6,7 @@ import {
   CalendarCheck,
   Trophy,
   Download,
+  Menu,
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
@@ -47,6 +48,7 @@ function OwnerReportsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState('30d')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -112,15 +114,25 @@ function OwnerReportsPage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex flex-col lg:flex-row">
-      <OwnerSidebar />
+    <div className="w-full min-h-screen bg-slate-50 flex">
+
+      <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Topbar */}
         <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md sticky top-0 z-10">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8">Revenue Reports</h1>
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 rounded-lg text-neutral-700 hover:bg-gray-200 shrink-0"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Revenue Reports</h1>
+            </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <select
                 value={range}
