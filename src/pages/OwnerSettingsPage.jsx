@@ -147,22 +147,8 @@ function OwnerSettingsPage() {
   return (
     <div className="w-full min-h-screen bg-slate-50 flex">
 
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* Sidebar — hidden off-canvas on phones, toggled by the header menu button */}
-      <div
-        className={`fixed lg:sticky top-0 h-screen z-40 transition-transform duration-200 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
-      >
-        <OwnerSidebar />
-      </div>
+      <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
 

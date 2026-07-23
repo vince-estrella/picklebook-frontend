@@ -1,34 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  MapPin,
-  CalendarCheck,
-  Users,
-  FileText,
-  LifeBuoy,
-  Settings,
-  Search,
-  Plus,
-  Pencil,
-  Eye,
-  Trash2,
-  Menu,
-  X,
-} from 'lucide-react'
+import { Search, Plus, Pencil, Eye, Trash2, Menu } from 'lucide-react'
 import api from '../services/api'
-
-const NAV_ITEMS = [
-  { label: 'Dashboard', path: '/owner/dashboard', icon: LayoutDashboard },
-  { label: 'Manage Courts', path: '/owner/courts', icon: MapPin },
-  { label: 'Bookings', path: '/owner/bookings', icon: CalendarCheck },
-  { label: 'Users', path: '/owner/users', icon: Users },
-  { label: 'Reports', path: '/owner/reports', icon: FileText },
-]
+import OwnerSidebar from '../components/OwnerSidebar'
 
 function OwnerCourtsPage() {
   const navigate = useNavigate()
-  const owner = JSON.parse(localStorage.getItem('owner') || '{}')
   const [courts, setCourts] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -90,99 +67,9 @@ function OwnerCourtsPage() {
     )
   }
 
-  const currentPath = window.location.pathname
-
-  const sidebarContent = (
-    <>
-      <div className="px-2 py-4 flex items-center justify-between">
-        <span className="text-green-800 text-2xl font-bold leading-8">PickleBook</span>
-        <button
-          onClick={() => setSidebarOpen(false)}
-          className="lg:hidden p-2 rounded-lg text-neutral-700 hover:bg-gray-300"
-          aria-label="Close menu"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      <nav className="flex-1 pt-2 flex flex-col gap-1">
-        {NAV_ITEMS.map(item => {
-          const Icon = item.icon
-          const active = currentPath === item.path
-          return (
-            <button
-              key={item.path}
-              onClick={() => { navigate(item.path); setSidebarOpen(false) }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-normal leading-5 text-left transition-colors duration-150 ${
-                active ? 'bg-green-700 text-green-50' : 'text-neutral-700 hover:bg-gray-300 hover:text-slate-900'
-              }`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span>{item.label}</span>
-            </button>
-          )
-        })}
-      </nav>
-
-      <div className="pt-2">
-        <div className="pt-8 border-t border-stone-300 flex flex-col gap-1">
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-normal leading-5 text-neutral-700 transition-colors duration-150 hover:bg-gray-300 hover:text-slate-900 text-left">
-            <LifeBuoy className="w-5 h-5" />
-            <span>Support</span>
-          </button>
-          <button className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-normal leading-5 text-neutral-700 transition-colors duration-150 hover:bg-gray-300 hover:text-slate-900 text-left">
-            <Settings className="w-5 h-5" />
-            <span>Settings</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="pt-2">
-        <div className="p-4 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-green-100 outline outline-2 outline-offset-[-2px] outline-green-300 flex items-center justify-center text-green-800 font-semibold shrink-0">
-              {(owner.firstName?.[0] || 'O')}{(owner.lastName?.[0] || '')}
-            </div>
-            <div className="min-w-0">
-              <p className="text-slate-800 text-sm font-semibold leading-4 tracking-wide truncate">
-                {owner.firstName} {owner.lastName}
-              </p>
-              <button
-                onClick={() => {
-                  localStorage.removeItem('token')
-                  localStorage.removeItem('owner')
-                  navigate('/owner/login')
-                }}
-                className="text-slate-500 text-xs font-medium leading-4 transition-colors duration-150 hover:text-red-600"
-              >
-                Log out
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  )
-
   return (
     <div className="w-full min-h-screen bg-slate-50 flex">
-
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`w-64 min-w-[16rem] h-screen fixed lg:sticky top-0 bg-gray-100 border-r border-stone-300 flex flex-col p-4 z-40 transition-transform duration-200 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
-      >
-        {sidebarContent}
-      </aside>
+      <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
