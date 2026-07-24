@@ -182,7 +182,7 @@ const totalPrice = duration * court.pricePerHour
 
             {/* Pay at venue notice */}
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#15803d' }}>
-              💚 <strong>Pay at the venue upon arrival</strong> — Simply check-in at the front desk before your time slot.
+              💚 <strong>Pay at the site or pay at venue upon arrival</strong> — Simply check-in at the front desk before your time slot.
             </div>
 
             {error && (
