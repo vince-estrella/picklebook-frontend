@@ -433,6 +433,23 @@ function QueueManager() {
   const history = useRef([])
   const [, forceRender] = useState(0)
 
+  // Always-current mirror of players/courts. Several effects in this file
+  // (notably the join-request subscription below, which only sets up once
+  // per room) capture whichever version of `commit` existed at the moment
+  // they were created and hold onto it — if `commit` closed over the
+  // `players`/`courts` React state directly, that captured copy would be
+  // frozen at whatever it was when the effect first ran. A later call
+  // (e.g. a new player joining minutes into the session) would then
+  // silently overwrite the queue with that stale snapshot, wiping out
+  // everyone added since. Routing every read/write through this ref —
+  // updated synchronously, not just after a re-render — means `commit`
+  // always operates on the true latest state no matter which closure
+  // called it or how quickly calls arrive back-to-back.
+  const stateRef = useRef({ players, courts })
+  useEffect(() => {
+    stateRef.current = { players, courts }
+  }, [players, courts])
+
   useEffect(() => { saveState(players, courts) }, [players, courts])
 
   // Publish every local change up to Firebase so joined players see it live.
@@ -442,18 +459,26 @@ function QueueManager() {
   }, [roomCode, players, courts])
 
   const commit = useCallback((mutator) => {
-    history.current.push({ players: clone(players), courts: clone(courts) })
+    const { players: curPlayers, courts: curCourts } = stateRef.current
+    history.current.push({ players: clone(curPlayers), courts: clone(curCourts) })
     if (history.current.length > 15) history.current.shift()
-    const draftPlayers = clone(players)
-    const draftCourts = clone(courts)
+    const draftPlayers = clone(curPlayers)
+    const draftCourts = clone(curCourts)
     const result = mutator(draftPlayers, draftCourts)
-    setPlayers(result?.players ?? draftPlayers)
-    setCourts(result?.courts ?? draftCourts)
-  }, [players, courts])
+    const nextPlayers = result?.players ?? draftPlayers
+    const nextCourts = result?.courts ?? draftCourts
+    // Update the ref immediately so a second commit() in the same tick
+    // (e.g. two join requests processed back-to-back) builds on this
+    // change instead of reading the pre-commit snapshot again.
+    stateRef.current = { players: nextPlayers, courts: nextCourts }
+    setPlayers(nextPlayers)
+    setCourts(nextCourts)
+  }, [])
 
   const undo = () => {
     const prev = history.current.pop()
     if (!prev) return
+    stateRef.current = prev
     setPlayers(prev.players)
     setCourts(prev.courts)
     forceRender(n => n + 1)
@@ -718,9 +743,11 @@ function QueueManager() {
 
   const resetQueue = () => {
     if (!window.confirm('Reset the entire session? This clears all players and courts.')) return
-    history.current.push({ players: clone(players), courts: clone(courts) })
-    setPlayers([])
-    setCourts(emptyCourts())
+    history.current.push({ players: clone(stateRef.current.players), courts: clone(stateRef.current.courts) })
+    const next = { players: [], courts: emptyCourts() }
+    stateRef.current = next
+    setPlayers(next.players)
+    setCourts(next.courts)
   }
 
   const endRound = () => {
