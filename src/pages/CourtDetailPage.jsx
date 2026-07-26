@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Star, MapPin, Share2, Heart, ShieldCheck, KeyRound, Droplets,
-  Sun, Fan, Wifi, ParkingCircle, ShowerHead, Flag, ChevronRight, Check, MessageCircle
+  Sun, Fan, Wifi, ParkingCircle, ShowerHead, Flag, ChevronRight, Check, MessageCircle, ExternalLink
 } from 'lucide-react'
 import CourtMap from '../components/CourtMap'
 import MessageOwnerModal from '../components/MessageOwnerModal'
@@ -567,6 +567,21 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
               Book now
             </button>
             <p className="text-sm text-center" style={{ color: COLORS.inkMute }}>You won't be charged yet</p>
+
+            {court.externalBookingUrl && (
+              <div className="pt-4 flex flex-col items-center gap-2 text-center" style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>
+                <p className="text-sm" style={{ color: COLORS.inkMute }}>This court also takes bookings through their own site.</p>
+                <a
+                  href={court.externalBookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cd-external-book inline-flex items-center justify-center gap-1.5 text-sm font-semibold transition-colors duration-150"
+                  style={{ color: COLORS.teal }}
+                >
+                  Visit their booking site <ExternalLink size={14} />
+                </a>
+              </div>
+            )}
 
             <div className="pt-4 flex justify-center" style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>
               <button className="cd-report flex items-center gap-1 text-xs font-medium transition-colors duration-150" style={{ color: COLORS.inkMute }}>

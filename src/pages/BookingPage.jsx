@@ -8,6 +8,17 @@ const COLORS = {
   primaryHover: '#15803d',
 }
 
+// Formats "HH:MM" or "HH:MM:SS" (24hr) into "h:mm AM/PM"
+function formatTime12h(time) {
+  if (!time) return ''
+  const [hStr, mStr] = time.split(':')
+  let h = parseInt(hStr, 10)
+  const period = h >= 12 ? 'PM' : 'AM'
+  h = h % 12
+  if (h === 0) h = 12
+  return `${h}:${mStr} ${period}`
+}
+
 function BookingPage() {
   const { id } = useParams()
   const { state } = useLocation()
@@ -114,7 +125,7 @@ const totalPrice = duration * court.pricePerHour
                 <div>
                   <p style={{ color: '#9ca3af', marginBottom: '2px' }}>TIME</p>
                   <p style={{ fontWeight: '600' }}>
-  {selectedSlots[0].start} – {selectedSlots[selectedSlots.length - 1].end}
+  {formatTime12h(selectedSlots[0].start)} – {formatTime12h(selectedSlots[selectedSlots.length - 1].end)}
 </p>
                 </div>
                 <div>
@@ -180,10 +191,16 @@ const totalPrice = duration * court.pricePerHour
               <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>We'll send a confirmation SMS to this number.</p>
             </div>
 
-            {/* Pay at venue notice */}
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#15803d' }}>
-              💚 <strong>Pay at the site or pay at venue upon arrival</strong> — Simply check-in at the front desk before your time slot.
-            </div>
+            {/* Payment notice — reflects this court's actual payment method */}
+            {court.paymentMethod === 'Online' ? (
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#1d4ed8' }}>
+                💳 <strong>Pay online</strong> — This court requires online payment. You'll be redirected to Xendit's secure checkout after confirming.
+              </div>
+            ) : (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#15803d' }}>
+                💚 <strong>Pay at the venue upon arrival</strong> — Simply check-in at the front desk before your time slot.
+              </div>
+            )}
 
             {error && (
               <p style={{ color: '#dc2626', fontSize: '14px', marginBottom: '16px' }}>{error}</p>
@@ -210,7 +227,7 @@ const totalPrice = duration * court.pricePerHour
                 opacity: loading ? 0.8 : 1,
               }}
             >
-              {loading ? 'Confirming...' : 'Confirm Booking'}
+              {loading ? 'Confirming...' : court.paymentMethod === 'Online' ? 'Continue to Payment' : 'Confirm Booking'}
             </button>
           </div>
         </div>

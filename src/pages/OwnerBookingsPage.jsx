@@ -4,6 +4,17 @@ import { Menu } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
 
+// Formats "HH:MM" or "HH:MM:SS" (24hr) into "h:mm AM/PM"
+function formatTime12h(time) {
+  if (!time) return ''
+  const [hStr, mStr] = time.split(':')
+  let h = parseInt(hStr, 10)
+  const period = h >= 12 ? 'PM' : 'AM'
+  h = h % 12
+  if (h === 0) h = 12
+  return `${h}:${mStr} ${period}`
+}
+
 function OwnerBookingsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -69,8 +80,8 @@ function OwnerBookingsPage() {
                     bookings.map(b => (
                       <tr key={b.id} className="border-t border-stone-100">
                         <td className="px-4 py-3.5 font-semibold text-sm text-green-700">{b.bookingReference}</td>
-                        <td className="px-4 py-3.5 text-sm">{new Date(b.date).toLocaleDateString('en-PH')}</td>
-                        <td className="px-4 py-3.5 text-sm">{b.startTime?.substring(0, 5)} – {b.endTime?.substring(0, 5)}</td>
+                        <td className="px-4 py-3.5 text-sm">{new Date(b.date).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</td>
+                        <td className="px-4 py-3.5 text-sm">{formatTime12h(b.startTime)} – {formatTime12h(b.endTime)}</td>
                         <td className="px-4 py-3.5 text-sm">{b.bookerName}</td>
                         <td className="px-4 py-3.5 text-sm">{b.bookerPhone}</td>
                         <td className="px-4 py-3.5">

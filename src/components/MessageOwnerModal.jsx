@@ -21,10 +21,10 @@ const POLL_MS = 8000
 function formatTimestamp(iso) {
   if (!iso) return ''
   const d = new Date(iso)
-  const isToday = d.toDateString() === new Date().toDateString()
+  const isToday = d.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' }) === new Date().toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })
   return isToday
-    ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    ? d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })
+    : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' })
 }
 
 // courtId: the court being asked about. ownerName: display name for the

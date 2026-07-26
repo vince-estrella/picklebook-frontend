@@ -3,6 +3,25 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 
+// Formats "HH:MM" or "HH:MM:SS" (24hr) into "h:mm AM/PM"
+function formatTime12h(time) {
+  if (!time) return ''
+  const [hStr, mStr] = time.split(':')
+  let h = parseInt(hStr, 10)
+  const period = h >= 12 ? 'PM' : 'AM'
+  h = h % 12
+  if (h === 0) h = 12
+  return `${h}:${mStr} ${period}`
+}
+
+// Minutes between two "HH:MM:SS" (or "HH:MM") strings
+function getDurationMinutes(start, end) {
+  if (!start || !end) return 0
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  return (eh * 60 + em) - (sh * 60 + sm)
+}
+
 function BookingConfirmedPage() {
   const { state } = useLocation()
   const navigate = useNavigate()
@@ -64,6 +83,8 @@ function BookingConfirmedPage() {
 
   const isOnline = booking.paymentMethod === 'Online'
   const isPaid = booking.paymentStatus === 'Paid'
+  const durationMinutes = getDurationMinutes(booking.startTime, booking.endTime)
+  const totalPrice = (durationMinutes / 60) * (court?.pricePerHour || 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,15 +120,15 @@ function BookingConfirmedPage() {
             </div>
             <div>
               <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>TIME</p>
-              <p style={{ fontWeight: '600' }}>{booking.startTime?.substring(0, 5)} – {booking.endTime?.substring(0, 5)}</p>
+              <p style={{ fontWeight: '600' }}>{formatTime12h(booking.startTime)} – {formatTime12h(booking.endTime)}</p>
             </div>
             <div>
               <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>DURATION</p>
-              <p style={{ fontWeight: '600' }}>60 Mins</p>
+              <p style={{ fontWeight: '600' }}>{durationMinutes} Mins</p>
             </div>
             <div>
               <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>PRICE</p>
-              <p style={{ fontWeight: '700', color: '#16a34a' }}>₱{court?.pricePerHour}</p>
+              <p style={{ fontWeight: '700', color: '#16a34a' }}>₱{totalPrice.toFixed(2)}</p>
             </div>
           </div>
 
