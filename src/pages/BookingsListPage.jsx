@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  Check,
   X,
   Filter,
   Menu,
@@ -62,18 +63,18 @@ function BookingsListPage() {
       })
   }, [])
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Cancel this booking? This cannot be undone.')) return
+  const handleUpdateStatus = async (bookingId, status) => {
+    if (status === 'Cancelled' && !window.confirm('Cancel this booking? This cannot be undone.')) return
     try {
-      await api.patch(`/bookings/${bookingId}/status`, JSON.stringify('Cancelled'), {
+      await api.patch(`/bookings/${bookingId}/status`, JSON.stringify(status), {
         headers: { 'Content-Type': 'application/json' },
       })
       setBookings((prev) =>
-        prev.map((b) => (b.id === bookingId ? { ...b, status: 'Cancelled' } : b))
+        prev.map((b) => (b.id === bookingId ? { ...b, status } : b))
       )
     } catch (err) {
-      console.error('Failed to cancel booking:', err)
-      alert('Could not cancel booking. Please try again.')
+      console.error(`Failed to update booking to ${status}:`, err)
+      alert('Could not update booking. Please try again.')
     }
   }
 
@@ -263,13 +264,22 @@ function BookingsListPage() {
                               <Eye className="w-4 h-4" />
                             </button>
                             {b.status === 'Pending' && (
-                              <button
-                                onClick={() => handleCancelBooking(b.id)}
-                                className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-red-600 hover:bg-red-100"
-                                title="Cancel Booking"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleUpdateStatus(b.id, 'Confirmed')}
+                                  className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-green-800 hover:bg-green-100"
+                                  title="Confirm Booking"
+                                >
+                                  <Check className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateStatus(b.id, 'Cancelled')}
+                                  className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-red-600 hover:bg-red-100"
+                                  title="Cancel Booking"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>

@@ -91,17 +91,23 @@ function BookingConfirmedPage() {
       <Navbar />
       <div style={{ maxWidth: '520px', margin: '60px auto', padding: '0 24px', textAlign: 'center' }}>
 
-        <div style={{ width: '64px', height: '64px', background: isOnline && !isPaid ? '#fef3c7' : '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>
-          {isOnline && !isPaid ? '⏳' : '✓'}
+        <div style={{ width: '64px', height: '64px', background: booking.status === 'Confirmed' ? '#dcfce7' : '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px' }}>
+          {booking.status === 'Confirmed' ? '✓' : '⏳'}
         </div>
 
         <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>
-          {isOnline && !isPaid ? 'Payment Processing…' : 'Booking Confirmed!'}
+          {isOnline && !isPaid
+            ? 'Payment Processing…'
+            : booking.status === 'Confirmed'
+              ? 'Booking Confirmed!'
+              : 'Booking Requested'}
         </h1>
         <p style={{ color: '#6b7280', marginBottom: '32px' }}>
           {isOnline && !isPaid
             ? "We're confirming your payment with Xendit — this usually takes just a few seconds. Refresh this page or check My Bookings shortly."
-            : 'Your court is reserved. Show this confirmation upon arrival.'}
+            : booking.status === 'Confirmed'
+              ? 'Your court is reserved. Show this confirmation upon arrival.'
+              : 'The court owner will confirm your booking once you check in and pay at the venue.'}
         </p>
 
         <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', textAlign: 'left', marginBottom: '24px' }}>
@@ -142,9 +148,13 @@ function BookingConfirmedPage() {
                 ⏳ <strong>Waiting for payment confirmation</strong> — this page will update once Xendit confirms your payment.
               </div>
             )
-          ) : (
+          ) : booking.status === 'Confirmed' ? (
             <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 16px', fontSize: '13px', color: '#15803d' }}>
-              💚 <strong>Pay at venue</strong> — Please check in at the front desk upon arrival to finalize payment.
+              ✅ <strong>Confirmed</strong> — you're all set for your booking.
+            </div>
+          ) : (
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 16px', fontSize: '13px', color: '#92400e' }}>
+              ⏳ <strong>Pending confirmation</strong> — pay at the venue when you check in to confirm your spot.
             </div>
           )}
         </div>
