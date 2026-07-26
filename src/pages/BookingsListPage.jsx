@@ -12,6 +12,18 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import BookingReceiptModal from '../components/BookingReceiptModal'
+
+// Formats "HH:MM" or "HH:MM:SS" (24hr) into "h:mm AM/PM"
+function formatTime12h(time) {
+  if (!time) return ''
+  const [hStr, mStr] = time.split(':')
+  let h = parseInt(hStr, 10)
+  const period = h >= 12 ? 'PM' : 'AM'
+  h = h % 12
+  if (h === 0) h = 12
+  return `${h}:${mStr} ${period}`
+}
 
 const STATUS_FILTERS = ['All', 'Confirmed', 'Pending', 'Cancelled', 'Completed']
 
@@ -32,6 +44,7 @@ function BookingsListPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [viewingBookingId, setViewingBookingId] = useState(null)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -226,7 +239,7 @@ function BookingsListPage() {
                           {b.courtName}
                         </td>
                         <td className="px-4 sm:px-6 py-4 text-neutral-700 text-sm font-normal leading-5 whitespace-nowrap">
-                          {new Date(b.date).toLocaleDateString('en-PH')} • {b.startTime?.slice(0, 5)}–{b.endTime?.slice(0, 5)}
+                          {new Date(b.date).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })} • {formatTime12h(b.startTime)}–{formatTime12h(b.endTime)}
                         </td>
                         <td className="px-4 sm:px-6 py-4">
                           <span className="text-slate-800 text-sm font-bold leading-5">₱{b.amount}</span>
@@ -243,7 +256,7 @@ function BookingsListPage() {
                         <td className="px-4 sm:px-6 py-4">
                           <div className="flex justify-end gap-2">
                             <button
-                              onClick={() => navigate(`/owner/bookings/${b.id}`)}
+                              onClick={() => setViewingBookingId(b.id)}
                               className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-green-800 hover:bg-green-100"
                               title="View Details"
                             >
@@ -320,6 +333,13 @@ function BookingsListPage() {
           </div>
         </footer>
       </div>
+
+      {viewingBookingId && (
+        <BookingReceiptModal
+          bookingId={viewingBookingId}
+          onClose={() => setViewingBookingId(null)}
+        />
+      )}
     </div>
   )
 }
