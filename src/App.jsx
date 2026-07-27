@@ -27,6 +27,7 @@ import PlayerLoginPage from './pages/PlayerLoginPage'
 import PlayerRegisterPage from './pages/PlayerRegisterPage'
 import MyBookingsPage from './pages/MyBookingsPage'
 import PlayerSettingsPage from './pages/PlayerSettingsPage'
+import ReportListingPage from './pages/ReportListingPage'
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
       <Route path="/contact" element={<ContactSupportPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/report-listing/:id" element={<ReportListingPage />} />
     </Routes>
   )
 }
