@@ -39,6 +39,7 @@ const { court, selectedDate, selectedSlots } = state || {}
     firstName: player?.firstName || '',
     lastName: player?.lastName || '',
     phone: player?.phone || '',
+    email: player?.email || '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -49,7 +50,7 @@ if (!court || !selectedSlots || selectedSlots.length === 0) {
 }
 
   const handleSubmit = async () => {
-    if (!form.firstName || !form.lastName || !form.phone) {
+    if (!form.firstName || !form.lastName || !form.phone || !form.email) {
       setError('Please fill in all fields.')
       return
     }
@@ -65,6 +66,7 @@ if (!court || !selectedSlots || selectedSlots.length === 0) {
 endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
         bookerName: `${form.firstName} ${form.lastName}`,
         bookerPhone: form.phone,
+        bookerEmail: form.email,
         userId: player?.id ?? null,
       })
 
@@ -197,6 +199,20 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
                 style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.15s ease, box-shadow 0.15s ease' }}
               />
               <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>We'll send a confirmation SMS to this number.</p>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Email Address</label>
+              <input
+                type="email"
+                placeholder="juan@example.com"
+                value={form.email}
+                onChange={e => setForm({ ...form, email: e.target.value })}
+                onFocus={e => { e.target.style.borderColor = COLORS.primary; e.target.style.boxShadow = '0 0 0 3px rgba(22,163,74,0.15)' }}
+                onBlur={e => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none' }}
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', outline: 'none', transition: 'border-color 0.15s ease, box-shadow 0.15s ease' }}
+              />
+              <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px' }}>We'll email your booking receipt here.</p>
             </div>
 
             {/* Payment notice — reflects this court's actual payment method */}
