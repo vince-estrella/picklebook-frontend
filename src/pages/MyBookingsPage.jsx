@@ -36,6 +36,15 @@ function formatCurrency(n) {
   return `₱${Number(n || 0).toFixed(2)}`
 }
 
+// Booking date/time is always in Asia/Manila (UTC+8, no DST) — anchor the
+// comparison instant there explicitly instead of relying on the viewer's
+// local timezone, which would shift the upcoming/past boundary.
+function getBookingEndInstant(b) {
+  const datePart = (b.date || '').slice(0, 10)
+  const endTime = b.endTime || '00:00:00'
+  return new Date(`${datePart}T${endTime}+08:00`)
+}
+
 function MyBookingsPage() {
   const navigate = useNavigate()
   const player = JSON.parse(localStorage.getItem('player') || '{}')
@@ -67,10 +76,7 @@ function MyBookingsPage() {
 
   const now = new Date()
   const upcoming = bookings.filter(b => {
-    const end = new Date(b.date)
-    const [h] = (b.endTime || '00:00:00').split(':').map(Number)
-    end.setHours(h)
-    return end >= now && b.status !== 'Cancelled'
+    return getBookingEndInstant(b) >= now && b.status !== 'Cancelled'
   })
   const past = bookings.filter(b => !upcoming.includes(b))
 
@@ -125,7 +131,7 @@ function MyBookingsPage() {
         <div style={{ display: 'flex', gap: '18px', fontSize: '13px', color: COLORS.inkMute, marginTop: '10px', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Calendar size={13} />
-            {new Date(b.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {new Date(b.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' })}
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Clock size={13} />

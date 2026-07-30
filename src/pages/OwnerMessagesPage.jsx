@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Send, AlertCircle, MessagesSquare, Menu } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
@@ -19,6 +20,7 @@ function formatTimestamp(iso) {
 }
 
 function OwnerMessagesPage() {
+  const navigate = useNavigate()
   const [conversations, setConversations] = useState([])
   const [search, setSearch] = useState('')
   const [activeId, setActiveId] = useState(null)
@@ -45,7 +47,13 @@ function OwnerMessagesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => { loadConversations() }, [loadConversations])
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      navigate('/owner/login')
+      return
+    }
+    loadConversations()
+  }, [loadConversations])
 
   useEffect(() => {
     if (!activeId) return

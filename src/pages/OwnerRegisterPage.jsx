@@ -38,7 +38,8 @@ function OwnerRegisterPage() {
       })
       navigate('/owner/login')
     } catch (err) {
-      setError(err.response?.data || 'Registration failed. Please try again.')
+      const message = err.response?.data
+      setError(typeof message === 'string' ? message : (typeof message?.message === 'string' ? message.message : 'Registration failed. Please try again.'))
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -60,6 +60,12 @@ function AddCourtPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      navigate('/owner/login')
+    }
+  }, [])
+
   const toggleAmenity = (a) => {
     setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
   }
@@ -71,26 +77,32 @@ function AddCourtPage() {
     }
     setLoading(true)
     setError(null)
+
+    let courtId
     try {
       const courtData = { ...form, amenities: amenities.join(','), pricePerHour: parseFloat(form.pricePerHour), maxPlayers: parseInt(form.maxPlayers) }
       const res = await api.post('/courts', courtData)
-      const courtId = res.data.id
+      courtId = res.data.id
+    } catch {
+      setError('Failed to save court. Please try again.')
+      setLoading(false)
+      return
+    }
 
-      // Upload images if any
+    // The court already exists at this point — an image-upload failure below
+    // must not be reported as a save failure, or the owner will resubmit and
+    // create a duplicate court.
+    try {
       for (const img of images) {
         const formData = new FormData()
         formData.append('file', img)
-        await api.post(`/courts/${courtId}/images`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.post(`/courts/${courtId}/images`, formData)
       }
-
-      navigate('/owner/dashboard')
-    } catch (err) {
-      setError('Failed to save court. Please try again.')
-    } finally {
-      setLoading(false)
+    } catch {
+      alert('Court saved, but some images failed to upload. You can add them from Edit Court.')
     }
+
+    navigate('/owner/dashboard')
   }
 
   const currentPath = window.location.pathname

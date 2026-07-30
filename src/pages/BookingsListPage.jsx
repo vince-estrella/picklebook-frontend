@@ -243,7 +243,7 @@ function BookingsListPage() {
                           {new Date(b.date).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })} • {formatTime12h(b.startTime)}–{formatTime12h(b.endTime)}
                         </td>
                         <td className="px-4 sm:px-6 py-4">
-                          <span className="text-slate-800 text-sm font-bold leading-5">₱{b.amount}</span>
+                          <span className="text-slate-800 text-sm font-bold leading-5">₱{Number(b.amount || 0).toFixed(2)}</span>
                         </td>
                         <td className="px-4 sm:px-6 py-4">
                           <span

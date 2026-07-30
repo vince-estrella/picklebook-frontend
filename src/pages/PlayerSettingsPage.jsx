@@ -237,9 +237,9 @@ function PlayerSettingsPage() {
       const formData = new FormData()
       formData.append('image', avatarFile)
 
-      const res = await api.post('/users/profile-picture', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      // Let axios set Content-Type itself so it includes the multipart boundary —
+      // setting it manually here strips the boundary and the backend can't parse the body.
+      const res = await api.post('/users/profile-picture', formData)
 
       const profileImageUrl = res.data?.profileImageUrl || avatarPreview
 

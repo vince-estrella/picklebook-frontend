@@ -323,7 +323,7 @@ function OwnerDashboardPage() {
                                 <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                                   <img
                                     className="w-full h-full object-cover"
-                                    src={court.imageUrl || 'https://placehold.co/40x40'}
+                                    src={court.images?.[0]?.imageUrl || 'https://placehold.co/40x40'}
                                     alt={court.name}
                                   />
                                 </div>

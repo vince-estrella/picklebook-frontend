@@ -1412,9 +1412,7 @@ function AddPlayerModal({ onClose, onAdd }) {
     try {
       const formData = new FormData()
       formData.append('image', imageFile)
-      const res = await api.post('/players/extract-names', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const res = await api.post('/players/extract-names', formData)
       const names = Array.isArray(res.data?.names) ? res.data.names : []
       if (names.length === 0) {
         setExtractError('Couldn\u2019t find any names in that screenshot. Try a clearer crop.')

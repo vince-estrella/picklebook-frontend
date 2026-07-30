@@ -28,6 +28,7 @@ import PlayerRegisterPage from './pages/PlayerRegisterPage'
 import MyBookingsPage from './pages/MyBookingsPage'
 import PlayerSettingsPage from './pages/PlayerSettingsPage'
 import ReportListingPage from './pages/ReportListingPage'
+import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
   return (
@@ -64,6 +65,8 @@ function App() {
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/report-listing/:id" element={<ReportListingPage />} />
+
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

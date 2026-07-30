@@ -84,7 +84,7 @@ function BookingConfirmedPage() {
   const isOnline = booking.paymentMethod === 'Online'
   const isPaid = booking.paymentStatus === 'Paid'
   const durationMinutes = getDurationMinutes(booking.startTime, booking.endTime)
-  const totalPrice = (durationMinutes / 60) * (court?.pricePerHour || 0)
+  const totalPrice = Number(booking.amount || 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -122,7 +122,7 @@ function BookingConfirmedPage() {
             </div>
             <div>
               <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>DATE</p>
-              <p style={{ fontWeight: '600' }}>{new Date(booking.date).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+              <p style={{ fontWeight: '600' }}>{new Date(booking.date).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' })}</p>
             </div>
             <div>
               <p style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>TIME</p>

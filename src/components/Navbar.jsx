@@ -7,7 +7,12 @@ function Navbar() {
   useEffect(() => {
     const stored = localStorage.getItem('player')
     if (stored && localStorage.getItem('playerToken')) {
-      setPlayer(JSON.parse(stored))
+      try {
+        setPlayer(JSON.parse(stored))
+      } catch {
+        localStorage.removeItem('player')
+        localStorage.removeItem('playerToken')
+      }
     }
   }, [])
 

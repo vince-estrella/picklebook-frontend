@@ -79,9 +79,7 @@ function OwnerSettingsPage() {
     try {
       const formData = new FormData()
       formData.append('image', avatarFile)
-      const res = await api.post('/owner/profile-picture', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const res = await api.post('/owner/profile-picture', formData)
       setProfile(p => ({ ...p, profileImageUrl: res.data?.profileImageUrl || avatarPreview }))
       setAvatarStatus('success')
     } catch (err) {

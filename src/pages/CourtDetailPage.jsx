@@ -49,13 +49,15 @@ function iconForAmenity(name) {
 }
 
 // Works out "Open now" from the same open/close fields the hours table uses.
+// "00:00:00" means the owner hasn't set hours for that day, same convention
+// used by the slot-generation fallback below.
 function computeIsOpenNow(court) {
   if (!court) return null
   const now = new Date()
   const day = now.getDay()
   const open = day === 0 ? court.sunOpen : day === 6 ? court.satOpen : court.monFriOpen
   const close = day === 0 ? court.sunClose : day === 6 ? court.satClose : court.monFriClose
-  if (!open || !close) return null
+  if (!open || !close || open === '00:00:00' || close === '00:00:00') return null
   const [oh, om] = open.split(':').map(Number)
   const [ch, cm] = close.split(':').map(Number)
   const nowMin = now.getHours() * 60 + now.getMinutes()
@@ -83,9 +85,13 @@ function formatSlotRangeLabel(slot) {
 
 function generateSlots(open, close) {
   const slots = []
-  let [startH] = open.split(':').map(Number)
-  const [endH] = close.split(':').map(Number)
-  while (startH < endH) {
+  const [openH, openM = 0] = open.split(':').map(Number)
+  const [closeH, closeM = 0] = close.split(':').map(Number)
+  // First slot starts on the next full hour at or after the actual open
+  // time, so e.g. a 06:30 open time doesn't offer a 06:00 slot.
+  let startH = openM > 0 ? openH + 1 : openH
+  const closeMinutes = closeH * 60 + closeM
+  while (startH * 60 + 60 <= closeMinutes) {
     const start = `${String(startH).padStart(2, '0')}:00`
     const end = `${String(startH + 1).padStart(2, '0')}:00`
     slots.push({ start, end })
@@ -131,8 +137,12 @@ const [selectedDate, setSelectedDate] = useState(getDefaultDate())
   const [showAllReviews, setShowAllReviews] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
 
+  const [courtError, setCourtError] = useState(false)
+
   useEffect(() => {
-    api.get(`/courts/${id}`).then(res => setCourt(res.data))
+    api.get(`/courts/${id}`)
+      .then(res => setCourt(res.data))
+      .catch(() => setCourtError(true))
   }, [id])
 
   useEffect(() => {
@@ -141,6 +151,16 @@ const [selectedDate, setSelectedDate] = useState(getDefaultDate())
       .then(res => setBookedSlots(res.data))
       .catch(() => setBookedSlots([]))
   }, [id, selectedDate])
+
+  if (courtError) {
+    return (
+      <div className="min-h-screen" style={{ background: COLORS.chalk }}>
+        <style>{FONT_IMPORT}</style>
+        <Navbar />
+        <div className="p-8" style={{ color: COLORS.inkMute }}>Couldn't load this court. It may no longer be available.</div>
+      </div>
+    )
+  }
 
   if (!court) {
     return (
@@ -584,7 +604,9 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
             )}
 
             <div className="pt-4 flex justify-center" style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>
-              <button className="cd-report flex items-center gap-1 text-xs font-medium transition-colors duration-150" style={{ color: COLORS.inkMute }}>
+              <button
+                onClick={() => navigate(`/report-listing/${court.id}`)}
+                className="cd-report flex items-center gap-1 text-xs font-medium transition-colors duration-150" style={{ color: COLORS.inkMute }}>
                 <Flag size={12} /> Report listing
               </button>
             </div>

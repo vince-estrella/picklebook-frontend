@@ -18,6 +18,14 @@ function EditCourtPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      navigate('/owner/login')
+      return
+    }
+    setFetching(true)
+    setImages([])
+    setError(null)
+    setDeletingImageId(null)
     api.get(`/courts/${id}`).then(res => {
       const court = res.data
       setForm({
@@ -99,21 +107,25 @@ function EditCourtPage() {
         maxPlayers: parseInt(form.maxPlayers)
       }
       await api.put(`/courts/${id}`, courtData)
+    } catch {
+      setError('Failed to update court. Please try again.')
+      setLoading(false)
+      return
+    }
 
+    // The update above already succeeded — an image-upload failure here
+    // must not be reported as "failed to update," which would be misleading.
+    try {
       for (const img of images) {
         const formData = new FormData()
         formData.append('file', img)
-        await api.post(`/courts/${id}/images`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        })
+        await api.post(`/courts/${id}/images`, formData)
       }
-
-      navigate('/owner/dashboard')
     } catch {
-      setError('Failed to update court. Please try again.')
-    } finally {
-      setLoading(false)
+      alert('Court updated, but some images failed to upload. Please try adding them again.')
     }
+
+    navigate('/owner/dashboard')
   }
 
   if (fetching) return <div style={{ padding: '40px', color: '#6b7280' }}>Loading...</div>

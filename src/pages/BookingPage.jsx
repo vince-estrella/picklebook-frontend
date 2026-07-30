@@ -19,6 +19,14 @@ function formatTime12h(time) {
   return `${h}:${mStr} ${period}`
 }
 
+// Minutes between two "HH:MM:SS" (or "HH:MM") strings
+function getDurationMinutes(start, end) {
+  if (!start || !end) return 0
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  return (eh * 60 + em) - (sh * 60 + sm)
+}
+
 function BookingPage() {
   const { id } = useParams()
   const { state } = useLocation()
@@ -79,8 +87,8 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
     }
   }
 
-  const duration = selectedSlots.length
-const totalPrice = duration * court.pricePerHour
+  const durationMinutes = getDurationMinutes(selectedSlots[0].start, selectedSlots[selectedSlots.length - 1].end)
+  const totalPrice = (durationMinutes / 60) * court.pricePerHour
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -131,7 +139,7 @@ const totalPrice = duration * court.pricePerHour
                 <div>
                   <p style={{ color: '#9ca3af', marginBottom: '2px' }}>DURATION</p>
                  <p style={{ fontWeight: '600' }}>
-  {duration * 60} Minutes
+  {durationMinutes} Minutes
 </p>
                 </div>
               </div>
@@ -139,12 +147,12 @@ const totalPrice = duration * court.pricePerHour
               <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                   <span style={{ color: '#6b7280' }}>Standard Rate</span>
-  <span>₱{totalPrice}</span>
+  <span>₱{totalPrice.toFixed(2)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', marginTop: '8px' }}>
                   <span>Total to Pay</span>
                <span style={{ color: '#16a34a' }}>
-  ₱{totalPrice}
+  ₱{totalPrice.toFixed(2)}
 </span>
                 </div>
               </div>
