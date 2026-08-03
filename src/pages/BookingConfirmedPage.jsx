@@ -27,6 +27,7 @@ function BookingConfirmedPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const bookingIdParam = searchParams.get('bookingId')
+  const tokenParam = searchParams.get('token')
 
   const [booking, setBooking] = useState(state?.booking || null)
   const [court, setCourt] = useState(state?.court || null)
@@ -45,7 +46,8 @@ function BookingConfirmedPage() {
       return
     }
 
-    api.get(`/bookings/${bookingIdParam}`)
+    const query = tokenParam ? `?token=${encodeURIComponent(tokenParam)}` : ''
+    api.get(`/bookings/${bookingIdParam}${query}`)
       .then(res => {
         setBooking(res.data)
         setCourt(res.data.court)

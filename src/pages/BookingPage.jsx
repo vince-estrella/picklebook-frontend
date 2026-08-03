@@ -34,6 +34,7 @@ function BookingPage() {
 const { court, selectedDate, selectedSlots } = state || {}
 
   const player = JSON.parse(localStorage.getItem('player') || 'null')
+  const requiresOnlinePayment = court?.paymentMethod === 'Online' || court?.paymentMethod === 'PayMongo'
 
   const [form, setForm] = useState({
     firstName: player?.firstName || '',
@@ -106,7 +107,11 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
         </button>
 
         <h1 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '8px' }}>Confirm Your Booking</h1>
-        <p style={{ color: '#6b7280', marginBottom: '32px' }}>Complete your details below to reserve your court. No prepayment required today.</p>
+        <p style={{ color: '#6b7280', marginBottom: '32px' }}>
+          {requiresOnlinePayment
+            ? 'Complete your details below, then continue to secure online payment.'
+            : 'Complete your details below to reserve your court. No prepayment required today.'}
+        </p>
 
         <div className="flex flex-col md:flex-row gap-8 items-start">
 
@@ -216,7 +221,7 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
             </div>
 
             {/* Payment notice — reflects this court's actual payment method */}
-            {court.paymentMethod === 'Online' ? (
+            {requiresOnlinePayment ? (
               <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '14px', color: '#1d4ed8' }}>
                 💳 <strong>Pay online</strong> — This court requires online payment. You'll be redirected to Xendit's secure checkout after confirming.
               </div>
@@ -251,7 +256,7 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
                 opacity: loading ? 0.8 : 1,
               }}
             >
-              {loading ? 'Confirming...' : court.paymentMethod === 'Online' ? 'Continue to Payment' : 'Confirm Booking'}
+              {loading ? 'Confirming...' : requiresOnlinePayment ? 'Continue to Payment' : 'Confirm Booking'}
             </button>
           </div>
         </div>
