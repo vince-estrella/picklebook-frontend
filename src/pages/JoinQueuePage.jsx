@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { FaBed, FaClock, FaCheckCircle } from 'react-icons/fa'
+import { FaBed, FaClock, FaCheckCircle, FaCrown, FaTrophy } from 'react-icons/fa'
 import { subscribeRoomState, submitJoinRequest, roomExists } from '../lib/roomSync'
 
 // Same design tokens as QueueManager — kept local here so this page can be
@@ -13,6 +13,8 @@ const COLORS = {
   chalkDim: '#DCE1D6',
   ink: '#101817',
   inkMute: '#5B6864',
+  gold: '#C99A2E',
+  goldBg: '#FBF1DA',
 }
 
 const FONT_IMPORT = `
@@ -21,6 +23,8 @@ const FONT_IMPORT = `
 
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Pro']
 const DEFAULT_SKILL = 'Beginner'
+// Keep in sync with QueueManager.jsx's REST_INTERVAL — purely a visual nudge.
+const REST_INTERVAL = 3
 
 const inputStyle = {
   width: '100%',
@@ -62,6 +66,44 @@ function playSuccessTone() {
   }
 }
 
+/**
+ * Ranks players by wins (desc), then win %, then fewest losses.
+ * Players with zero recorded games sink to the bottom rather than tying
+ * for first, since an 0-0 record isn't actually a leading record.
+ */
+function computeRankings(players) {
+  return players
+    .map(p => {
+      const wins = p.wins || 0
+      const losses = p.losses || 0
+      const total = wins + losses
+      const winPct = total > 0 ? Math.round((wins / total) * 100) : 0
+      return { ...p, wins, losses, totalGames: total, winPct }
+    })
+    .sort((a, b) => {
+      if (a.totalGames === 0 && b.totalGames === 0) return 0
+      if (a.totalGames === 0) return 1
+      if (b.totalGames === 0) return -1
+      return b.wins - a.wins || b.winPct - a.winPct || a.losses - b.losses
+    })
+}
+
+function CrownBadge() {
+  return (
+    <span title="Leading the rankings" style={{ display: 'inline-flex', alignItems: 'center', color: COLORS.gold, flexShrink: 0 }}>
+      <FaCrown size={12} />
+    </span>
+  )
+}
+
+function tabStyle(active) {
+  return {
+    flex: 1, padding: '12px', border: 'none', background: active ? COLORS.chalk : '#fff',
+    fontWeight: 700, fontSize: '13px', color: active ? COLORS.ink : COLORS.inkMute, cursor: 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+  }
+}
+
 function JoinQueuePage() {
   const initialCode = useMemo(() => {
     const params = new URLSearchParams(window.location.search)
@@ -78,6 +120,7 @@ function JoinQueuePage() {
   const [nameInput, setNameInput] = useState('')
   const [skillInput, setSkillInput] = useState(DEFAULT_SKILL)
   const [submitting, setSubmitting] = useState(false)
+  const [tab, setTab] = useState('queue') // 'queue' | 'rankings'
 
   const prevStatusRef = useRef(null)
 
@@ -105,9 +148,14 @@ function JoinQueuePage() {
       .sort((a, b) => a.gamesPlayed - b.gamesPlayed || a.joinedAt - b.joinedAt)
   }, [roomState])
 
+  const rankings = useMemo(() => computeRankings(roomState?.players || []), [roomState])
+  const leaderId = rankings.length > 0 && rankings[0].totalGames > 0 ? rankings[0].id : null
+
   const myPosition = me?.status === 'waiting'
     ? waitingList.findIndex(p => p.id === me.id) + 1
     : null
+
+  const myRestRemaining = me ? REST_INTERVAL - (me.gamesSinceRest || 0) : null
 
   // Notify the moment status flips to "playing"
   useEffect(() => {
@@ -259,35 +307,53 @@ function JoinQueuePage() {
 
         {code && me && (
           <>
-            <StatusCard me={me} myCourt={myCourt} myPosition={myPosition} waitingCount={waitingList.length} />
+            <StatusCard
+              me={me}
+              myCourt={myCourt}
+              myPosition={myPosition}
+              waitingCount={waitingList.length}
+              isLeader={me.id === leaderId}
+              restRemaining={myRestRemaining}
+            />
 
             <div style={{ marginTop: '18px', background: '#fff', borderRadius: '12px', border: `1px solid ${COLORS.chalkDim}`, overflow: 'hidden' }}>
-              <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '15px', margin: 0, padding: '14px 18px', borderBottom: `1px solid ${COLORS.chalkDim}`, color: COLORS.ink }}>
-                Waiting List
-              </h2>
-              {waitingList.length === 0 ? (
-                <p style={{ padding: '20px 18px', fontSize: '13px', color: COLORS.inkMute, textAlign: 'center' }}>Nobody's waiting right now.</p>
+              <div style={{ display: 'flex', borderBottom: `1px solid ${COLORS.chalkDim}` }}>
+                <button style={tabStyle(tab === 'queue')} onClick={() => setTab('queue')}>
+                  Waiting List
+                </button>
+                <button style={tabStyle(tab === 'rankings')} onClick={() => setTab('rankings')}>
+                  <FaTrophy size={11} /> Rankings
+                </button>
+              </div>
+
+              {tab === 'queue' ? (
+                waitingList.length === 0 ? (
+                  <p style={{ padding: '20px 18px', fontSize: '13px', color: COLORS.inkMute, textAlign: 'center' }}>Nobody's waiting right now.</p>
+                ) : (
+                  waitingList.map((p, i) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 18px',
+                        borderBottom: `1px solid ${COLORS.chalkDim}`,
+                        background: p.id === me.id ? '#FBFAD9' : 'transparent',
+                      }}
+                    >
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.inkMute, width: '20px' }}>
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      {p.id === leaderId && <CrownBadge />}
+                      <span style={{ fontSize: '13.5px', fontWeight: p.id === me.id ? 700 : 500, color: COLORS.ink, flex: 1 }}>
+                        {p.name}{p.id === me.id ? ' (you)' : ''}
+                      </span>
+                      <span style={{ fontSize: '10.5px', color: COLORS.inkMute, border: '1px solid #D5DAD1', borderRadius: '999px', padding: '1px 7px' }}>
+                        {p.skill || DEFAULT_SKILL}
+                      </span>
+                    </div>
+                  ))
+                )
               ) : (
-                waitingList.map((p, i) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 18px',
-                      borderBottom: `1px solid ${COLORS.chalkDim}`,
-                      background: p.id === me.id ? '#FBFAD9' : 'transparent',
-                    }}
-                  >
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.inkMute, width: '20px' }}>
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <span style={{ fontSize: '13.5px', fontWeight: p.id === me.id ? 700 : 500, color: COLORS.ink, flex: 1 }}>
-                      {p.name}{p.id === me.id ? ' (you)' : ''}
-                    </span>
-                    <span style={{ fontSize: '10.5px', color: COLORS.inkMute, border: '1px solid #D5DAD1', borderRadius: '999px', padding: '1px 7px' }}>
-                      {p.skill || DEFAULT_SKILL}
-                    </span>
-                  </div>
-                ))
+                <RankingList rankings={rankings} meId={me.id} />
               )}
             </div>
           </>
@@ -297,7 +363,7 @@ function JoinQueuePage() {
   )
 }
 
-function StatusCard({ me, myCourt, myPosition, waitingCount }) {
+function StatusCard({ me, myCourt, myPosition, waitingCount, isLeader, restRemaining }) {
   if (me.status === 'playing') {
     return (
       <div style={{ background: COLORS.citron, borderRadius: '12px', padding: '26px 22px', textAlign: 'center' }}>
@@ -323,14 +389,48 @@ function StatusCard({ me, myCourt, myPosition, waitingCount }) {
   return (
     <div style={{ background: '#fff', borderRadius: '12px', padding: '24px 22px', textAlign: 'center', border: `1px solid ${COLORS.chalkDim}` }}>
       <FaClock size={20} color={COLORS.teal} style={{ marginBottom: '8px' }} />
-      <p style={{ fontSize: '15px', fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>
+      <p style={{ fontSize: '15px', fontWeight: 700, color: COLORS.ink, margin: '0 0 4px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+        {isLeader && <CrownBadge />}
         {myPosition ? `You're #${myPosition} in line` : "You're in the queue"}
       </p>
       <p style={{ fontSize: '13px', color: COLORS.inkMute, margin: 0 }}>
         {waitingCount} waiting · keep this page open — you'll be notified the moment you're on a court
       </p>
+      {restRemaining !== null && (
+        <p style={{ fontSize: '12px', margin: '10px 0 0', fontWeight: 600, color: restRemaining <= 0 ? '#8A5A12' : COLORS.inkMute }}>
+          {restRemaining <= 0 ? 'You\u2019ve played several in a row — maybe rest soon' : `${restRemaining} game${restRemaining === 1 ? '' : 's'} until a suggested rest`}
+        </p>
+      )}
     </div>
   )
+}
+
+function RankingList({ rankings, meId }) {
+  if (rankings.length === 0) {
+    return <p style={{ padding: '20px 18px', fontSize: '13px', color: COLORS.inkMute, textAlign: 'center' }}>No results yet.</p>
+  }
+
+  return rankings.map((p, i) => (
+    <div
+      key={p.id}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 18px',
+        borderBottom: `1px solid ${COLORS.chalkDim}`,
+        background: p.id === meId ? '#FBFAD9' : (i === 0 && p.totalGames > 0 ? COLORS.goldBg : 'transparent'),
+      }}
+    >
+      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.inkMute, width: '20px' }}>{i + 1}</span>
+      {i === 0 && p.totalGames > 0 && <CrownBadge />}
+      <span style={{ fontSize: '13.5px', fontWeight: p.id === meId ? 700 : 500, color: COLORS.ink, flex: 1 }}>
+        {p.name}{p.id === meId ? ' (you)' : ''}
+      </span>
+      <span style={{ fontSize: '12px', color: COLORS.teal, fontWeight: 700 }}>{p.wins}W</span>
+      <span style={{ fontSize: '12px', color: '#B3453D', fontWeight: 700 }}>{p.losses}L</span>
+      <span style={{ fontSize: '10.5px', color: COLORS.inkMute, fontFamily: "'JetBrains Mono', monospace", width: '38px', textAlign: 'right' }}>
+        {p.totalGames > 0 ? `${p.winPct}%` : '—'}
+      </span>
+    </div>
+  ))
 }
 
 export default JoinQueuePage

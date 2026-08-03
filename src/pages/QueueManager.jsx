@@ -23,6 +23,8 @@ import {
   FaWifi,
   FaImage,
   FaSpinner,
+  FaTrophy,
+  FaCrown,
 } from 'react-icons/fa'
 import { QRCodeSVG } from 'qrcode.react'
 import Navbar from '../components/Navbar'
@@ -49,6 +51,8 @@ const COLORS = {
   chalkDim: '#DCE1D6',
   ink: '#101817',
   inkMute: '#5B6864',
+  gold: '#C99A2E',
+  goldBg: '#FBF1DA',
 }
 
 const FONT_IMPORT = `
@@ -60,6 +64,9 @@ const ROOM_KEY = 'picklebook_room_code_v1'
 const COURT_COUNT = 3
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Pro']
 const DEFAULT_SKILL = 'Beginner'
+// How many games a player can play in a row before we flag them as
+// "due to rest". Purely a visual nudge for the host — nothing forces it.
+const REST_INTERVAL = 3
 
 // Set this to wherever JoinQueuePage is mounted in your router, e.g. '/join'
 const JOIN_PATH = '/join'
@@ -299,6 +306,28 @@ function generateMatches(players, courts) {
   return { players: nextPlayers, courts: nextCourts }
 }
 
+/**
+ * Ranks players by wins (desc), then win %, then fewest losses.
+ * Players with zero recorded games sink to the bottom rather than tying
+ * for first, since an 0-0 record isn't actually a leading record.
+ */
+function computeRankings(players) {
+  return players
+    .map(p => {
+      const wins = p.wins || 0
+      const losses = p.losses || 0
+      const total = wins + losses
+      const winPct = total > 0 ? Math.round((wins / total) * 100) : 0
+      return { ...p, wins, losses, totalGames: total, winPct }
+    })
+    .sort((a, b) => {
+      if (a.totalGames === 0 && b.totalGames === 0) return 0
+      if (a.totalGames === 0) return 1
+      if (b.totalGames === 0) return -1
+      return b.wins - a.wins || b.winPct - a.winPct || a.losses - b.losses
+    })
+}
+
 // ---------------------------------------------------------------------------
 // Small shared UI primitives
 // ---------------------------------------------------------------------------
@@ -377,6 +406,44 @@ function StatusPill({ status }) {
   )
 }
 
+/** Small "N games until rest" / "Due to rest" chip, shown for waiting players. */
+function RestChip({ player }) {
+  const since = player.gamesSinceRest || 0
+  const remaining = REST_INTERVAL - since
+  if (remaining <= 0) {
+    return (
+      <span
+        title="Played several games in a row — consider resting"
+        style={{
+          fontSize: '10.5px', fontWeight: 700, color: '#8A5A12', background: '#FBEAD2',
+          borderRadius: '999px', padding: '1px 7px', display: 'inline-flex', alignItems: 'center', gap: '4px',
+        }}
+      >
+        <FaBed size={9} /> Due to rest
+      </span>
+    )
+  }
+  return (
+    <span style={{ fontSize: '10.5px', color: COLORS.inkMute }}>
+      {remaining} game{remaining === 1 ? '' : 's'} until rest
+    </span>
+  )
+}
+
+function CrownBadge() {
+  return (
+    <span
+      title="Leading the rankings"
+      style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        color: COLORS.gold, flexShrink: 0,
+      }}
+    >
+      <FaCrown size={13} />
+    </span>
+  )
+}
+
 function Modal({ title, onClose, children, width = 420 }) {
   return (
     <div
@@ -430,6 +497,8 @@ function QueueManager() {
   const [pairFirst, setPairFirst] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [replaceTarget, setReplaceTarget] = useState(null) // { courtId, team, slotIndex, outgoingId }
+  const [finishTarget, setFinishTarget] = useState(null) // court object being finished
+  const [showRankings, setShowRankings] = useState(false)
   const [roomCode, setRoomCode] = useState(() => sessionStorage.getItem(ROOM_KEY) || null)
   const [showJoinPanel, setShowJoinPanel] = useState(false)
   const [joinedCount, setJoinedCount] = useState(0)
@@ -504,6 +573,12 @@ function QueueManager() {
   const activeCourts = courts.filter(c => c.teamA.length > 0).length
   const byId = useMemo(() => Object.fromEntries(players.map(p => [p.id, p])), [players])
 
+  // Ranked list + id of the current #1 (used to show the crown badge
+  // anywhere that player's name appears). No crown if nobody has a
+  // recorded win/loss yet.
+  const rankings = useMemo(() => computeRankings(players), [players])
+  const leaderId = rankings.length > 0 && rankings[0].totalGames > 0 ? rankings[0].id : null
+
   // ---- actions -----------------------------------------------------------
   // Adds one or many players at once. `entries` is an array of
   // { name, skill, joinRequestId? }. Any entry with no skill (or an
@@ -522,6 +597,9 @@ function QueueManager() {
           skill,
           gamesPlayed: 0,
           timesRested: 0,
+          wins: 0,
+          losses: 0,
+          gamesSinceRest: 0,
           status: 'waiting',
           joinedAt: Date.now(),
           fixedPairId: null,
@@ -616,6 +694,7 @@ function QueueManager() {
       } else if (p.status === 'waiting') {
         p.status = 'resting'
         p.timesRested += 1
+        p.gamesSinceRest = 0
       }
       return { players: ps }
     })
@@ -762,6 +841,7 @@ function QueueManager() {
           const p = ps.find(pl => pl.id === id)
           if (p) {
             p.gamesPlayed += 1
+            p.gamesSinceRest = (p.gamesSinceRest || 0) + 1
             p.status = 'waiting'
             p.joinedAt = Date.now()
             p.courtId = null
@@ -777,23 +857,40 @@ function QueueManager() {
 
   const canEndRound = courts.some(c => !c.locked && c.teamA.length > 0)
 
-  // Finish a single court independently — increments games played for just
-  // that foursome, sends them to the back of the queue, and immediately
-  // pulls the next fair group into that one court without touching the others.
-  const endCourtRound = (courtId) => {
+  // Finish a single court independently — increments games played (and,
+  // for the winning/losing side, wins/losses) for just that foursome,
+  // sends them to the back of the queue, and immediately pulls the next
+  // fair group into that one court without touching the others.
+  // `winner` is 'teamA', 'teamB', or null/undefined to skip recording a result.
+  const endCourtRound = (courtId, winner) => {
     commit((ps, cs) => {
       const c = cs.find(cc => cc.id === courtId)
       if (!c || c.locked || (c.teamA.length === 0 && c.teamB.length === 0)) return { players: ps, courts: cs }
+
       const ids = [...c.teamA, ...c.teamB]
       for (const id of ids) {
         const p = ps.find(pl => pl.id === id)
         if (p) {
           p.gamesPlayed += 1
+          p.gamesSinceRest = (p.gamesSinceRest || 0) + 1
           p.status = 'waiting'
           p.joinedAt = Date.now()
           p.courtId = null
         }
       }
+
+      if (winner === 'teamA' || winner === 'teamB') {
+        const loser = winner === 'teamA' ? 'teamB' : 'teamA'
+        for (const id of c[winner]) {
+          const p = ps.find(pl => pl.id === id)
+          if (p) p.wins = (p.wins || 0) + 1
+        }
+        for (const id of c[loser]) {
+          const p = ps.find(pl => pl.id === id)
+          if (p) p.losses = (p.losses || 0) + 1
+        }
+      }
+
       c.teamA = []
       c.teamB = []
       const result = generateMatches(ps, cs)
@@ -881,6 +978,9 @@ function QueueManager() {
                   Join Game
                 </Button>
               )}
+              <Button className="qm-btn" variant="outline" size="lg" icon={<FaTrophy size={13} />} onClick={() => setShowRankings(true)}>
+                Rankings
+              </Button>
               <Button className="qm-btn" variant="outline" size="lg" icon={<FaUserPlus size={13} />} onClick={() => setShowAddModal(true)}>
                 Add Players
               </Button>
@@ -951,6 +1051,7 @@ function QueueManager() {
                     key={p.id}
                     player={p}
                     position={i + 1}
+                    isLeader={p.id === leaderId}
                     pairMode={pairMode}
                     isPairSelected={pairFirst === p.id}
                     onSelectForPair={() => handlePlayerClickForPairing(p.id)}
@@ -971,6 +1072,7 @@ function QueueManager() {
                   <QueueRow
                     key={p.id}
                     player={p}
+                    isLeader={p.id === leaderId}
                     resting
                     onRemove={() => removePlayer(p.id)}
                     onRest={() => toggleRest(p.id)}
@@ -1008,10 +1110,11 @@ function QueueManager() {
                   key={court.id}
                   court={court}
                   byId={byId}
+                  leaderId={leaderId}
                   onLockToggle={() => toggleLockCourt(court.id)}
                   onRemove={(team, pid) => removeFromCourt(court.id, team, pid)}
                   onReplace={(team, pid) => setReplaceTarget({ courtId: court.id, team, outgoingId: pid })}
-                  onFinish={() => endCourtRound(court.id)}
+                  onFinish={() => setFinishTarget(court)}
                 />
               ))}
             </div>
@@ -1025,7 +1128,7 @@ function QueueManager() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
                   <thead>
                     <tr style={{ background: COLORS.chalk }}>
-                      {['Player', 'Skill', 'Games Played', 'Times Rested', 'Status', 'Fixed Pair'].map(h => (
+                      {['Player', 'Skill', 'W', 'L', 'Games Played', 'Times Rested', 'Status', 'Fixed Pair'].map(h => (
                         <th key={h} style={{ textAlign: 'left', padding: '10px 18px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: COLORS.inkMute, fontWeight: 600, whiteSpace: 'nowrap' }}>
                           {h}
                         </th>
@@ -1034,15 +1137,22 @@ function QueueManager() {
                   </thead>
                   <tbody>
                     {players.length === 0 && (
-                      <tr><td colSpan={6} style={{ padding: '20px 18px', color: COLORS.inkMute, textAlign: 'center' }}>No players yet.</td></tr>
+                      <tr><td colSpan={8} style={{ padding: '20px 18px', color: COLORS.inkMute, textAlign: 'center' }}>No players yet.</td></tr>
                     )}
                     {players
                       .slice()
                       .sort((a, b) => a.name.localeCompare(b.name))
                       .map(p => (
                         <tr key={p.id} style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>
-                          <td style={{ padding: '10px 18px', fontWeight: 600, color: COLORS.ink, whiteSpace: 'nowrap' }}>{p.name}</td>
+                          <td style={{ padding: '10px 18px', fontWeight: 600, color: COLORS.ink, whiteSpace: 'nowrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              {p.id === leaderId && <CrownBadge />}
+                              {p.name}
+                            </span>
+                          </td>
                           <td style={{ padding: '10px 18px', whiteSpace: 'nowrap' }}>{p.skill || DEFAULT_SKILL}</td>
+                          <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace", color: COLORS.teal, fontWeight: 700 }}>{p.wins || 0}</td>
+                          <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace", color: '#B3453D', fontWeight: 700 }}>{p.losses || 0}</td>
                           <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace" }}>{p.gamesPlayed}</td>
                           <td style={{ padding: '10px 18px', fontFamily: "'JetBrains Mono', monospace" }}>{p.timesRested}</td>
                           <td style={{ padding: '10px 18px' }}><StatusPill status={p.status} /></td>
@@ -1070,6 +1180,22 @@ function QueueManager() {
           onClose={() => setReplaceTarget(null)}
           onConfirm={confirmReplace}
         />
+      )}
+
+      {finishTarget && (
+        <FinishCourtModal
+          court={finishTarget}
+          byId={byId}
+          onClose={() => setFinishTarget(null)}
+          onConfirm={(winner) => {
+            endCourtRound(finishTarget.id, winner)
+            setFinishTarget(null)
+          }}
+        />
+      )}
+
+      {showRankings && (
+        <RankingsModal rankings={rankings} onClose={() => setShowRankings(false)} />
       )}
 
       {showJoinPanel && roomCode && (
@@ -1104,7 +1230,7 @@ function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
   return (
     <Modal title="Join Game" onClose={onClose} width={420}>
       <p style={{ fontSize: '13.5px', color: COLORS.inkMute, margin: '0 0 20px' }}>
-        Players scan or type this code on their own phone to add themselves to the queue and follow it live.
+        Players scan or type this code on their own phone to add themselves to the queue, follow it live, and check the rankings.
       </p>
 
       <div style={{
@@ -1147,9 +1273,96 @@ function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
 }
 
 // ---------------------------------------------------------------------------
+// Rankings modal (host side)
+// ---------------------------------------------------------------------------
+function RankingsModal({ rankings, onClose }) {
+  return (
+    <Modal title="Rankings" onClose={onClose} width={480}>
+      <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+          <thead>
+            <tr style={{ background: COLORS.chalk }}>
+              {['#', 'Player', 'W', 'L', 'Win %'].map(h => (
+                <th key={h} style={{ textAlign: 'left', padding: '8px 10px', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: COLORS.inkMute }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rankings.length === 0 && (
+              <tr><td colSpan={5} style={{ padding: '16px 10px', color: COLORS.inkMute, textAlign: 'center' }}>No players yet.</td></tr>
+            )}
+            {rankings.map((p, i) => (
+              <tr key={p.id} style={{ borderTop: `1px solid ${COLORS.chalkDim}`, background: i === 0 && p.totalGames > 0 ? COLORS.goldBg : 'transparent' }}>
+                <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace", color: COLORS.inkMute }}>{i + 1}</td>
+                <td style={{ padding: '8px 10px', fontWeight: 600, color: COLORS.ink }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    {i === 0 && p.totalGames > 0 && <CrownBadge />}
+                    {p.name}
+                  </span>
+                </td>
+                <td style={{ padding: '8px 10px', color: COLORS.teal, fontWeight: 700 }}>{p.wins}</td>
+                <td style={{ padding: '8px 10px', color: '#B3453D', fontWeight: 700 }}>{p.losses}</td>
+                <td style={{ padding: '8px 10px', fontFamily: "'JetBrains Mono', monospace" }}>{p.totalGames > 0 ? `${p.winPct}%` : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Finish court modal — pick a winner (or skip) before sending both teams
+// back to the queue.
+// ---------------------------------------------------------------------------
+function FinishCourtModal({ court, byId, onClose, onConfirm }) {
+  const teamName = (ids) => ids.map(id => byId[id]?.name).filter(Boolean).join(' & ')
+
+  return (
+    <Modal title="Finish Court" onClose={onClose} width={380}>
+      <p style={{ fontSize: '13.5px', color: COLORS.inkMute, marginBottom: '18px' }}>
+        Who won this match on <strong style={{ color: COLORS.ink }}>{court.name}</strong>?
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+        <button
+          onClick={() => onConfirm('teamA')}
+          style={{
+            padding: '14px', borderRadius: '8px', border: `1.5px solid ${COLORS.teal}`,
+            background: '#E7EEE9', color: COLORS.teal, fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+          }}
+        >
+          {teamName(court.teamA)} won
+        </button>
+        <button
+          onClick={() => onConfirm('teamB')}
+          style={{
+            padding: '14px', borderRadius: '8px', border: `1.5px solid ${COLORS.teal}`,
+            background: '#E7EEE9', color: COLORS.teal, fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+          }}
+        >
+          {teamName(court.teamB)} won
+        </button>
+      </div>
+      <button
+        onClick={() => onConfirm(null)}
+        style={{
+          width: '100%', padding: '10px', background: 'none', border: 'none',
+          color: COLORS.inkMute, fontSize: '12.5px', cursor: 'pointer', textDecoration: 'underline',
+        }}
+      >
+        Skip — don't record a result
+      </button>
+    </Modal>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Queue row
 // ---------------------------------------------------------------------------
-function QueueRow({ player, position, pairMode, isPairSelected, onSelectForPair, onRemove, onRest, onMoveUp, onMoveDown, onUnpair, partnerName, resting }) {
+function QueueRow({ player, position, isLeader, pairMode, isPairSelected, onSelectForPair, onRemove, onRest, onMoveUp, onMoveDown, onUnpair, partnerName, resting }) {
   return (
     <div
       onClick={pairMode ? onSelectForPair : undefined}
@@ -1168,10 +1381,18 @@ function QueueRow({ player, position, pairMode, isPairSelected, onSelectForPair,
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {isLeader && <CrownBadge />}
           <span style={{ fontWeight: 600, fontSize: '14px', color: COLORS.ink }}>{player.name}</span>
           <span style={{ fontSize: '10.5px', color: COLORS.inkMute, border: '1px solid #D5DAD1', borderRadius: '999px', padding: '1px 7px' }}>
             {player.skill || DEFAULT_SKILL}
           </span>
+          {(player.wins || player.losses) ? (
+            <span style={{ fontSize: '10.5px', fontFamily: "'JetBrains Mono', monospace" }}>
+              <span style={{ color: COLORS.teal, fontWeight: 700 }}>{player.wins || 0}W</span>
+              {' '}
+              <span style={{ color: '#B3453D', fontWeight: 700 }}>{player.losses || 0}L</span>
+            </span>
+          ) : null}
           {partnerName && (
             <span style={{ fontSize: '10.5px', color: COLORS.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               <FaLink size={9} /> {partnerName}
@@ -1183,9 +1404,10 @@ function QueueRow({ player, position, pairMode, isPairSelected, onSelectForPair,
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '10px', marginTop: '3px' }}>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '3px', alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '11.5px', color: COLORS.inkMute }}>{player.gamesPlayed} games played</span>
           <StatusPill status={player.status} />
+          {!resting && <RestChip player={player} />}
         </div>
       </div>
 
@@ -1231,7 +1453,7 @@ function IconBtn({ children, onClick, title, danger }) {
 // ---------------------------------------------------------------------------
 // Court card
 // ---------------------------------------------------------------------------
-function CourtCard({ court, byId, onLockToggle, onRemove, onReplace, onFinish }) {
+function CourtCard({ court, byId, leaderId, onLockToggle, onRemove, onReplace, onFinish }) {
   const hasPlayers = court.teamA.length > 0 || court.teamB.length > 0
   return (
     <div
@@ -1270,9 +1492,9 @@ function CourtCard({ court, byId, onLockToggle, onRemove, onReplace, onFinish })
         </p>
       ) : (
         <>
-          <TeamBlock label="Team A" ids={court.teamA} byId={byId} onRemove={pid => onRemove('teamA', pid)} onReplace={pid => onReplace('teamA', pid)} />
+          <TeamBlock label="Team A" ids={court.teamA} byId={byId} leaderId={leaderId} onRemove={pid => onRemove('teamA', pid)} onReplace={pid => onReplace('teamA', pid)} />
           <div style={{ textAlign: 'center', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.citron, letterSpacing: '0.1em', margin: '10px 0' }}>VS</div>
-          <TeamBlock label="Team B" ids={court.teamB} byId={byId} onRemove={pid => onRemove('teamB', pid)} onReplace={pid => onReplace('teamB', pid)} />
+          <TeamBlock label="Team B" ids={court.teamB} byId={byId} leaderId={leaderId} onRemove={pid => onRemove('teamB', pid)} onReplace={pid => onReplace('teamB', pid)} />
 
           <button
             className="qm-btn"
@@ -1296,7 +1518,7 @@ function CourtCard({ court, byId, onLockToggle, onRemove, onReplace, onFinish })
   )
 }
 
-function TeamBlock({ label, ids, byId, onRemove, onReplace }) {
+function TeamBlock({ label, ids, byId, leaderId, onRemove, onReplace }) {
   return (
     <div>
       <p style={{ fontSize: '10.5px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7C8B85', margin: '0 0 6px' }}>{label}</p>
@@ -1305,7 +1527,10 @@ function TeamBlock({ label, ids, byId, onRemove, onReplace }) {
         if (!p) return null
         return (
           <div key={pid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', gap: '8px' }}>
-            <span style={{ color: COLORS.chalk, fontSize: '13.5px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{p.name}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+              {pid === leaderId && <CrownBadge />}
+              <span style={{ color: COLORS.chalk, fontSize: '13.5px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            </span>
             <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
               <button
                 title="Replace player"
