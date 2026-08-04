@@ -910,9 +910,15 @@ function QueueManager() {
         @keyframes qm-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         @media (max-width: 1000px) {
-          .qm-grid { grid-template-columns: 1fr !important; }
-          .qm-courts { grid-template-columns: 1fr !important; }
-        }
+  .qm-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Tablet: sidebar has already stacked above the courts (rule above), but
+   there's still plenty of width here for two court cards side by side —
+   dropping straight to one column wasted it. */
+@media (max-width: 1000px) and (min-width: 641px) {
+  .qm-courts { grid-template-columns: repeat(2, 1fr) !important; }
+}
 
         @media (max-width: 700px) {
           .qm-header-stats { flex-wrap: wrap; }
@@ -924,6 +930,7 @@ function QueueManager() {
           .qm-body-wrap { padding: 16px 12px 40px !important; }
           .qm-header-top { flex-direction: column; align-items: stretch !important; gap: 14px !important; }
           .qm-header-actions { width: 100%; }
+          .qm-courts { gap: 12px !important; grid-template-columns: 1fr !important; }
           .qm-header-actions .qm-btn { flex: 1 1 auto; }
           .qm-header-actions .qm-primary-cta { flex-basis: 100%; order: 3; }
           .qm-header-stats { display: grid !important; grid-template-columns: 1fr 1fr; gap: 14px 10px; row-gap: 16px; margin-top: 20px !important; }
