@@ -25,6 +25,7 @@ import {
   FaSpinner,
   FaTrophy,
   FaCrown,
+  FaSitemap,
 } from 'react-icons/fa'
 import { QRCodeSVG } from 'qrcode.react'
 import Navbar from '../components/Navbar'
@@ -36,6 +37,7 @@ import {
   clearJoinRequest,
   closeRoom,
 } from '../lib/roomSync'
+import TournamentMode from './TournamentMode'
 
 // ---------------------------------------------------------------------------
 // Design tokens — shared with HomePage so this page reads as the same
@@ -448,6 +450,7 @@ function Modal({ title, onClose, children, width = 420 }) {
   return (
     <div
       onClick={onClose}
+      className="qm-modal-overlay"
       style={{
         position: 'fixed', inset: 0, background: 'rgba(7,29,39,0.55)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px',
@@ -502,6 +505,7 @@ function QueueManager() {
   const [roomCode, setRoomCode] = useState(() => sessionStorage.getItem(ROOM_KEY) || null)
   const [showJoinPanel, setShowJoinPanel] = useState(false)
   const [joinedCount, setJoinedCount] = useState(0)
+  const [showTournament, setShowTournament] = useState(false)
   const history = useRef([])
   const [, forceRender] = useState(0)
 
@@ -899,6 +903,10 @@ function QueueManager() {
   }
 
   // -------------------------------------------------------------------------
+  if (showTournament) {
+    return <TournamentMode onExit={() => setShowTournament(false)} />
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: COLORS.chalk, fontFamily: "'Inter', sans-serif" }}>
       <style>{FONT_IMPORT}{`
@@ -909,42 +917,63 @@ function QueueManager() {
         .qm-spin { animation: qm-spin 0.8s linear infinite; }
         @keyframes qm-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        @media (max-width: 1000px) {
-  .qm-grid { grid-template-columns: 1fr !important; }
-}
+        .qm-btn-label-full { display: inline; }
+        .qm-btn-label-short { display: none; }
 
-/* Tablet: sidebar has already stacked above the courts (rule above), but
-   there's still plenty of width here for two court cards side by side —
-   dropping straight to one column wasted it. */
-@media (max-width: 1000px) and (min-width: 641px) {
-  .qm-courts { grid-template-columns: repeat(2, 1fr) !important; }
-}
+        @media (max-width: 1000px) {
+          .qm-grid { grid-template-columns: 1fr !important; }
+          .qm-courts { grid-template-columns: 1fr !important; }
+        }
 
         @media (max-width: 700px) {
           .qm-header-stats { flex-wrap: wrap; }
         }
 
-        /* --- Mobile tightening --- */
+        /* --- Mobile portrait tightening (iPhone 11 and similar, ~390-430px) --- */
         @media (max-width: 640px) {
-          .qm-header-wrap { padding: 20px 16px !important; }
-          .qm-body-wrap { padding: 16px 12px 40px !important; }
+          .qm-header-wrap { padding: 20px 14px !important; }
+          .qm-body-wrap { padding: 14px 10px 40px !important; }
+
           .qm-header-top { flex-direction: column; align-items: stretch !important; gap: 14px !important; }
-          .qm-header-actions { width: 100%; }
-          .qm-courts { gap: 12px !important; grid-template-columns: 1fr !important; }
-          .qm-header-actions .qm-btn { flex: 1 1 auto; }
-          .qm-header-actions .qm-primary-cta { flex-basis: 100%; order: 3; }
-          .qm-header-stats { display: grid !important; grid-template-columns: 1fr 1fr; gap: 14px 10px; row-gap: 16px; margin-top: 20px !important; }
+
+          /* Header action buttons: clean 2-column grid instead of ragged wrap */
+          .qm-header-actions {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
+          .qm-header-actions .qm-btn { width: 100%; }
+          .qm-header-actions .qm-primary-cta { grid-column: 1 / -1; }
+
+          .qm-header-stats {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px 10px;
+            row-gap: 16px;
+            margin-top: 20px !important;
+          }
           .qm-header-stats > div { border-right: none !important; padding-right: 0 !important; margin-right: 0 !important; }
-          .qm-courts-header { flex-direction: column; align-items: stretch !important; }
-          .qm-courts-actions { width: 100%; display: grid !important; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+          .qm-courts-header { flex-direction: column; align-items: stretch !important; gap: 12px !important; }
+          .qm-courts-actions {
+            width: 100%;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+          }
           .qm-courts-actions .qm-btn { width: 100%; }
           .qm-courts { gap: 12px !important; }
+
+          /* Shorter labels on cramped action buttons so nothing wraps to 2 lines */
+          .qm-btn-label-full { display: none; }
+          .qm-btn-label-short { display: inline; }
 
           /* Prevent iOS Safari from zooming the page when a form field is focused */
           input, select, textarea { font-size: 16px !important; }
 
           /* Bigger, thumb-friendly tap targets everywhere on small screens */
-          .qm-btn { padding: 11px 14px !important; font-size: 13.5px !important; }
+          .qm-btn { padding: 12px 10px !important; font-size: 13px !important; gap: 6px !important; }
           .qm-icon-btn { padding: 10px !important; }
 
           /* Let the waiting list flow with page scroll instead of scrolling
@@ -952,12 +981,50 @@ function QueueManager() {
           .qm-queue-scroll { max-height: none !important; overflow: visible !important; }
 
           .qm-court-card { min-height: 0 !important; padding: 14px !important; }
+
+          /* Queue rows: let content wrap cleanly instead of squeezing name + controls */
+          .qm-queue-row {
+            flex-wrap: wrap !important;
+            row-gap: 8px !important;
+          }
+          .qm-queue-row-controls {
+            width: 100% !important;
+            justify-content: flex-end !important;
+            border-top: 1px solid rgba(0,0,0,0.06);
+            padding-top: 8px !important;
+            margin-top: 2px;
+          }
+          .qm-queue-row-info { flex-basis: 100%; }
+
+          /* Court team rows: keep names from being crushed by action icons */
+          .qm-team-row { gap: 4px !important; }
+          .qm-team-name { font-size: 13px !important; }
+
+          /* Full-bleed, edge-anchored modals on small screens instead of a
+             floating centered box — much easier to reach and read one-handed */
+          .qm-modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+          .qm-modal {
+            max-width: 100% !important;
+            width: 100% !important;
+            border-radius: 16px 16px 0 0 !important;
+            max-height: 88vh !important;
+            padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+          }
+
+          /* Stats table: shrink padding & font so more columns are visible
+             before the user has to scroll horizontally */
+          .qm-stats-table th, .qm-stats-table td { padding: 8px 10px !important; font-size: 12.5px !important; }
+
+          /* Room-code / QR block scales down so it never forces overflow */
+          .qm-roomcode-value { font-size: 36px !important; }
         }
 
         @media (max-width: 420px) {
           .qm-header-stats { grid-template-columns: 1fr 1fr; }
           .qm-courts-actions { grid-template-columns: 1fr; }
-          .qm-modal { padding: 18px !important; }
+          .qm-header-actions { grid-template-columns: 1fr 1fr; }
+          .qm-modal { padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px)) !important; }
+          .qm-roomcode-value { font-size: 32px !important; }
         }
       `}</style>
 
@@ -978,7 +1045,8 @@ function QueueManager() {
             <div className="qm-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               {roomCode ? (
                 <Button className="qm-btn" variant="outline" size="lg" icon={<FaWifi size={13} color={COLORS.citron} />} onClick={() => setShowJoinPanel(true)}>
-                  Join Session Live
+                  <span className="qm-btn-label-full">Join Session Live</span>
+                  <span className="qm-btn-label-short">Live</span>
                 </Button>
               ) : (
                 <Button className="qm-btn" variant="outline" size="lg" icon={<FaQrcode size={13} />} onClick={startJoinSession}>
@@ -988,8 +1056,13 @@ function QueueManager() {
               <Button className="qm-btn" variant="outline" size="lg" icon={<FaTrophy size={13} />} onClick={() => setShowRankings(true)}>
                 Rankings
               </Button>
+              <Button className="qm-btn" variant="outline" size="lg" icon={<FaSitemap size={13} />} onClick={() => setShowTournament(true)}>
+                <span className="qm-btn-label-full">Tournament Mode</span>
+                <span className="qm-btn-label-short">Bracket</span>
+              </Button>
               <Button className="qm-btn" variant="outline" size="lg" icon={<FaUserPlus size={13} />} onClick={() => setShowAddModal(true)}>
-                Add Players
+                <span className="qm-btn-label-full">Add Players</span>
+                <span className="qm-btn-label-short">Add</span>
               </Button>
               <Button className="qm-btn qm-primary-cta" variant="primary" size="lg" icon={<FaSyncAlt size={13} />} onClick={endRound} disabled={!canEndRound}>
                 End Round
@@ -1097,10 +1170,12 @@ function QueueManager() {
               </h2>
               <div className="qm-courts-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaRandom size={11} />} onClick={randomizeOpenCourts}>
-                  Randomize Open Courts
+                  <span className="qm-btn-label-full">Randomize Open Courts</span>
+                  <span className="qm-btn-label-short">Randomize</span>
                 </Button>
                 <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaSyncAlt size={11} />} onClick={shuffleWaiting}>
-                  Shuffle Waiting
+                  <span className="qm-btn-label-full">Shuffle Waiting</span>
+                  <span className="qm-btn-label-short">Shuffle</span>
                 </Button>
                 <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaUndo size={11} />} onClick={undo} disabled={history.current.length === 0}>
                   Undo
@@ -1132,7 +1207,7 @@ function QueueManager() {
                 Player Statistics
               </h2>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+                <table className="qm-stats-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
                   <thead>
                     <tr style={{ background: COLORS.chalk }}>
                       {['Player', 'Skill', 'W', 'L', 'Games Played', 'Times Rested', 'Status', 'Fixed Pair'].map(h => (
@@ -1246,7 +1321,7 @@ function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
         <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', color: COLORS.citron, margin: '0 0 10px' }}>
           Room Code
         </p>
-        <p style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: '46px', letterSpacing: '0.12em', color: COLORS.chalk, margin: '0 0 18px' }}>
+        <p className="qm-roomcode-value" style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: '46px', letterSpacing: '0.12em', color: COLORS.chalk, margin: '0 0 18px' }}>
           {code}
         </p>
         <div style={{ background: COLORS.chalk, borderRadius: '8px', padding: '14px', display: 'inline-block' }}>
@@ -1258,8 +1333,8 @@ function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
       </div>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        <input readOnly value={link} style={{ ...inputStyle, fontSize: '12.5px', color: COLORS.inkMute }} onFocus={e => e.target.select()} />
-        <Button variant="outlineDark" size="md" onClick={copyLink} icon={copied ? <FaCheck size={12} /> : <FaCopy size={12} />}>
+        <input readOnly value={link} style={{ ...inputStyle, fontSize: '12.5px', color: COLORS.inkMute, minWidth: 0 }} onFocus={e => e.target.select()} />
+        <Button variant="outlineDark" size="md" onClick={copyLink} icon={copied ? <FaCheck size={12} /> : <FaCopy size={12} />} style={{ flexShrink: 0 }}>
           {copied ? 'Copied' : 'Copy'}
         </Button>
       </div>
@@ -1373,7 +1448,7 @@ function QueueRow({ player, position, isLeader, pairMode, isPairSelected, onSele
   return (
     <div
       onClick={pairMode ? onSelectForPair : undefined}
-      className="qm-card"
+      className="qm-card qm-queue-row"
       style={{
         display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 18px',
         borderBottom: `1px solid ${COLORS.chalkDim}`, cursor: pairMode ? 'pointer' : 'default',
@@ -1386,7 +1461,7 @@ function QueueRow({ player, position, isLeader, pairMode, isPairSelected, onSele
           {String(position).padStart(2, '0')}
         </span>
       )}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="qm-queue-row-info" style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           {isLeader && <CrownBadge />}
           <span style={{ fontWeight: 600, fontSize: '14px', color: COLORS.ink }}>{player.name}</span>
@@ -1419,7 +1494,7 @@ function QueueRow({ player, position, isLeader, pairMode, isPairSelected, onSele
       </div>
 
       {!pairMode && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+        <div className="qm-queue-row-controls" style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
           {!resting && onMoveUp && (
             <>
               <IconBtn title="Move up" onClick={onMoveUp}><FaChevronUp size={10} /></IconBtn>
@@ -1533,10 +1608,10 @@ function TeamBlock({ label, ids, byId, leaderId, onRemove, onReplace }) {
         const p = byId[pid]
         if (!p) return null
         return (
-          <div key={pid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', gap: '8px' }}>
+          <div key={pid} className="qm-team-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', gap: '8px' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
               {pid === leaderId && <CrownBadge />}
-              <span style={{ color: COLORS.chalk, fontSize: '13.5px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+              <span className="qm-team-name" style={{ color: COLORS.chalk, fontSize: '13.5px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
             </span>
             <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
               <button
