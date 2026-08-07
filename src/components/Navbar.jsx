@@ -24,7 +24,8 @@ function Navbar() {
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100">
       <Link to="/" className="flex items-center gap-2 font-bold text-gray-900 text-lg">
-        PickleBook
+        <img src="/favicon.svg" alt="" className="h-8 w-8" />
+        <span>PickleBook</span>
       </Link>
 
       <div className="flex items-center gap-6">

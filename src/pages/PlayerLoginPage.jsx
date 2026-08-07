@@ -82,7 +82,7 @@ function PlayerLoginPage() {
 
       <div className="w-full max-w-[672px] flex flex-col gap-5 sm:gap-6 relative z-10 mt-10 sm:mt-0">
         <div className="flex flex-col gap-1">
-          <h1 className="text-center text-green-800 text-2xl sm:text-3xl font-bold leading-9 sm:leading-10">PickleBook</h1>
+          <img src="/picklebook-logo.jpg" alt="PickleBook" className="mx-auto h-28 sm:h-32 w-auto object-contain" />
           <p className="text-center text-neutral-700 text-sm sm:text-base font-normal leading-6 px-2">
             Welcome back — log in to manage your bookings
           </p>
