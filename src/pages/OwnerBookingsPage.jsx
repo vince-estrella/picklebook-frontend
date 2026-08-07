@@ -33,11 +33,11 @@ function OwnerBookingsPage() {
   }, [id])
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex">
+    <div className="w-full min-h-screen owner-workspace flex">
       <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md sticky top-0 z-10">
+        <header className="owner-topbar px-4 sm:px-6 lg:px-12 py-4 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -48,7 +48,7 @@ function OwnerBookingsPage() {
             </button>
             <button
               onClick={() => navigate('/owner/dashboard')}
-              className="text-green-800 text-sm bg-transparent border-none cursor-pointer"
+              className="owner-secondary-btn px-3 py-2 text-sm bg-transparent cursor-pointer"
             >
               ← Back to Dashboard
             </button>
@@ -56,7 +56,7 @@ function OwnerBookingsPage() {
         </header>
 
         <main className="p-4 sm:p-6 lg:p-12">
-          <h1 className="text-xl sm:text-2xl font-bold mb-1">Booking Management</h1>
+          <h1 className="owner-title text-xl sm:text-2xl mb-1">Booking Management</h1>
           <p className="text-slate-500 text-sm mb-6">Today's bookings for this court.</p>
 
           <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">

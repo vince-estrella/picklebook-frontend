@@ -1,8 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Link as LinkIcon, Menu, Upload, X } from 'lucide-react'
 import api from '../services/api'
+import OwnerSidebar from '../components/OwnerSidebar'
 
 const AMENITIES_OPTIONS = ['Night Lighting', 'Free WiFi', 'Parking', 'Locker Rooms', 'Water Station', 'Paddle Rental', 'Changing Rooms', 'Ample Parking']
+
+const SCHEDULE_ROWS = [
+  { label: 'Mon - Fri', openKey: 'monFriOpen', closeKey: 'monFriClose' },
+  { label: 'Saturday', openKey: 'satOpen', closeKey: 'satClose' },
+  { label: 'Sunday', openKey: 'sunOpen', closeKey: 'sunClose' },
+]
+
+function fieldClass(extra = '') {
+  return `owner-field px-4 py-3 text-sm font-normal placeholder:text-gray-400 ${extra}`
+}
 
 function EditCourtPage() {
   const navigate = useNavigate()
@@ -16,16 +28,14 @@ function EditCourtPage() {
   const [deletingCourt, setDeletingCourt] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
       navigate('/owner/login')
       return
     }
-    setFetching(true)
-    setImages([])
-    setError(null)
-    setDeletingImageId(null)
+
     api.get(`/courts/${id}`).then(res => {
       const court = res.data
       setForm({
@@ -52,14 +62,14 @@ function EditCourtPage() {
       setExistingImages(court.images || [])
       setFetching(false)
     }).catch(() => navigate('/owner/dashboard'))
-  }, [id])
+  }, [id, navigate])
 
   const toggleAmenity = (a) => {
     setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
   }
 
   const handleDeleteImage = async (imageId) => {
-    const confirmed = window.confirm('Delete this photo? This can\'t be undone.')
+    const confirmed = window.confirm('Delete this photo? This cannot be undone.')
     if (!confirmed) return
 
     setDeletingImageId(imageId)
@@ -75,7 +85,7 @@ function EditCourtPage() {
 
   const handleDeleteCourt = async () => {
     const confirmed = window.confirm(
-      `Delete "${form?.name || 'this court'}"? This can't be undone. Courts with pending or confirmed bookings can't be deleted.`
+      `Delete "${form?.name || 'this court'}"? This cannot be undone. Courts with pending or confirmed bookings cannot be deleted.`
     )
     if (!confirmed) return
 
@@ -104,7 +114,7 @@ function EditCourtPage() {
         ...form,
         amenities: amenities.join(','),
         pricePerHour: parseFloat(form.pricePerHour),
-        maxPlayers: parseInt(form.maxPlayers)
+        maxPlayers: parseInt(form.maxPlayers),
       }
       await api.put(`/courts/${id}`, courtData)
     } catch {
@@ -113,8 +123,6 @@ function EditCourtPage() {
       return
     }
 
-    // The update above already succeeded — an image-upload failure here
-    // must not be reported as "failed to update," which would be misleading.
     try {
       for (const img of images) {
         const formData = new FormData()
@@ -125,239 +133,217 @@ function EditCourtPage() {
       alert('Court updated, but some images failed to upload. Please try adding them again.')
     }
 
-    navigate('/owner/dashboard')
+    navigate('/owner/courts')
   }
 
-  if (fetching) return <div style={{ padding: '40px', color: '#6b7280' }}>Loading...</div>
+  if (fetching) {
+    return (
+      <div className="min-h-screen flex items-center justify-center owner-workspace text-slate-500">
+        Loading...
+      </div>
+    )
+  }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb' }}>
+    <div className="w-full min-h-screen owner-workspace flex">
+      <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Sidebar */}
-      <div style={{ width: '220px', minWidth: '220px', background: '#1a1a1a', display: 'flex', flexDirection: 'column', padding: '24px 0' }}>
-        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid #2d2d2d' }}>
-          <h2 style={{ color: '#16a34a', fontWeight: '700', fontSize: '18px', margin: 0 }}>🏓 PickleBook</h2>
-        </div>
-        <nav style={{ padding: '16px 12px', flex: 1 }}>
-          {[
-            { label: 'Dashboard', path: '/owner/dashboard' },
-            { label: 'Add Court', path: '/owner/courts/add' },
-          ].map(item => (
-            <button key={item.path} onClick={() => navigate(item.path)}
-              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '14px', fontWeight: '500', marginBottom: '4px', background: 'transparent', color: '#9ca3af' }}>
-              {item.label}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="owner-topbar px-4 sm:px-6 lg:px-12 py-4 sticky top-0 z-10">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 rounded-md text-neutral-700 hover:bg-black/5 shrink-0"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="min-w-0">
+                <p className="owner-kicker mb-1">Court Inventory</p>
+                <h1 className="owner-title text-2xl sm:text-3xl leading-none truncate">Edit Court</h1>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/owner/courts')}
+              className="owner-secondary-btn px-4 py-2 flex items-center gap-2 text-sm shrink-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
             </button>
-          ))}
-        </nav>
-      </div>
+          </div>
+        </header>
 
-      {/* Main */}
-      <div style={{ flex: 1, padding: '32px', maxWidth: '800px' }}>
-        <button onClick={() => navigate('/owner/dashboard')}
-          style={{ color: '#16a34a', fontSize: '14px', marginBottom: '24px', background: 'none', border: 'none', cursor: 'pointer' }}>
-          ← Back to Dashboard
-        </button>
+        <main className="w-full max-w-[960px] px-4 sm:px-6 lg:px-8 py-8 lg:py-10 flex flex-col gap-8">
+          <p className="text-zinc-600 text-sm">Update court details, photos, schedule, payment method, and listing copy.</p>
 
-        <h1 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '4px' }}>Edit Court</h1>
-        <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '32px' }}>Update your court details.</p>
+          {existingImages.length > 0 && (
+            <section className="owner-panel p-6 sm:p-8">
+              <h2 className="text-stone-900 text-xl font-semibold leading-6 mb-4">Current Photos</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {existingImages.map(img => (
+                  <div key={img.id} className="relative rounded-lg overflow-hidden aspect-square bg-stone-100">
+                    <img src={img.imageUrl} alt="Court" className="w-full h-full object-cover block" />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(img.id)}
+                      disabled={deletingImageId === img.id}
+                      title="Delete photo"
+                      className="absolute top-2 right-2 w-8 h-8 rounded-md border border-white/30 bg-black/65 text-white flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
-        {/* Existing Images */}
-        {existingImages.length > 0 && (
-          <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-            <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '16px' }}>Current Photos</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-              {existingImages.map(img => (
-                <div key={img.id} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', aspectRatio: '1', background: '#f3f4f6' }}>
-                  <img src={img.imageUrl} alt="Court" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          <section className="owner-panel-muted p-6 sm:p-8 flex flex-col gap-4">
+            <span className="text-zinc-600 text-sm font-semibold uppercase leading-5 tracking-wide">Gallery</span>
+            <label className="h-44 relative bg-white/60 rounded-lg outline outline-2 outline-offset-[-2px] outline-dashed outline-stone-300 flex flex-col justify-center items-center gap-1 overflow-hidden cursor-pointer hover:bg-white">
+              <Upload className="w-6 h-6 text-[var(--pb-teal)]" />
+              <span className="text-stone-900 text-sm font-semibold leading-5 tracking-tight">Upload additional court images</span>
+              <span className="text-zinc-600 text-xs font-normal leading-4">JPEG or PNG</span>
+              <input type="file" multiple accept="image/*" onChange={e => setImages(Array.from(e.target.files))} className="hidden" />
+            </label>
+            {images.length > 0 && <p className="text-[var(--pb-teal)] text-sm font-semibold leading-5">{images.length} new image(s) selected</p>}
+          </section>
+
+          <section className="owner-panel p-6 sm:p-8 flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Court Name</label>
+              <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={fieldClass()} />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Full Address</label>
+              <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className={fieldClass()} />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Environment</label>
+                <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })} className={fieldClass()}>
+                  <option>Outdoor</option>
+                  <option>Indoor</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Surface Material</label>
+                <select value={form.surfaceType} onChange={e => setForm({ ...form, surfaceType: e.target.value })} className={fieldClass()}>
+                  <option value="">Select surface</option>
+                  <option>Acrylic (Professional)</option>
+                  <option>Cemented</option>
+                  <option>Clay</option>
+                  <option>Hardcourt</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2">
+                <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Max Players</label>
+                <input type="number" value={form.maxPlayers} onChange={e => setForm({ ...form, maxPlayers: e.target.value })} className={fieldClass()} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Price per Hour (PHP)</label>
+                <input type="number" value={form.pricePerHour} onChange={e => setForm({ ...form, pricePerHour: e.target.value })} className={fieldClass()} />
+              </div>
+            </div>
+          </section>
+
+          <section className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
+            <div>
+              <h2 className="text-stone-900 text-xl font-semibold leading-6">Payment Method</h2>
+              <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">Choose how bookers pay for this court.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { value: 'PayAtVenue', title: 'Pay at Venue', body: 'Bookers reserve now, pay in person on arrival.' },
+                { value: 'Online', title: 'Pay Online (Xendit)', body: 'Bookers pay online at checkout through Xendit.' },
+              ].map(option => {
+                const selected = form.paymentMethod === option.value
+                return (
                   <button
+                    key={option.value}
                     type="button"
-                    onClick={() => handleDeleteImage(img.id)}
-                    disabled={deletingImageId === img.id}
-                    title="Delete photo"
-                    style={{
-                      position: 'absolute', top: '6px', right: '6px', width: '24px', height: '24px',
-                      borderRadius: '999px', border: 'none', background: 'rgba(0,0,0,0.6)', color: 'white',
-                      fontSize: '14px', lineHeight: '24px', textAlign: 'center', cursor: deletingImageId === img.id ? 'not-allowed' : 'pointer',
-                      opacity: deletingImageId === img.id ? 0.5 : 1,
-                    }}
+                    onClick={() => setForm({ ...form, paymentMethod: option.value })}
+                    className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${selected ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]' : 'outline-neutral-200 bg-white hover:bg-stone-50'}`}
                   >
-                    ✕
+                    <span className={`text-sm font-semibold block ${selected ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>{option.title}</span>
+                    <span className="text-xs text-zinc-600 block mt-1">{option.body}</span>
                   </button>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
+            <h2 className="text-stone-900 text-xl font-semibold leading-6">Facility Amenities</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {AMENITIES_OPTIONS.map(a => {
+                const selected = amenities.includes(a)
+                return (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => toggleAmenity(a)}
+                    className={`p-3 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${selected ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]' : 'outline-neutral-200 bg-white hover:bg-stone-50'}`}
+                  >
+                    <span className={`text-xs font-medium leading-4 ${selected ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>{a}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
+          <section className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
+            <h2 className="text-stone-900 text-xl font-semibold leading-6">Operating Schedule</h2>
+            <div className="flex flex-col gap-4">
+              {SCHEDULE_ROWS.map((row, i) => (
+                <div key={row.label} className={`py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 ${i < SCHEDULE_ROWS.length - 1 ? 'border-b border-zinc-100' : ''}`}>
+                  <span className="w-32 text-stone-900 text-sm font-semibold leading-5 tracking-tight">{row.label}</span>
+                  <div className="flex items-center gap-3">
+                    <input type="time" value={form[row.openKey].substring(0, 5)} onChange={e => setForm({ ...form, [row.openKey]: e.target.value + ':00' })} className="owner-field px-3 py-2 text-sm" />
+                    <span className="text-zinc-600 text-sm">to</span>
+                    <input type="time" value={form[row.closeKey].substring(0, 5)} onChange={e => setForm({ ...form, [row.closeKey]: e.target.value + ':00' })} className="owner-field px-3 py-2 text-sm" />
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          </section>
 
-        {/* Image Upload */}
-        <div style={{ border: '2px dashed #e5e7eb', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '24px', background: 'white' }}>
-          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '8px' }}>📷 Upload additional court images</p>
-          <input type="file" multiple accept="image/*" onChange={e => setImages(Array.from(e.target.files))}
-            style={{ fontSize: '13px', color: '#374151' }} />
-          {images.length > 0 && <p style={{ fontSize: '13px', color: '#16a34a', marginTop: '8px' }}>{images.length} new image(s) selected</p>}
-        </div>
-
-        {/* Basic Info */}
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Court Name</label>
-            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Full Address</label>
-            <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Environment</label>
-              <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}>
-                <option>Outdoor</option>
-                <option>Indoor</option>
-              </select>
+          <section className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">External Booking URL (Optional)</label>
+              <div className="relative">
+                <LinkIcon className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input placeholder="https://yourclub.com/book" value={form.externalBookingUrl} onChange={e => setForm({ ...form, externalBookingUrl: e.target.value })} className={fieldClass('pl-12')} />
+              </div>
             </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Surface Material</label>
-              <select value={form.surfaceType} onChange={e => setForm({ ...form, surfaceType: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}>
-                <option value="">Select surface</option>
-                <option>Acrylic (Professional)</option>
-                <option>Cemented</option>
-                <option>Clay</option>
-                <option>Hardcourt</option>
-              </select>
+            <div className="flex flex-col gap-2">
+              <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Court Description</label>
+              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={4} className={fieldClass('resize-y')} />
             </div>
-          </div>
+          </section>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Max Players</label>
-              <input type="number" value={form.maxPlayers} onChange={e => setForm({ ...form, maxPlayers: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-            <div>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Price per Hour (₱)</label>
-              <input type="number" value={form.pricePerHour} onChange={e => setForm({ ...form, pricePerHour: e.target.value })}
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
-            </div>
-          </div>
-        </div>
+          {error && <p className="text-red-600 text-sm font-normal leading-5">{error}</p>}
 
-        {/* Payment Method */}
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
-          <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '4px' }}>Payment Method</h3>
-          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '16px' }}>Choose how bookers pay for this court.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <button
-              type="button"
-              onClick={() => setForm({ ...form, paymentMethod: 'PayAtVenue' })}
-              style={{
-                textAlign: 'left', padding: '14px', borderRadius: '8px', cursor: 'pointer',
-                border: form.paymentMethod === 'PayAtVenue' ? '1px solid #16a34a' : '1px solid #e5e7eb',
-                background: form.paymentMethod === 'PayAtVenue' ? '#f0fdf4' : 'white',
-              }}
-            >
-              <span style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: form.paymentMethod === 'PayAtVenue' ? '#15803d' : '#111827' }}>
-                Pay at Venue
-              </span>
-              <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                Bookers reserve now, pay in person on arrival.
-              </span>
+          <div className="pt-2 flex flex-col sm:flex-row sm:justify-between gap-3">
+            <button onClick={handleDeleteCourt} disabled={deletingCourt} className="owner-danger-btn px-6 py-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+              {deletingCourt ? 'Deleting...' : 'Delete Court'}
             </button>
-            <button
-              type="button"
-              onClick={() => setForm({ ...form, paymentMethod: 'Online' })}
-              style={{
-                textAlign: 'left', padding: '14px', borderRadius: '8px', cursor: 'pointer',
-                border: form.paymentMethod === 'Online' ? '1px solid #16a34a' : '1px solid #e5e7eb',
-                background: form.paymentMethod === 'Online' ? '#f0fdf4' : 'white',
-              }}
-            >
-              <span style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: form.paymentMethod === 'Online' ? '#15803d' : '#111827' }}>
-                Pay Online (Xendit)
-              </span>
-              <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                Bookers pay online at checkout through Xendit.
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Amenities */}
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
-          <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '16px' }}>Facility Amenities</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-            {AMENITIES_OPTIONS.map(a => (
-              <button key={a} onClick={() => toggleAmenity(a)}
-                style={{ padding: '10px 8px', borderRadius: '8px', fontSize: '12px', fontWeight: '500', border: '1px solid', cursor: 'pointer', textAlign: 'center',
-                  borderColor: amenities.includes(a) ? '#16a34a' : '#e5e7eb',
-                  background: amenities.includes(a) ? '#f0fdf4' : 'white',
-                  color: amenities.includes(a) ? '#16a34a' : '#374151' }}>
-                {a}
+            <div className="flex justify-end gap-3">
+              <button onClick={() => navigate('/owner/courts')} className="owner-secondary-btn px-6 py-3 text-sm">
+                Cancel
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Operating Schedule */}
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
-          <h3 style={{ fontWeight: '700', fontSize: '15px', marginBottom: '16px' }}>Operating Schedule</h3>
-          {[
-            { label: 'Mon - Fri', openKey: 'monFriOpen', closeKey: 'monFriClose' },
-            { label: 'Saturday', openKey: 'satOpen', closeKey: 'satClose' },
-            { label: 'Sunday', openKey: 'sunOpen', closeKey: 'sunClose' },
-          ].map(row => (
-            <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px', fontSize: '14px' }}>
-              <span style={{ width: '80px', color: '#374151', fontWeight: '500' }}>{row.label}</span>
-              <input type="time" value={form[row.openKey].substring(0, 5)}
-                onChange={e => setForm({ ...form, [row.openKey]: e.target.value + ':00' })}
-                style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px 12px', fontSize: '14px' }} />
-              <span style={{ color: '#9ca3af' }}>to</span>
-              <input type="time" value={form[row.closeKey].substring(0, 5)}
-                onChange={e => setForm({ ...form, [row.closeKey]: e.target.value + ':00' })}
-                style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '8px 12px', fontSize: '14px' }} />
+              <button onClick={handleSubmit} disabled={loading} className="owner-primary-btn px-8 py-3 text-sm disabled:opacity-70 disabled:cursor-not-allowed">
+                {loading ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
-          ))}
-        </div>
-
-        {/* Description */}
-        <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>External Booking URL (Optional)</label>
-            <input placeholder="https://yourclub.com/book" value={form.externalBookingUrl}
-              onChange={e => setForm({ ...form, externalBookingUrl: e.target.value })}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }} />
           </div>
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Court Description</label>
-            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-              rows={4}
-              style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', resize: 'vertical' }} />
-          </div>
-        </div>
-
-        {error && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '16px' }}>{error}</p>}
-
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
-          <button onClick={handleDeleteCourt} disabled={deletingCourt}
-            style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: '1px solid #fca5a5', background: 'white', cursor: deletingCourt ? 'not-allowed' : 'pointer', color: '#dc2626', opacity: deletingCourt ? 0.5 : 1 }}>
-            {deletingCourt ? 'Deleting...' : 'Delete Court'}
-          </button>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button onClick={() => navigate('/owner/dashboard')}
-              style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', color: '#374151' }}>
-              Cancel
-            </button>
-            <button onClick={handleSubmit} disabled={loading}
-              style={{ padding: '12px 24px', borderRadius: '8px', fontWeight: '600', fontSize: '14px', border: 'none', background: '#16a34a', color: 'white', cursor: loading ? 'not-allowed' : 'pointer' }}>
-              {loading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
+        </main>
       </div>
     </div>
   )

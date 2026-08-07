@@ -27,7 +27,7 @@ function OwnerCourtsPage() {
       .catch(() => {
         navigate('/owner/login')
       })
-  }, [])
+  }, [navigate])
 
   const handleDelete = async (court) => {
     const confirmed = window.confirm(
@@ -61,20 +61,20 @@ function OwnerCourtsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">
+      <div className="min-h-screen flex items-center justify-center owner-workspace text-slate-500">
         Loading...
       </div>
     )
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex">
+    <div className="w-full min-h-screen owner-workspace flex">
       <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10 gap-3">
+        <header className="owner-topbar px-4 sm:px-6 lg:px-12 py-4 backdrop-blur-md flex justify-between items-center sticky top-0 z-10 gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -83,7 +83,7 @@ function OwnerCourtsPage() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Manage Courts</h1>
+            <h1 className="owner-title text-xl sm:text-2xl leading-8 truncate">Manage Courts</h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="relative hidden sm:block">
@@ -93,12 +93,12 @@ function OwnerCourtsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search courts..."
-                className="w-48 md:w-64 pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+                className="owner-field w-48 md:w-64 pl-10 pr-4 py-2 text-sm font-normal placeholder:text-gray-500"
               />
             </div>
             <button
               onClick={() => navigate('/owner/courts/add')}
-              className="px-3 sm:px-6 py-2 bg-green-800 hover:bg-green-900 rounded-full flex items-center gap-2 text-white text-sm font-medium transition-colors whitespace-nowrap"
+              className="owner-primary-btn px-3 sm:px-6 py-2 flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden sm:inline">Add Court</span>
@@ -115,7 +115,7 @@ function OwnerCourtsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search courts..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+              className="owner-field w-full pl-10 pr-4 py-2 text-sm font-normal placeholder:text-gray-500"
             />
           </div>
 

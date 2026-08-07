@@ -1,1 +1,136 @@
 @import "tailwindcss";
+
+:root {
+  --pb-navy: #0b2a38;
+  --pb-navy-deep: #071d27;
+  --pb-teal: #0f6b5c;
+  --pb-citron: #d7e22b;
+  --pb-chalk: #eef1ea;
+  --pb-chalk-dim: #dce1d6;
+  --pb-ink: #101817;
+  --pb-ink-muted: #5b6864;
+  --pb-line: #c9d0c6;
+}
+
+.owner-workspace {
+  background: var(--pb-chalk);
+  color: var(--pb-ink);
+}
+
+.owner-topbar {
+  background: rgba(238, 241, 234, 0.92);
+  border-bottom: 1px solid rgba(11, 42, 56, 0.12);
+  box-shadow: none;
+}
+
+.owner-sidebar {
+  background: var(--pb-navy);
+  border-right: 1px solid rgba(238, 241, 234, 0.16);
+  color: var(--pb-chalk);
+}
+
+.owner-brand {
+  color: var(--pb-citron);
+  font-family: "Big Shoulders Display", system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.owner-nav-item {
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.owner-nav-item-active {
+  background: var(--pb-citron);
+  color: var(--pb-navy-deep);
+}
+
+.owner-nav-item-idle {
+  color: rgba(238, 241, 234, 0.78);
+}
+
+.owner-nav-item-idle:hover {
+  background: rgba(238, 241, 234, 0.08);
+  color: #fff;
+}
+
+.owner-panel {
+  background: #fff;
+  border: 1px solid var(--pb-chalk-dim);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.owner-panel-muted {
+  background: #f8faf6;
+  border: 1px solid var(--pb-chalk-dim);
+  border-radius: 8px;
+}
+
+.owner-field {
+  width: 100%;
+  border: 1px solid var(--pb-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--pb-ink);
+  outline: none;
+}
+
+.owner-field:focus {
+  border-color: var(--pb-teal);
+  box-shadow: 0 0 0 2px rgba(15, 107, 92, 0.16);
+}
+
+.owner-primary-btn {
+  background: var(--pb-citron);
+  color: var(--pb-navy-deep);
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.owner-primary-btn:hover {
+  background: #c3cc1f;
+}
+
+.owner-secondary-btn {
+  border: 1px solid var(--pb-line);
+  color: var(--pb-ink-muted);
+  background: transparent;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.owner-secondary-btn:hover {
+  background: #f4f6f1;
+  color: var(--pb-ink);
+}
+
+.owner-danger-btn {
+  border: 1px solid #e3c3c0;
+  color: #b3453d;
+  background: #fff;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.owner-danger-btn:hover {
+  background: #fbedec;
+}
+
+.owner-title {
+  color: var(--pb-navy);
+  font-family: "Big Shoulders Display", system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.owner-kicker {
+  color: var(--pb-teal);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}

@@ -39,7 +39,6 @@ function deriveCustomers(bookings) {
 
 function OwnerUsersPage() {
   const navigate = useNavigate()
-  const owner = JSON.parse(localStorage.getItem('owner') || '{}')
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -60,7 +59,7 @@ function OwnerUsersPage() {
         setError('Could not load bookings. The /bookings/owner endpoint may not exist yet.')
         setLoading(false)
       })
-  }, [])
+  }, [navigate])
 
   const customers = useMemo(() => deriveCustomers(bookings), [bookings])
 
@@ -74,13 +73,13 @@ function OwnerUsersPage() {
   }, [customers, search])
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex">
+    <div className="w-full min-h-screen owner-workspace flex">
       <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
 
-        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md flex justify-between items-center sticky top-0 z-10 gap-3">
+        <header className="owner-topbar px-4 sm:px-6 lg:px-12 py-4 backdrop-blur-md flex justify-between items-center sticky top-0 z-10 gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -89,7 +88,7 @@ function OwnerUsersPage() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Users</h1>
+            <h1 className="owner-title text-xl sm:text-2xl leading-8 truncate">Users</h1>
           </div>
           <div className="relative hidden sm:block">
             <Search className="w-4 h-4 text-neutral-700 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -98,7 +97,7 @@ function OwnerUsersPage() {
               placeholder="Search by name or phone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-48 md:w-64 pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+              className="owner-field w-48 md:w-64 pl-10 pr-4 py-2 text-sm font-normal placeholder:text-gray-500"
             />
           </div>
         </header>
@@ -112,7 +111,7 @@ function OwnerUsersPage() {
               placeholder="Search by name or phone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+              className="owner-field w-full pl-10 pr-4 py-2 text-sm font-normal placeholder:text-gray-500"
             />
           </div>
 

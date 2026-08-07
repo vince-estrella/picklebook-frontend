@@ -35,7 +35,6 @@ function formatRelativeTime(timestamp) {
 
 function OwnerDashboardPage() {
   const navigate = useNavigate()
-  const owner = JSON.parse(localStorage.getItem('owner') || '{}')
   const [courts, setCourts] = useState([])
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState({
@@ -75,7 +74,7 @@ function OwnerDashboardPage() {
       .then(res => setNotifications(res.data))
       .catch(() => setNotifications([]))
       .finally(() => setNotificationsLoading(false))
-  }, [])
+  }, [navigate])
 
   // Close the notification dropdown when clicking anywhere outside it.
   useEffect(() => {
@@ -102,7 +101,7 @@ function OwnerDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">
+      <div className="min-h-screen flex items-center justify-center owner-workspace text-slate-500">
         Loading...
       </div>
     )
@@ -111,14 +110,14 @@ function OwnerDashboardPage() {
   const totalCourts = courts.length
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 flex">
+    <div className="w-full min-h-screen owner-workspace flex">
       <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
 
         {/* Topbar */}
-        <header className="px-4 sm:px-6 lg:px-12 py-4 bg-slate-50/80 shadow-sm backdrop-blur-md sticky top-0 z-10">
+        <header className="owner-topbar px-4 sm:px-6 lg:px-12 py-4 backdrop-blur-md sticky top-0 z-10">
           <div className="flex justify-between items-center gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <button
@@ -128,7 +127,7 @@ function OwnerDashboardPage() {
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <h1 className="text-green-800 text-xl sm:text-2xl font-bold leading-8 truncate">Admin Overview</h1>
+              <h1 className="owner-title text-xl sm:text-2xl leading-8 truncate">Admin Overview</h1>
             </div>
             <div className="flex items-center gap-2 sm:gap-4 lg:gap-8">
               {/* Search: full input on desktop, icon toggle on mobile */}
@@ -137,7 +136,7 @@ function OwnerDashboardPage() {
                 <input
                   type="text"
                   placeholder="Search resources..."
-                  className="w-40 md:w-64 pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+                  className="owner-field w-40 md:w-64 pl-10 pr-4 py-2 text-sm font-normal placeholder:text-gray-500"
                 />
               </div>
               <button
@@ -204,7 +203,7 @@ function OwnerDashboardPage() {
                 </div>
                 <button
                   onClick={() => navigate('/owner/courts/add')}
-                  className="px-3 sm:px-6 py-2 bg-green-800 hover:bg-green-900 active:scale-95 rounded-full flex items-center gap-2 text-white text-sm sm:text-base font-normal leading-6 transition-all duration-150 whitespace-nowrap"
+                  className="owner-primary-btn px-3 sm:px-6 py-2 active:scale-95 flex items-center gap-2 text-sm sm:text-base leading-6 transition-all duration-150 whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Add Court</span>
@@ -220,7 +219,7 @@ function OwnerDashboardPage() {
               <input
                 type="text"
                 placeholder="Search resources..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm font-normal text-slate-800 placeholder:text-gray-500 outline-none transition-shadow duration-150 focus:ring-2 focus:ring-green-700/30"
+              className="owner-field w-full pl-10 pr-4 py-2 text-sm font-normal placeholder:text-gray-500"
                 autoFocus
               />
             </div>
@@ -469,7 +468,7 @@ function OwnerDashboardPage() {
         {/* Footer */}
         <footer className="mt-auto py-6 bg-zinc-800">
           <div className="px-4 sm:px-6 lg:px-12 flex flex-col sm:flex-row justify-between items-center flex-wrap gap-4 text-center sm:text-left">
-            <span className="text-green-300 text-xl sm:text-2xl font-bold leading-8">PickleBook Admin</span>
+            <span className="owner-brand text-xl sm:text-2xl font-bold leading-8">PickleBook</span>
             <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
               <span
                 onClick={() => navigate('/privacy-policy')}
