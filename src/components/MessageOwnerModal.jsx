@@ -32,39 +32,41 @@ function formatTimestamp(iso) {
 // onClose: closes the modal.
 function MessageOwnerModal({ courtId, ownerName, onClose }) {
   const navigate = useNavigate()
+  const isLoggedIn = !!localStorage.getItem('playerToken')
   const [conversationId, setConversationId] = useState(null)
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(isLoggedIn)
   const [error, setError] = useState(null)
   const [sending, setSending] = useState(false)
   const scrollRef = useRef(null)
   const pollRef = useRef(null)
 
-  const isLoggedIn = !!localStorage.getItem('playerToken')
-
   useEffect(() => {
     if (!isLoggedIn) {
-      setLoading(false)
       return
     }
 
+    let cancelled = false
     api.post('/messages/start', { courtId })
       .then(res => {
         const id = res.data.conversationId
+        if (cancelled) return null
         setConversationId(id)
         return api.get(`/messages/conversations/${id}/messages`)
       })
       .then(res => {
+        if (cancelled || !res) return
         setMessages(res.data || [])
         setLoading(false)
       })
       .catch(() => {
+        if (cancelled) return
         setError('Could not start this conversation. Please try again.')
         setLoading(false)
       })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courtId])
+    return () => { cancelled = true }
+  }, [courtId, isLoggedIn])
 
   // Mark as read once the thread's loaded, and poll for new replies while open.
   useEffect(() => {

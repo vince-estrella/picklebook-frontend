@@ -35,17 +35,19 @@ function BookingReceiptModal({ bookingId, onClose }) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
+    let cancelled = false
     api.get(`/bookings/owner/${bookingId}`)
       .then(res => {
+        if (cancelled) return
         setBooking(res.data)
         setLoading(false)
       })
       .catch(() => {
+        if (cancelled) return
         setError('Could not load this booking.')
         setLoading(false)
       })
+    return () => { cancelled = true }
   }, [bookingId])
 
   const durationMinutes = booking ? getDurationMinutes(booking.startTime, booking.endTime) : 0

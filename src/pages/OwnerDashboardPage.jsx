@@ -1,15 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search,
-  Bell,
   Plus,
   Pencil,
   Eye,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
-  Check,
   Menu,
   Users,
   MapPin,
@@ -17,21 +15,6 @@ import {
 } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
-
-// Turns a timestamp into a short "5m ago" / "3h ago" / "2d ago" style label.
-function formatRelativeTime(timestamp) {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  if (Number.isNaN(date.getTime())) return ''
-  const diffMs = Date.now() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1) return 'Just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  const diffHr = Math.floor(diffMin / 60)
-  if (diffHr < 24) return `${diffHr}h ago`
-  const diffDay = Math.floor(diffHr / 24)
-  return `${diffDay}d ago`
-}
 
 function OwnerDashboardPage() {
   const navigate = useNavigate()
@@ -45,12 +28,8 @@ function OwnerDashboardPage() {
   })
   const [loading, setLoading] = useState(true)
 
-  const [notifications, setNotifications] = useState([])
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [notificationsLoading, setNotificationsLoading] = useState(true)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const notificationsRef = useRef(null)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) {
@@ -70,34 +49,7 @@ function OwnerDashboardPage() {
       navigate('/owner/login')
     })
 
-    api.get('/owner/notifications')
-      .then(res => setNotifications(res.data))
-      .catch(() => setNotifications([]))
-      .finally(() => setNotificationsLoading(false))
   }, [navigate])
-
-  // Close the notification dropdown when clicking anywhere outside it.
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (notificationsRef.current && !notificationsRef.current.contains(e.target)) {
-        setShowNotifications(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const unreadCount = notifications.filter(n => !n.read).length
-
-  const markNotificationRead = (notifId) => {
-    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n))
-    api.patch(`/owner/notifications/${notifId}/read`).catch(() => {})
-  }
-
-  const markAllNotificationsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-    api.post('/owner/notifications/read-all').catch(() => {})
-  }
 
   if (loading) {
     return (
@@ -148,59 +100,6 @@ function OwnerDashboardPage() {
               </button>
 
               <div className="flex items-center gap-2 sm:gap-4">
-                <div className="relative" ref={notificationsRef}>
-                  <button
-                    onClick={() => setShowNotifications(s => !s)}
-                    className="relative px-2 pt-2 pb-3.5 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-gray-200"
-                  >
-                    <Bell className="w-4 h-5 text-neutral-700" />
-                    {unreadCount > 0 && (
-                      <span className="w-2 h-2 bg-red-500 rounded-full absolute top-1.5 right-1.5" />
-                    )}
-                  </button>
-
-                  {showNotifications && (
-                    <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-16 sm:top-full mt-0 sm:mt-2 sm:w-80 bg-white rounded-xl shadow-lg outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden z-20">
-                      <div className="px-4 py-3 border-b border-stone-200 flex justify-between items-center">
-                        <span className="text-slate-800 text-sm font-semibold">Notifications</span>
-                        {unreadCount > 0 && (
-                          <button
-                            onClick={markAllNotificationsRead}
-                            className="flex items-center gap-1 text-green-800 text-xs font-medium transition-colors duration-150 hover:text-green-900"
-                          >
-                            <Check className="w-3 h-3" /> Mark all read
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="max-h-80 overflow-y-auto">
-                        {notificationsLoading ? (
-                          <p className="px-4 py-6 text-center text-slate-500 text-sm">Loading...</p>
-                        ) : notifications.length === 0 ? (
-                          <p className="px-4 py-6 text-center text-slate-500 text-sm">You're all caught up.</p>
-                        ) : (
-                          notifications.map(n => (
-                            <button
-                              key={n.id}
-                              onClick={() => markNotificationRead(n.id)}
-                              className="w-full text-left px-4 py-3 border-b border-stone-100 last:border-b-0 flex items-start gap-3 transition-colors duration-150 hover:bg-gray-100"
-                            >
-                              <span
-                                className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read ? 'bg-transparent' : 'bg-green-700'}`}
-                              />
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm leading-5 ${n.read ? 'text-slate-500 font-normal' : 'text-slate-800 font-medium'}`}>
-                                  {n.message}
-                                </p>
-                                <p className="text-slate-400 text-xs mt-0.5">{formatRelativeTime(n.createdAt)}</p>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
                 <button
                   onClick={() => navigate('/owner/courts/add')}
                   className="owner-primary-btn px-3 sm:px-6 py-2 active:scale-95 flex items-center gap-2 text-sm sm:text-base leading-6 transition-all duration-150 whitespace-nowrap"

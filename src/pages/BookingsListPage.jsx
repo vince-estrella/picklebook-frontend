@@ -61,7 +61,7 @@ function BookingsListPage() {
       .catch(() => {
         navigate('/owner/login')
       })
-  }, [])
+  }, [navigate])
 
   const handleUpdateStatus = async (bookingId, status) => {
     if (status === 'Cancelled' && !window.confirm('Cancel this booking? This cannot be undone.')) return

@@ -61,7 +61,7 @@ function OwnerSettingsPage() {
         // Profile endpoint may not exist yet — still let the owner use the forms below.
         setLoading(false)
       })
-  }, [])
+  }, [navigate])
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0]
@@ -82,7 +82,7 @@ function OwnerSettingsPage() {
       const res = await api.post('/owner/profile-picture', formData)
       setProfile(p => ({ ...p, profileImageUrl: res.data?.profileImageUrl || avatarPreview }))
       setAvatarStatus('success')
-    } catch (err) {
+    } catch {
       setAvatarStatus('error')
     }
   }
@@ -104,7 +104,7 @@ function OwnerSettingsPage() {
       setProfile(p => ({ ...p, email: newEmail }))
       setEmailPassword('')
       setEmailStatus('success')
-    } catch (err) {
+    } catch {
       setEmailStatus('error')
     }
   }
@@ -127,7 +127,7 @@ function OwnerSettingsPage() {
       setNewPassword('')
       setConfirmPassword('')
       setPasswordStatus('success')
-    } catch (err) {
+    } catch {
       setPasswordStatus('error')
     }
   }

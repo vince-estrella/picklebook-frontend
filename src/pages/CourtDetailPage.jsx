@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Star, MapPin, Share2, Heart, ShieldCheck, KeyRound, Droplets,
@@ -31,8 +31,6 @@ const monoStyle = { fontFamily: "'JetBrains Mono', monospace" }
 
 // ── Constants ────────────────────────────────────────────────────────────
 const SERVICE_FEE = 5 // flat platform fee per booking, in the same currency as pricePerHour
-const API_BASE = 'https://picklebook-api-production.up.railway.app'
-
 // Maps a raw amenity string to an icon. Falls back to a generic check mark
 // for anything the design doesn't have a specific icon for yet.
 const AMENITY_ICONS = [
@@ -130,6 +128,12 @@ const getDefaultDate = () => {
   return getLocalDateString(now)
 }
 const [selectedDate, setSelectedDate] = useState(getDefaultDate())
+  const [dateBounds] = useState(() => {
+    const min = getLocalDateString(new Date())
+    const maxDate = new Date()
+    maxDate.setDate(maxDate.getDate() + 7)
+    return { min, max: getLocalDateString(maxDate) }
+  })
   const [bookedSlots, setBookedSlots] = useState([])
   const [selectedSlots, setSelectedSlots] = useState([])
   const [showFullDescription, setShowFullDescription] = useState(false)
@@ -517,8 +521,8 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
               <input
                 type="date"
                 value={selectedDate}
-                min={getLocalDateString(new Date())}
-                max={getLocalDateString(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000))}
+                min={dateBounds.min}
+                max={dateBounds.max}
                 onChange={e => { setSelectedDate(e.target.value); setSelectedSlots([]) }}
                 className="text-base border-none outline-none bg-transparent p-0"
                 style={{ ...monoStyle, color: COLORS.ink }}

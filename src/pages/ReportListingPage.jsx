@@ -60,7 +60,7 @@ function ReportListingPage() {
       setTimeout(() => {
         navigate('/owner/dashboard', { state: { reportedCourtId: id } })
       }, 1500)
-    } catch (e) {
+    } catch {
       setError('Something went wrong submitting your report. Please try again.')
     } finally {
       setSubmitting(false)

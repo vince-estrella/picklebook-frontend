@@ -66,7 +66,7 @@ function MyBookingsPage() {
         setError('Could not load your bookings. Please try logging in again.')
         setLoading(false)
       })
-  }, [])
+  }, [navigate])
 
   const handleLogout = () => {
     localStorage.removeItem('playerToken')

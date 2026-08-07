@@ -40,11 +40,10 @@ function OwnerMessagesPage() {
         const data = res.data || []
         setConversations(data)
         setConvError(false)
-        if (!activeId && data.length > 0) setActiveId(data[0].id)
+        setActiveId(current => current || data[0]?.id || null)
       })
       .catch(() => setConvError(true))
       .finally(() => setLoading(false))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -53,18 +52,25 @@ function OwnerMessagesPage() {
       return
     }
     loadConversations()
-  }, [loadConversations])
+  }, [loadConversations, navigate])
 
   useEffect(() => {
     if (!activeId) return
-    setMessages([])
-    setThreadError(false)
+    let cancelled = false
     api.get(`/messages/owner/conversations/${activeId}/messages`)
-      .then(res => setMessages(res.data || []))
-      .catch(() => setThreadError(true))
+      .then(res => {
+        if (cancelled) return
+        setMessages(res.data || [])
+        setThreadError(false)
+        setConversations(prev => prev.map(c => c.id === activeId ? { ...c, unreadCount: 0 } : c))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setThreadError(true)
+      })
 
-    setConversations(prev => prev.map(c => c.id === activeId ? { ...c, unreadCount: 0 } : c))
     api.patch(`/messages/owner/conversations/${activeId}/read`).catch(() => {})
+    return () => { cancelled = true }
   }, [activeId])
 
   useEffect(() => {

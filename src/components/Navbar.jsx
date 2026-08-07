@@ -2,18 +2,23 @@
 import { useState, useEffect } from 'react'
 
 function Navbar() {
-  const [player, setPlayer] = useState(null)
-
-  useEffect(() => {
+  const [player] = useState(() => {
     const stored = localStorage.getItem('player')
     if (stored && localStorage.getItem('playerToken')) {
       try {
-        setPlayer(JSON.parse(stored))
+        return JSON.parse(stored)
       } catch {
         localStorage.removeItem('player')
         localStorage.removeItem('playerToken')
       }
     }
+    return null
+  })
+
+  useEffect(() => {
+    const handleStorage = () => window.location.reload()
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
   return (
