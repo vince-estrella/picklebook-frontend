@@ -90,6 +90,15 @@ function emptyTeam() {
   return { id: uid(), name: '', player1: '', player2: '' }
 }
 
+function normalizeTeam(team) {
+  return {
+    ...team,
+    name: team.name?.trim() || '',
+    player1: team.player1?.trim() || '',
+    player2: team.player2?.trim() || '',
+  }
+}
+
 function displayName(team) {
   if (!team) return null
   return team.name?.trim() || [team.player1, team.player2].filter(Boolean).join(' & ') || 'Unnamed Team'
@@ -121,7 +130,13 @@ function computeRounds(seedTeams, picks) {
       const pick = picks?.[0]?.[i / 2]
       if (pick) winner = pick === 'A' ? a : b
     }
-    round0.push({ teamA: a, teamB: b, winner, bye: !!((a && !b) || (b && !a)) })
+    round0.push({
+      teamA: a,
+      teamB: b,
+      winner,
+      bye: !!((a && !b) || (b && !a)),
+      hasContender: !!(a || b),
+    })
   }
 
   const rounds = [round0]
@@ -130,16 +145,28 @@ function computeRounds(seedTeams, picks) {
   while (prev.length > 1) {
     const round = []
     for (let i = 0; i < prev.length; i += 2) {
-      const a = prev[i].winner
-      const b = prev[i + 1].winner
+      const left = prev[i]
+      const right = prev[i + 1]
+      const a = left.winner
+      const b = right.winner
+      const leftHasContender = !!left.hasContender
+      const rightHasContender = !!right.hasContender
       let winner = null
       if (a && b) {
         const pick = picks?.[r]?.[i / 2]
         if (pick) winner = pick === 'A' ? a : b
-      } else if (a && !b) {
-        winner = null // waiting on the other match to resolve
+      } else if (a && !rightHasContender) {
+        winner = a
+      } else if (b && !leftHasContender) {
+        winner = b
       }
-      round.push({ teamA: a, teamB: b, winner, bye: false })
+      round.push({
+        teamA: a,
+        teamB: b,
+        winner,
+        bye: !!((a && !rightHasContender) || (b && !leftHasContender)),
+        hasContender: leftHasContender || rightHasContender,
+      })
     }
     rounds.push(round)
     prev = round
@@ -253,7 +280,7 @@ const inputStyle = {
 // ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
-function TournamentMode({ onExit }) {
+function TournamentMode({ queuePlayers = [], onExit }) {
   const persisted = loadState()
   const [stage, setStage] = useState(persisted?.stage || 'setup') // 'setup' | 'bracket'
   const [format, setFormat] = useState(persisted?.format || 'single') // 'single' | 'split'
@@ -278,9 +305,24 @@ function TournamentMode({ onExit }) {
   const removeTeam = (id) => setTeams(t => t.filter(tm => tm.id !== id))
   const updateTeam = (id, patch) => setTeams(t => t.map(tm => (tm.id === id ? { ...tm, ...patch } : tm)))
   const shuffleSeeds = () => setTeams(t => shuffle(t))
+  const importQueuePlayers = () => {
+    const imported = queuePlayers
+      .filter(p => p.name?.trim())
+      .slice(0, MAX_TEAMS)
+      .map(p => ({ id: uid(), name: p.name.trim(), player1: p.name.trim(), player2: '' }))
+    if (imported.length >= MIN_TEAMS) {
+      setTeams(imported)
+      setPicks({})
+      setSilverPicks({})
+      setThirdPick(null)
+      setSilverThirdPick(null)
+      setStage('setup')
+    }
+  }
 
-  const validTeams = teams.filter(t => displayName(t).trim() && displayName(t) !== 'Unnamed Team' || t.name.trim() || t.player1.trim() || t.player2.trim())
-  const readyTeams = teams.filter(t => t.name.trim() || t.player1.trim() || t.player2.trim())
+  const readyTeams = teams
+    .map(normalizeTeam)
+    .filter(t => t.name || t.player1 || t.player2)
   const canGenerate = readyTeams.length >= MIN_TEAMS
 
   const generateBracket = () => {
@@ -350,12 +392,6 @@ function TournamentMode({ onExit }) {
     () => (playThird ? computeThirdPlaceMatch(silverRounds, silverThirdPick) : null),
     [playThird, silverRounds, silverThirdPick]
   )
-
-  useEffect(() => {
-    const activeThird = format === 'split' && activeBracketTab === 'silver' ? silverThirdMatch : goldThirdMatch
-    const totalSteps = activeRounds.length + (activeThird ? 1 : 0)
-    if (mobileRound > totalSteps - 1) setMobileRound(Math.max(0, totalSteps - 1))
-  }, [activeRounds.length, goldThirdMatch, silverThirdMatch, activeBracketTab, format]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // -------------------------------------------------------------------------
   return (
@@ -437,14 +473,14 @@ function TournamentMode({ onExit }) {
             removeTeam={removeTeam}
             updateTeam={updateTeam}
             shuffleSeeds={shuffleSeeds}
+            importQueuePlayers={importQueuePlayers}
+            queueImportCount={Math.min(queuePlayers.filter(p => p.name?.trim()).length, MAX_TEAMS)}
             canGenerate={canGenerate}
             generateBracket={generateBracket}
           />
         ) : (
           <BracketScreen
             format={format}
-            mainRounds={mainRounds}
-            silverRounds={silverRounds}
             hasSilverContenders={hasSilverContenders}
             activeBracketTab={activeBracketTab}
             setActiveBracketTab={setActiveBracketTab}
@@ -467,7 +503,7 @@ function TournamentMode({ onExit }) {
 // ---------------------------------------------------------------------------
 // Setup screen
 // ---------------------------------------------------------------------------
-function SetupScreen({ teams, format, setFormat, playThird, setPlayThird, addTeam, removeTeam, updateTeam, shuffleSeeds, canGenerate, generateBracket }) {
+function SetupScreen({ teams, format, setFormat, playThird, setPlayThird, addTeam, removeTeam, updateTeam, shuffleSeeds, importQueuePlayers, queueImportCount, canGenerate, generateBracket }) {
   return (
     <div>
       {/* Format picker */}
@@ -518,6 +554,11 @@ function SetupScreen({ teams, format, setFormat, playThird, setPlayThird, addTea
             Teams <span style={{ color: COLORS.inkMute, fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', fontWeight: 400 }}>({teams.length}/{MAX_TEAMS})</span>
           </h2>
           <div style={{ display: 'flex', gap: '8px' }}>
+            {queueImportCount >= MIN_TEAMS && (
+              <Button className="tm-btn" variant="outlineDark" size="sm" icon={<FaUsers size={11} />} onClick={importQueuePlayers}>
+                Import Queue
+              </Button>
+            )}
             <Button className="tm-btn" variant="outlineDark" size="sm" icon={<FaRandom size={11} />} onClick={shuffleSeeds}>
               Shuffle Seeds
             </Button>
@@ -634,7 +675,7 @@ function FormatCard({ active, title, desc, onClick }) {
 // Bracket screen — desktop columns + mobile round-by-round
 // ---------------------------------------------------------------------------
 function BracketScreen({
-  format, mainRounds, silverRounds, hasSilverContenders,
+  format, hasSilverContenders,
   activeBracketTab, setActiveBracketTab, activeRounds, setActivePick,
   goldChampion, silverChampion, mobileRound, setMobileRound,
   goldThirdMatch, silverThirdMatch, onPickThird,
@@ -643,7 +684,9 @@ function BracketScreen({
   const activeThirdMatch = activeBracketTab === 'silver' ? silverThirdMatch : goldThirdMatch
   const thirdLabel = activeBracketTab === 'silver' ? '4th Place Match' : '3rd Place Match'
   const totalSteps = totalRounds + (activeThirdMatch ? 1 : 0)
-  const onThirdStep = activeThirdMatch && mobileRound === totalRounds
+  const lastStep = Math.max(0, totalSteps - 1)
+  const safeMobileRound = Math.min(mobileRound, lastStep)
+  const onThirdStep = activeThirdMatch && safeMobileRound === totalRounds
 
   return (
     <div>
@@ -710,8 +753,8 @@ function BracketScreen({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', background: '#fff', border: `1px solid ${COLORS.chalkDim}`, borderRadius: '8px', padding: '10px 6px' }}>
               <button
                 onClick={() => setMobileRound(r => Math.max(0, r - 1))}
-                disabled={mobileRound === 0}
-                style={{ background: 'none', border: 'none', padding: '10px', color: mobileRound === 0 ? '#C9D0C6' : COLORS.ink, cursor: mobileRound === 0 ? 'not-allowed' : 'pointer' }}
+                disabled={safeMobileRound === 0}
+                style={{ background: 'none', border: 'none', padding: '10px', color: safeMobileRound === 0 ? '#C9D0C6' : COLORS.ink, cursor: safeMobileRound === 0 ? 'not-allowed' : 'pointer' }}
               >
                 <FaChevronLeft size={16} />
               </button>
@@ -721,12 +764,12 @@ function BracketScreen({
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
               }}>
                 {onThirdStep && <FaMedal size={14} />}
-                {onThirdStep ? thirdLabel : getRoundLabel(mobileRound, totalRounds)}
+                {onThirdStep ? thirdLabel : getRoundLabel(safeMobileRound, totalRounds)}
               </span>
               <button
                 onClick={() => setMobileRound(r => Math.min(totalSteps - 1, r + 1))}
-                disabled={mobileRound === totalSteps - 1}
-                style={{ background: 'none', border: 'none', padding: '10px', color: mobileRound === totalSteps - 1 ? '#C9D0C6' : COLORS.ink, cursor: mobileRound === totalSteps - 1 ? 'not-allowed' : 'pointer' }}
+                disabled={safeMobileRound === lastStep}
+                style={{ background: 'none', border: 'none', padding: '10px', color: safeMobileRound === lastStep ? '#C9D0C6' : COLORS.ink, cursor: safeMobileRound === lastStep ? 'not-allowed' : 'pointer' }}
               >
                 <FaChevronRight size={16} />
               </button>
@@ -739,7 +782,7 @@ function BracketScreen({
                   onClick={() => setMobileRound(i)}
                   style={{
                     width: '9px', height: '9px', borderRadius: '50%', border: 'none', padding: 0, cursor: 'pointer',
-                    background: i === mobileRound ? (i === totalRounds ? COLORS.bronze : COLORS.teal) : '#D5DAD1',
+                    background: i === safeMobileRound ? (i === totalRounds ? COLORS.bronze : COLORS.teal) : '#D5DAD1',
                   }}
                 />
               ))}
@@ -749,11 +792,11 @@ function BracketScreen({
               {onThirdStep ? (
                 <MatchCard match={activeThirdMatch} onPick={onPickThird} large />
               ) : (
-                activeRounds[mobileRound]?.map((match, mIdx) => (
+                activeRounds[safeMobileRound]?.map((match, mIdx) => (
                   <MatchCard
                     key={mIdx}
                     match={match}
-                    onPick={side => setActivePick(mobileRound, mIdx, side)}
+                    onPick={side => setActivePick(safeMobileRound, mIdx, side)}
                     large
                   />
                 ))

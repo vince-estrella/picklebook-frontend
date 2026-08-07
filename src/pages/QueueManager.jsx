@@ -506,8 +506,8 @@ function QueueManager() {
   const [showJoinPanel, setShowJoinPanel] = useState(false)
   const [joinedCount, setJoinedCount] = useState(0)
   const [showTournament, setShowTournament] = useState(false)
+  const [historyDepth, setHistoryDepth] = useState(0)
   const history = useRef([])
-  const [, forceRender] = useState(0)
 
   // Always-current mirror of players/courts. Several effects in this file
   // (notably the join-request subscription below, which only sets up once
@@ -538,6 +538,7 @@ function QueueManager() {
     const { players: curPlayers, courts: curCourts } = stateRef.current
     history.current.push({ players: clone(curPlayers), courts: clone(curCourts) })
     if (history.current.length > 15) history.current.shift()
+    setHistoryDepth(history.current.length)
     const draftPlayers = clone(curPlayers)
     const draftCourts = clone(curCourts)
     const result = mutator(draftPlayers, draftCourts)
@@ -554,10 +555,10 @@ function QueueManager() {
   const undo = () => {
     const prev = history.current.pop()
     if (!prev) return
+    setHistoryDepth(history.current.length)
     stateRef.current = prev
     setPlayers(prev.players)
     setCourts(prev.courts)
-    forceRender(n => n + 1)
   }
 
   // ---- derived data ----------------------------------------------------
@@ -589,7 +590,7 @@ function QueueManager() {
   // unrecognized one) automatically defaults to "Beginner". joinRequestId,
   // when present, tags the created player so a joined participant's device
   // can recognize itself in the live queue.
-  const addPlayers = (entries) => {
+  const addPlayers = useCallback((entries) => {
     const valid = (entries || []).filter(e => e.name && e.name.trim())
     if (valid.length === 0) return
     commit((ps) => {
@@ -616,7 +617,7 @@ function QueueManager() {
       return { players: ps }
     })
     setShowAddModal(false)
-  }
+  }, [commit])
 
   // ---- live "Join Game" session -------------------------------------------
   // While a room is open, players' devices push join requests to Firebase;
@@ -658,7 +659,7 @@ function QueueManager() {
       setJoinedCount(c => c + fresh.length)
     })
     return unsubscribe
-  }, [roomCode])
+  }, [roomCode, addPlayers])
 
   const startJoinSession = () => {
     const code = makeRoomCode()
@@ -830,6 +831,8 @@ function QueueManager() {
   const resetQueue = () => {
     if (!window.confirm('Reset the entire session? This clears all players and courts.')) return
     history.current.push({ players: clone(stateRef.current.players), courts: clone(stateRef.current.courts) })
+    if (history.current.length > 15) history.current.shift()
+    setHistoryDepth(history.current.length)
     const next = { players: [], courts: emptyCourts() }
     stateRef.current = next
     setPlayers(next.players)
@@ -904,7 +907,7 @@ function QueueManager() {
 
   // -------------------------------------------------------------------------
   if (showTournament) {
-    return <TournamentMode onExit={() => setShowTournament(false)} />
+    return <TournamentMode queuePlayers={players} onExit={() => setShowTournament(false)} />
   }
 
   return (
@@ -1177,7 +1180,7 @@ function QueueManager() {
                   <span className="qm-btn-label-full">Shuffle Waiting</span>
                   <span className="qm-btn-label-short">Shuffle</span>
                 </Button>
-                <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaUndo size={11} />} onClick={undo} disabled={history.current.length === 0}>
+                <Button className="qm-btn" variant="outlineDark" size="sm" icon={<FaUndo size={11} />} onClick={undo} disabled={historyDepth === 0}>
                   Undo
                 </Button>
                 <Button className="qm-btn" variant="danger" size="sm" icon={<FaTrashAlt size={11} />} onClick={resetQueue}>
