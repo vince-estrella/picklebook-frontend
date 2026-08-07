@@ -34,7 +34,7 @@ function BookingPage() {
 const { court, selectedDate, selectedSlots } = state || {}
 
   const player = JSON.parse(localStorage.getItem('player') || 'null')
-  const requiresOnlinePayment = court?.paymentMethod === 'Online' || court?.paymentMethod === 'PayMongo'
+  const requiresOnlinePayment = court?.paymentMethod === 'Online'
 
   const [form, setForm] = useState({
     firstName: player?.firstName || '',

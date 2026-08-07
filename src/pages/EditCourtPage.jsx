@@ -270,18 +270,18 @@ function EditCourtPage() {
             </button>
             <button
               type="button"
-              onClick={() => setForm({ ...form, paymentMethod: 'PayMongo' })}
+              onClick={() => setForm({ ...form, paymentMethod: 'Online' })}
               style={{
                 textAlign: 'left', padding: '14px', borderRadius: '8px', cursor: 'pointer',
-                border: form.paymentMethod === 'PayMongo' ? '1px solid #16a34a' : '1px solid #e5e7eb',
-                background: form.paymentMethod === 'PayMongo' ? '#f0fdf4' : 'white',
+                border: form.paymentMethod === 'Online' ? '1px solid #16a34a' : '1px solid #e5e7eb',
+                background: form.paymentMethod === 'Online' ? '#f0fdf4' : 'white',
               }}
             >
-              <span style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: form.paymentMethod === 'PayMongo' ? '#15803d' : '#111827' }}>
-                Pay Online (PayMongo)
+              <span style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: form.paymentMethod === 'Online' ? '#15803d' : '#111827' }}>
+                Pay Online (Xendit)
               </span>
               <span style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
-                Coming soon — bookings still default to pay-at-venue for now.
+                Bookers pay online at checkout through Xendit.
               </span>
             </button>
           </div>
