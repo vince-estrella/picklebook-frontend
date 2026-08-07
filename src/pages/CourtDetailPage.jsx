@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   Star, MapPin, Share2, Heart, ShieldCheck, KeyRound, Droplets,
-  Sun, Fan, Wifi, ParkingCircle, ShowerHead, Flag, ChevronRight, Check, MessageCircle, ExternalLink
+  Sun, Fan, Wifi, ParkingCircle, ShowerHead, Flag, ChevronRight, Check, MessageCircle, ExternalLink, Users
 } from 'lucide-react'
 import CourtMap from '../components/CourtMap'
 import MessageOwnerModal from '../components/MessageOwnerModal'
@@ -140,6 +140,7 @@ const [selectedDate, setSelectedDate] = useState(getDefaultDate())
   const [saved, setSaved] = useState(false)
   const [showAllReviews, setShowAllReviews] = useState(false)
   const [showMessageModal, setShowMessageModal] = useState(false)
+  const [openPlays, setOpenPlays] = useState([])
 
   const [courtError, setCourtError] = useState(false)
 
@@ -155,6 +156,12 @@ const [selectedDate, setSelectedDate] = useState(getDefaultDate())
       .then(res => setBookedSlots(res.data))
       .catch(() => setBookedSlots([]))
   }, [id, selectedDate])
+
+  useEffect(() => {
+    api.get(`/openplay/court/${id}`)
+      .then(res => setOpenPlays(res.data))
+      .catch(() => setOpenPlays([]))
+  }, [id])
 
   if (courtError) {
     return (
@@ -498,6 +505,46 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
             </div>
           </div>
         </div>
+
+        {openPlays.length > 0 && (
+          <div className="pb-8 flex flex-col gap-4" style={{ borderBottom: `1px solid ${COLORS.chalkDim}` }}>
+            <div>
+              <h2 className="text-2xl" style={{ ...headingStyle, color: COLORS.ink, fontWeight: 700 }}>Upcoming Open Play</h2>
+              <p className="text-sm" style={{ color: COLORS.inkMute }}>Join a court-hosted session and queue with other players.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {openPlays.map(session => (
+                <div key={session.id} className="rounded-xl bg-white p-4 flex flex-col gap-3" style={{ outline: `1px solid ${COLORS.chalkDim}` }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-base font-bold" style={{ color: COLORS.ink }}>
+                        {new Date(session.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone: 'Asia/Manila' })}
+                      </p>
+                      <p className="text-sm" style={{ ...monoStyle, color: COLORS.inkMute }}>
+                        {formatHour12(session.startTime.substring(0, 5))} - {formatHour12(session.endTime.substring(0, 5))}
+                      </p>
+                    </div>
+                    <span className="px-2 py-1 rounded-full text-xs font-bold" style={{ background: '#E7EEE9', color: COLORS.teal }}>
+                      PHP {Number(session.openPlayPricePerPlayer || 0).toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-sm" style={{ color: COLORS.inkMute }}>
+                    <span>{session.openPlaySkillLevel || 'All Levels'}</span>
+                    <span className="inline-flex items-center gap-1"><Users size={14} /> {session.joinedCount}/{session.openPlayMaxPlayers || 8}</span>
+                  </div>
+                  {session.openPlayNote && <p className="text-sm line-clamp-2" style={{ color: COLORS.inkMute }}>{session.openPlayNote}</p>}
+                  <button
+                    onClick={() => navigate(`/open-play/${session.roomCode}`)}
+                    className="cd-book-btn w-full py-2.5 rounded-lg font-semibold text-sm transition-all duration-150"
+                    style={{ background: COLORS.citron, color: COLORS.navyDeep }}
+                  >
+                    Join Open Play
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Booking panel */}
         <div className="flex flex-col md:flex-row gap-8 items-start">

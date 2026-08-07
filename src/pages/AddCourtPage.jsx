@@ -44,6 +44,7 @@ function AddCourtPage() {
     longitude: 0,
     courtOwnerId: JSON.parse(localStorage.getItem('owner') || '{}').id,
     paymentMethod: 'PayAtVenue',
+    allowOpenPlay: true,
   })
   const [amenities, setAmenities] = useState([])
   const [images, setImages] = useState([])
@@ -278,6 +279,28 @@ function AddCourtPage() {
                   </span>
                 </button>
               </div>
+            </div>
+            <div className="owner-panel p-6 sm:p-8 flex flex-col gap-4">
+              <div>
+                <h2 className="text-stone-900 text-xl font-semibold leading-6">Player-Hosted Open Play</h2>
+                <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">
+                  Let players turn a confirmed booking into a joinable open-play session with a QR code.
+                </p>
+              </div>
+              <label className="flex items-start gap-3 rounded-lg bg-white p-4 outline outline-1 outline-neutral-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.allowOpenPlay}
+                  onChange={e => setForm({ ...form, allowOpenPlay: e.target.checked })}
+                  className="mt-1 h-4 w-4 accent-[var(--pb-teal)]"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-stone-900">Allow Open Play bookings</span>
+                  <span className="block text-xs text-zinc-600 mt-1">
+                    The court still requires owner confirmation before players can join.
+                  </span>
+                </span>
+              </label>
             </div>
             <div className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
               <h2 className="text-stone-900 text-xl font-semibold leading-6">Facility Amenities</h2>

@@ -23,12 +23,14 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
 import OwnerReportsPage from './pages/OwnerReportsPage'
 import OwnerSettingsPage from './pages/OwnerSettingsPage'
+import OwnerOpenPlayPage from './pages/OwnerOpenPlayPage'
 import PlayerLoginPage from './pages/PlayerLoginPage'
 import PlayerRegisterPage from './pages/PlayerRegisterPage'
 import MyBookingsPage from './pages/MyBookingsPage'
 import PlayerSettingsPage from './pages/PlayerSettingsPage'
 import ReportListingPage from './pages/ReportListingPage'
 import NotFoundPage from './pages/NotFoundPage'
+import OpenPlaySessionPage from './pages/OpenPlaySessionPage'
 
 function App() {
   return (
@@ -47,6 +49,7 @@ function App() {
       <Route path="/owner/courts/:id/bookings" element={<OwnerBookingsPage />} />
       <Route path="/owner/users" element={<OwnerUsersPage />} />
       <Route path="/owner/bookings" element={<BookingsListPage />} />
+      <Route path="/owner/open-play" element={<OwnerOpenPlayPage />} />
       <Route path="/owner/support" element={<OwnerSupportPage />} />
       <Route path="/owner/messages" element={<OwnerMessagesPage />} />
       <Route path="/owner/reports" element={<OwnerReportsPage />} />
@@ -61,6 +64,7 @@ function App() {
       <Route path="/courts/:id" element={<CourtDetailPage />} />
       <Route path="/queue" element={<QueueManager />} />
       <Route path="/join" element={<JoinQueuePage />} />
+      <Route path="/open-play/:code" element={<OpenPlaySessionPage />} />
       <Route path="/contact" element={<ContactSupportPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />

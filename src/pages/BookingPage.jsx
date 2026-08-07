@@ -34,13 +34,22 @@ function BookingPage() {
 const { court, selectedDate, selectedSlots } = state || {}
 
   const player = JSON.parse(localStorage.getItem('player') || 'null')
+  const playerToken = localStorage.getItem('playerToken')
   const requiresOnlinePayment = court?.paymentMethod === 'Online'
+  const courtAllowsOpenPlay = court?.allowOpenPlay ?? true
 
   const [form, setForm] = useState({
     firstName: player?.firstName || '',
     lastName: player?.lastName || '',
     phone: player?.phone || '',
     email: player?.email || '',
+  })
+  const [bookingType, setBookingType] = useState('Standard')
+  const [openPlayForm, setOpenPlayForm] = useState({
+    maxPlayers: 8,
+    skillLevel: 'All Levels',
+    note: '',
+    reclubLink: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -53,6 +62,11 @@ if (!court || !selectedSlots || selectedSlots.length === 0) {
   const handleSubmit = async () => {
     if (!form.firstName || !form.lastName || !form.phone || !form.email) {
       setError('Please fill in all fields.')
+      return
+    }
+
+    if (bookingType === 'OpenPlay' && !playerToken) {
+      setError('Please log in as a player before creating an Open Play booking.')
       return
     }
 
@@ -69,6 +83,11 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
         bookerPhone: form.phone,
         bookerEmail: form.email,
         userId: player?.id ?? null,
+        bookingType,
+        openPlayMaxPlayers: bookingType === 'OpenPlay' ? parseInt(openPlayForm.maxPlayers, 10) : null,
+        openPlaySkillLevel: bookingType === 'OpenPlay' ? openPlayForm.skillLevel : null,
+        openPlayNote: bookingType === 'OpenPlay' ? openPlayForm.note : null,
+        openPlayReclubLink: bookingType === 'OpenPlay' ? openPlayForm.reclubLink : null,
       })
 
 
@@ -168,6 +187,109 @@ endTime: selectedSlots[selectedSlots.length - 1].end + ':00',
 
           {/* Left: Form — shown second on mobile, first on desktop */}
           <div className="w-full order-last md:order-first md:flex-1">
+            <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '700', color: '#374151', display: 'block', marginBottom: '10px' }}>Booking Type</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBookingType('Standard')}
+                  style={{
+                    textAlign: 'left',
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: bookingType === 'Standard' ? '2px solid #16a34a' : '1px solid #e5e7eb',
+                    background: bookingType === 'Standard' ? '#f0fdf4' : '#fff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <strong style={{ display: 'block', color: '#111827', fontSize: '14px' }}>Standard Booking</strong>
+                  <span style={{ display: 'block', color: '#6b7280', fontSize: '12px', marginTop: '4px' }}>Private court reservation for your group.</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={!courtAllowsOpenPlay}
+                  onClick={() => setBookingType('OpenPlay')}
+                  style={{
+                    textAlign: 'left',
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: bookingType === 'OpenPlay' ? '2px solid #16a34a' : '1px solid #e5e7eb',
+                    background: bookingType === 'OpenPlay' ? '#f0fdf4' : '#fff',
+                    cursor: courtAllowsOpenPlay ? 'pointer' : 'not-allowed',
+                    opacity: courtAllowsOpenPlay ? 1 : 0.55,
+                  }}
+                >
+                  <strong style={{ display: 'block', color: '#111827', fontSize: '14px' }}>Open Play</strong>
+                  <span style={{ display: 'block', color: '#6b7280', fontSize: '12px', marginTop: '4px' }}>You host a joinable session after owner confirmation.</span>
+                </button>
+              </div>
+              {!courtAllowsOpenPlay && (
+                <p style={{ color: '#92400e', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', marginTop: '12px', fontSize: '13px' }}>
+                  This court owner does not allow player-hosted open play for this listing.
+                </p>
+              )}
+              {bookingType === 'OpenPlay' && !playerToken && (
+                <p style={{ color: '#92400e', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', marginTop: '12px', fontSize: '13px' }}>
+                  Open Play requires a player account so hosts can see real joined-player info.
+                </p>
+              )}
+            </div>
+
+            {bookingType === 'OpenPlay' && (
+              <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Open Play Details</h2>
+                <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '14px' }}>
+                  Your QR/join page activates only after this booking is confirmed.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" style={{ marginBottom: '12px' }}>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Max Players</label>
+                    <input
+                      type="number"
+                      min="2"
+                      max="64"
+                      value={openPlayForm.maxPlayers}
+                      onChange={e => setOpenPlayForm({ ...openPlayForm, maxPlayers: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Skill Level</label>
+                    <select
+                      value={openPlayForm.skillLevel}
+                      onChange={e => setOpenPlayForm({ ...openPlayForm, skillLevel: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', background: 'white' }}
+                    >
+                      <option>All Levels</option>
+                      <option>Beginner Friendly</option>
+                      <option>Intermediate</option>
+                      <option>Advanced</option>
+                      <option>Competitive</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Reclub Link (Optional)</label>
+                  <input
+                    placeholder="https://reclub.co/..."
+                    value={openPlayForm.reclubLink}
+                    onChange={e => setOpenPlayForm({ ...openPlayForm, reclubLink: e.target.value })}
+                    style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Host Note (Optional)</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Beginner friendly, bring your own paddle, pay via Reclub..."
+                    value={openPlayForm.note}
+                    onChange={e => setOpenPlayForm({ ...openPlayForm, note: e.target.value })}
+                    style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '10px 12px', fontSize: '14px', boxSizing: 'border-box', resize: 'vertical' }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>First Name</label>

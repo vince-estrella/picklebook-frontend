@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { QRCodeSVG } from 'qrcode.react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 
@@ -33,6 +34,7 @@ function BookingConfirmedPage() {
   const [court, setCourt] = useState(state?.court || null)
   const [loading, setLoading] = useState(!state?.booking && !!bookingIdParam)
   const [error, setError] = useState(null)
+  const [openPlay, setOpenPlay] = useState(state?.booking?.openPlay || null)
 
   useEffect(() => {
     // Arrived via client-side navigate (guest / pay-at-venue flow) — already
@@ -51,14 +53,24 @@ function BookingConfirmedPage() {
       .then(res => {
         setBooking(res.data)
         setCourt(res.data.court)
+        setOpenPlay(res.data.openPlay || null)
         setLoading(false)
       })
       .catch(() => {
         setError('Could not load your booking. If you were just charged, check My Bookings or contact the court.')
         setLoading(false)
-      })
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const publicToken = booking?.publicToken || tokenParam
+    if (!booking?.id || booking.bookingType !== 'OpenPlay' || !publicToken) return
+
+    api.get(`/openplay/booking/${booking.id}?token=${encodeURIComponent(publicToken)}`)
+      .then(res => setOpenPlay(res.data))
+      .catch(() => {})
+  }, [booking?.id, booking?.bookingType, booking?.publicToken, tokenParam])
 
   if (loading) {
     return (
@@ -87,6 +99,7 @@ function BookingConfirmedPage() {
   const isPaid = booking.paymentStatus === 'Paid'
   const durationMinutes = getDurationMinutes(booking.startTime, booking.endTime)
   const totalPrice = Number(booking.amount || 0)
+  const openPlayLink = openPlay?.roomCode ? `${window.location.origin}/open-play/${openPlay.roomCode}` : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -160,6 +173,34 @@ function BookingConfirmedPage() {
             </div>
           )}
         </div>
+
+        {booking.bookingType === 'OpenPlay' && (
+          <div style={{ background: openPlayLink ? '#f0fdf4' : '#f8fafc', border: `1px solid ${openPlayLink ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: '12px', padding: '20px', textAlign: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '6px' }}>Open Play Session</h2>
+            {openPlayLink ? (
+              <>
+                <p style={{ fontSize: '13px', color: '#15803d', marginBottom: '14px' }}>
+                  Your booking is confirmed. Share this QR or link so logged-in players can join.
+                </p>
+                <div style={{ display: 'inline-flex', background: '#fff', padding: '12px', borderRadius: '10px', border: '1px solid #dcfce7', marginBottom: '10px' }}>
+                  <QRCodeSVG value={openPlayLink} size={150} bgColor="#ffffff" fgColor="#0f172a" level="M" />
+                </div>
+                <p style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0f172a', marginBottom: '12px' }}>{openPlay.roomCode}</p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/open-play/${openPlay.roomCode}`)}
+                  style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', background: '#16a34a', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Manage Open Play
+                </button>
+              </>
+            ) : (
+              <p style={{ fontSize: '13px', color: '#64748b' }}>
+                Your Open Play page will activate after this booking is confirmed by the court owner.
+              </p>
+            )}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
           <button

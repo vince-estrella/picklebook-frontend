@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   FaSearch,
   FaTrashAlt,
@@ -493,6 +494,7 @@ const inputStyle = {
 // Main page
 // ---------------------------------------------------------------------------
 function QueueManager() {
+  const location = useLocation()
   const [players, setPlayers] = useState(() => loadState()?.players ?? [])
   const [courts, setCourts] = useState(() => loadState()?.courts ?? emptyCourts())
   const [search, setSearch] = useState('')
@@ -508,6 +510,7 @@ function QueueManager() {
   const [showTournament, setShowTournament] = useState(false)
   const [historyDepth, setHistoryDepth] = useState(0)
   const history = useRef([])
+  const importedOpenPlayRef = useRef(false)
 
   // Always-current mirror of players/courts. Several effects in this file
   // (notably the join-request subscription below, which only sets up once
@@ -618,6 +621,17 @@ function QueueManager() {
     })
     setShowAddModal(false)
   }, [commit])
+
+  useEffect(() => {
+    if (importedOpenPlayRef.current) return
+    const openPlayPlayers = location.state?.openPlayPlayers
+    if (!Array.isArray(openPlayPlayers) || openPlayPlayers.length === 0) return
+
+    importedOpenPlayRef.current = true
+    const existingNames = new Set(stateRef.current.players.map(p => p.name.trim().toLowerCase()))
+    const freshPlayers = openPlayPlayers.filter(p => !existingNames.has((p.name || '').trim().toLowerCase()))
+    addPlayers(freshPlayers)
+  }, [addPlayers, location.state])
 
   // ---- live "Join Game" session -------------------------------------------
   // While a room is open, players' devices push join requests to Firebase;

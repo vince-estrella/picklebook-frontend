@@ -138,6 +138,33 @@ function MyBookingsPage() {
             {b.startTime?.substring(0, 5)} – {b.endTime?.substring(0, 5)}
           </span>
         </div>
+        {b.bookingType === 'OpenPlay' && (
+          <div style={{ marginTop: '14px' }}>
+            {b.openPlay?.active && b.openPlay?.roomCode ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/open-play/${b.openPlay.roomCode}`)}
+                className="hb-btn"
+                style={{
+                  border: 'none',
+                  background: COLORS.teal,
+                  color: '#fff',
+                  borderRadius: '4px',
+                  padding: '9px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Manage Open Play
+              </button>
+            ) : (
+              <span style={{ display: 'inline-flex', borderRadius: '999px', background: 'rgba(215,226,43,0.18)', color: '#7A7F0E', padding: '6px 10px', fontSize: '11px', fontWeight: 700 }}>
+                Open Play activates after confirmation
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0, borderLeft: `1px solid ${COLORS.chalkDim}`, paddingLeft: '20px' }}>
         <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', letterSpacing: '0.08em', color: COLORS.inkMute, margin: '0 0 4px', textTransform: 'uppercase' }}>
