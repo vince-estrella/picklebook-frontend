@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { FaBed, FaClock, FaCheckCircle, FaCrown, FaTrophy } from 'react-icons/fa'
 import { subscribeRoomState, submitJoinRequest, roomExists } from '../lib/roomSync'
+import api from '../services/api'
 
 // Same design tokens as QueueManager — kept local here so this page can be
 // dropped in on its own route without pulling in the rest of the app.
@@ -205,7 +206,17 @@ function JoinQueuePage() {
     e.preventDefault()
     if (!nameInput.trim()) return
     setSubmitting(true)
+    setCodeError('')
     try {
+      const linkedOpenPlayCode = roomState?.meta?.openPlayRoomCode
+      if (linkedOpenPlayCode) {
+        if (!localStorage.getItem('playerToken')) {
+          setCodeError('Log in through the Open Play QR page first so the host can see your player profile.')
+          setSubmitting(false)
+          return
+        }
+        await api.post(`/openplay/sessions/${linkedOpenPlayCode}/join`)
+      }
       const requestId = await submitJoinRequest(code, { name: nameInput.trim(), skill: skillInput })
       sessionStorage.setItem(joinStorageKey(code), requestId)
       setMyRequestId(requestId)

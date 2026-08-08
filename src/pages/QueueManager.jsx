@@ -64,6 +64,7 @@ const FONT_IMPORT = `
 
 const STORAGE_KEY = 'picklebook_queue_state_v1'
 const ROOM_KEY = 'picklebook_room_code_v1'
+const OPEN_PLAY_ROOM_KEY = 'picklebook_open_play_room_code_v1'
 const COURT_COUNT = 3
 const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Pro']
 const DEFAULT_SKILL = 'Beginner'
@@ -505,6 +506,7 @@ function QueueManager() {
   const [finishTarget, setFinishTarget] = useState(null) // court object being finished
   const [showRankings, setShowRankings] = useState(false)
   const [roomCode, setRoomCode] = useState(() => sessionStorage.getItem(ROOM_KEY) || null)
+  const [openPlayRoomCode, setOpenPlayRoomCode] = useState(() => location.state?.openPlayRoomCode || sessionStorage.getItem(OPEN_PLAY_ROOM_KEY) || null)
   const [showJoinPanel, setShowJoinPanel] = useState(false)
   const [joinedCount, setJoinedCount] = useState(0)
   const [showTournament, setShowTournament] = useState(false)
@@ -534,8 +536,8 @@ function QueueManager() {
   // Publish every local change up to Firebase so joined players see it live.
   useEffect(() => {
     if (!roomCode) return
-    publishState(roomCode, players, courts).catch(() => {})
-  }, [roomCode, players, courts])
+    publishState(roomCode, players, courts, { openPlayRoomCode }).catch(() => {})
+  }, [roomCode, players, courts, openPlayRoomCode])
 
   const commit = useCallback((mutator) => {
     const { players: curPlayers, courts: curCourts } = stateRef.current
@@ -628,6 +630,9 @@ function QueueManager() {
     if (!Array.isArray(openPlayPlayers) || openPlayPlayers.length === 0) return
 
     importedOpenPlayRef.current = true
+    if (location.state?.openPlayRoomCode) {
+      sessionStorage.setItem(OPEN_PLAY_ROOM_KEY, location.state.openPlayRoomCode)
+    }
     const existingNames = new Set(stateRef.current.players.map(p => p.name.trim().toLowerCase()))
     const freshPlayers = openPlayPlayers.filter(p => !existingNames.has((p.name || '').trim().toLowerCase()))
     addPlayers(freshPlayers)
@@ -687,7 +692,9 @@ function QueueManager() {
     if (!roomCode) return
     closeRoom(roomCode).catch(() => {})
     sessionStorage.removeItem(ROOM_KEY)
+    sessionStorage.removeItem(OPEN_PLAY_ROOM_KEY)
     setRoomCode(null)
+    setOpenPlayRoomCode(null)
     setShowJoinPanel(false)
   }
 
@@ -1300,6 +1307,7 @@ function QueueManager() {
       {showJoinPanel && roomCode && (
         <JoinGamePanel
           code={roomCode}
+          openPlayRoomCode={openPlayRoomCode}
           joinedCount={joinedCount}
           onClose={() => setShowJoinPanel(false)}
           onEndSession={endJoinSession}
@@ -1312,9 +1320,13 @@ function QueueManager() {
 // ---------------------------------------------------------------------------
 // Join Game panel (host side) — shows the code/link players use to join
 // ---------------------------------------------------------------------------
-function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
+function JoinGamePanel({ code, openPlayRoomCode, joinedCount, onClose, onEndSession }) {
   const [copied, setCopied] = useState(false)
-  const link = `${typeof window !== 'undefined' ? window.location.origin : ''}${JOIN_PATH}?code=${code}`
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const directQueueLink = `${origin}${JOIN_PATH}?code=${code}`
+  const link = openPlayRoomCode
+    ? `${origin}/open-play/${openPlayRoomCode}?queueCode=${code}`
+    : directQueueLink
 
   const copyLink = async () => {
     try {
@@ -1330,6 +1342,7 @@ function JoinGamePanel({ code, joinedCount, onClose, onEndSession }) {
     <Modal title="Join Game" onClose={onClose} width={420}>
       <p style={{ fontSize: '13.5px', color: COLORS.inkMute, margin: '0 0 20px' }}>
         Players scan or type this code on their own phone to add themselves to the queue, follow it live, and check the rankings.
+        {openPlayRoomCode ? ' This queue is linked to Open Play, so scans will ask players to log in before joining.' : ''}
       </p>
 
       <div style={{

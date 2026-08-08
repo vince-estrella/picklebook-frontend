@@ -50,9 +50,9 @@ export function makeRoomCode() {
 // ---- host side ----------------------------------------------------------
 
 /** Host calls this every time local players/courts change. */
-export function publishState(code, players, courts) {
+export function publishState(code, players, courts, meta = {}) {
   return set(ref(db(), `rooms/${code}/state`), {
-    players, courts, updatedAt: serverTimestamp(),
+    players, courts, meta, updatedAt: serverTimestamp(),
   })
 }
 

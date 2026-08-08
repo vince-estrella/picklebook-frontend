@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import Navbar from '../components/Navbar'
 import api from '../services/api'
@@ -23,6 +23,7 @@ function queueSkillFromOpenPlay(skillLevel) {
 
 function OpenPlaySessionPage() {
   const { code } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const playerToken = localStorage.getItem('playerToken')
   const [session, setSession] = useState(null)
@@ -31,6 +32,7 @@ function OpenPlaySessionPage() {
   const [joining, setJoining] = useState(false)
 
   const link = `${window.location.origin}/open-play/${code}`
+  const queueCode = searchParams.get('queueCode')
 
   const loadSession = async () => {
     if (!playerToken) {
@@ -77,6 +79,9 @@ function OpenPlaySessionPage() {
     try {
       await api.post(`/openplay/sessions/${code}/join`)
       await loadSession()
+      if (queueCode) {
+        navigate(`/join?code=${queueCode.toUpperCase()}`)
+      }
     } catch (err) {
       const message = err.response?.data
       setError(typeof message === 'string' ? message : 'Could not join open play.')
@@ -183,9 +188,18 @@ function OpenPlaySessionPage() {
             )}
 
             {session.joined && !session.isHost && (
-              <p className="rounded-lg bg-green-50 border border-green-100 p-4 text-sm text-green-800">
-                You're joined. The host can track payment and check-in status here.
-              </p>
+              <div className="rounded-lg bg-green-50 border border-green-100 p-4 text-sm text-green-800">
+                <p>You're joined. The host can track payment and check-in status here.</p>
+                {queueCode && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/join?code=${queueCode.toUpperCase()}`)}
+                    className="mt-3 px-4 py-2 rounded-lg bg-green-700 text-white font-semibold"
+                  >
+                    Continue to Queue
+                  </button>
+                )}
+              </div>
             )}
           </section>
 
@@ -202,6 +216,7 @@ function OpenPlaySessionPage() {
               <button
                 onClick={() => navigate('/queue', {
                   state: {
+                    openPlayRoomCode: session.roomCode,
                     openPlayPlayers: participants.map(player => ({
                       name: player.playerName,
                       skill: queueSkillFromOpenPlay(booking.openPlaySkillLevel),
