@@ -45,6 +45,7 @@ function AddCourtPage() {
     latitude: 0,
     longitude: 0,
     courtOwnerId: JSON.parse(localStorage.getItem('owner') || '{}').id,
+    bookingMode: 'PickleBook',
     paymentMethod: 'PayAtVenue',
     allowOpenPlay: true,
   })
@@ -310,49 +311,93 @@ function AddCourtPage() {
             </div>
 
             {/* Amenities */}
-            {/* Payment method */}
+            {/* Booking mode */}
             <div className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
               <div>
-                <h2 className="text-stone-900 text-xl font-semibold leading-6">Payment Method</h2>
+                <h2 className="text-stone-900 text-xl font-semibold leading-6">Booking System</h2>
                 <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">
-                  Choose how bookers pay for this court.
+                  Choose whether players book through PickleBook or use your listing for visibility only.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={() => setForm({ ...form, paymentMethod: 'PayAtVenue' })}
+                  onClick={() => setForm({ ...form, bookingMode: 'PickleBook' })}
                   className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${
-                    form.paymentMethod === 'PayAtVenue'
+                    form.bookingMode === 'PickleBook'
                       ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]'
                       : 'outline-neutral-200 bg-white hover:bg-stone-50'
                   }`}
                 >
-                  <span className={`text-sm font-semibold block ${form.paymentMethod === 'PayAtVenue' ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>
-                    Pay at Venue
+                  <span className={`text-sm font-semibold block ${form.bookingMode === 'PickleBook' ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>
+                    Use PickleBook booking
                   </span>
                   <span className="text-xs text-zinc-600 block mt-1">
-                    Bookers reserve now, pay in person on arrival.
+                    Players reserve time slots inside PickleBook.
                   </span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setForm({ ...form, paymentMethod: 'Online' })}
+                  onClick={() => setForm({ ...form, bookingMode: 'ExternalOnly' })}
                   className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${
-                    form.paymentMethod === 'Online'
+                    form.bookingMode === 'ExternalOnly'
                       ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]'
                       : 'outline-neutral-200 bg-white hover:bg-stone-50'
                   }`}
                 >
-                  <span className={`text-sm font-semibold block ${form.paymentMethod === 'Online' ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>
-                    Pay Online (Xendit)
+                  <span className={`text-sm font-semibold block ${form.bookingMode === 'ExternalOnly' ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>
+                    Visibility / external link
                   </span>
                   <span className="text-xs text-zinc-600 block mt-1">
-                    Bookers pay online at checkout through Xendit.
+                    Show the court, but send players to your own page or Messenger.
                   </span>
                 </button>
               </div>
             </div>
+            {form.bookingMode === 'PickleBook' && (
+              <div className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
+                <div>
+                  <h2 className="text-stone-900 text-xl font-semibold leading-6">Payment Method</h2>
+                  <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">
+                    Choose how bookers pay for this court.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, paymentMethod: 'PayAtVenue' })}
+                    className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${
+                      form.paymentMethod === 'PayAtVenue'
+                        ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]'
+                        : 'outline-neutral-200 bg-white hover:bg-stone-50'
+                    }`}
+                  >
+                    <span className={`text-sm font-semibold block ${form.paymentMethod === 'PayAtVenue' ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>
+                      Pay at Venue
+                    </span>
+                    <span className="text-xs text-zinc-600 block mt-1">
+                      Bookers reserve now, pay in person on arrival.
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, paymentMethod: 'Online' })}
+                    className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${
+                      form.paymentMethod === 'Online'
+                        ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]'
+                        : 'outline-neutral-200 bg-white hover:bg-stone-50'
+                    }`}
+                  >
+                    <span className={`text-sm font-semibold block ${form.paymentMethod === 'Online' ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>
+                      Pay Online (Xendit)
+                    </span>
+                    <span className="text-xs text-zinc-600 block mt-1">
+                      Bookers pay online at checkout through Xendit.
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="owner-panel p-6 sm:p-8 flex flex-col gap-4">
               <div>
                 <h2 className="text-stone-900 text-xl font-semibold leading-6">Player-Hosted Open Play</h2>

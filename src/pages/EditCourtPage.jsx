@@ -63,6 +63,7 @@ function EditCourtPage() {
         latitude: court.latitude || 0,
         longitude: court.longitude || 0,
         courtOwnerId: court.courtOwnerId,
+        bookingMode: court.bookingMode || 'PickleBook',
         paymentMethod: court.paymentMethod || 'PayAtVenue',
         allowOpenPlay: court.allowOpenPlay ?? true,
       })
@@ -312,20 +313,20 @@ function EditCourtPage() {
 
           <section className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
             <div>
-              <h2 className="text-stone-900 text-xl font-semibold leading-6">Payment Method</h2>
-              <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">Choose how bookers pay for this court.</p>
+              <h2 className="text-stone-900 text-xl font-semibold leading-6">Booking System</h2>
+              <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">Choose whether players book through PickleBook or use your listing for visibility only.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { value: 'PayAtVenue', title: 'Pay at Venue', body: 'Bookers reserve now, pay in person on arrival.' },
-                { value: 'Online', title: 'Pay Online (Xendit)', body: 'Bookers pay online at checkout through Xendit.' },
+                { value: 'PickleBook', title: 'Use PickleBook booking', body: 'Players reserve time slots inside PickleBook.' },
+                { value: 'ExternalOnly', title: 'Visibility / external link', body: 'Show the court, but send players to your own page or Messenger.' },
               ].map(option => {
-                const selected = form.paymentMethod === option.value
+                const selected = form.bookingMode === option.value
                 return (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setForm({ ...form, paymentMethod: option.value })}
+                    onClick={() => setForm({ ...form, bookingMode: option.value })}
                     className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${selected ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]' : 'outline-neutral-200 bg-white hover:bg-stone-50'}`}
                   >
                     <span className={`text-sm font-semibold block ${selected ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>{option.title}</span>
@@ -335,6 +336,34 @@ function EditCourtPage() {
               })}
             </div>
           </section>
+
+          {form.bookingMode === 'PickleBook' && (
+            <section className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
+              <div>
+                <h2 className="text-stone-900 text-xl font-semibold leading-6">Payment Method</h2>
+                <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">Choose how bookers pay for this court.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { value: 'PayAtVenue', title: 'Pay at Venue', body: 'Bookers reserve now, pay in person on arrival.' },
+                  { value: 'Online', title: 'Pay Online (Xendit)', body: 'Bookers pay online at checkout through Xendit.' },
+                ].map(option => {
+                  const selected = form.paymentMethod === option.value
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setForm({ ...form, paymentMethod: option.value })}
+                      className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${selected ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]' : 'outline-neutral-200 bg-white hover:bg-stone-50'}`}
+                    >
+                      <span className={`text-sm font-semibold block ${selected ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>{option.title}</span>
+                      <span className="text-xs text-zinc-600 block mt-1">{option.body}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )}
 
           <section className="owner-panel p-6 sm:p-8 flex flex-col gap-4">
             <div>

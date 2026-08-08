@@ -462,7 +462,7 @@ function FindCourtsPage() {
                       className="fc-book-btn mt-6 w-full py-3.5 rounded-xl font-semibold transition-all duration-150"
                       style={{ background: COLORS.citron, color: COLORS.navyDeep }}
                     >
-                      View Courts
+                      {venue.courts.some(court => court.bookingMode !== 'ExternalOnly') ? 'View Courts' : 'View Details'}
                     </button>
                   </div>
                 </div>

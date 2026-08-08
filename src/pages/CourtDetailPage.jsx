@@ -66,6 +66,13 @@ function formatCurrency(n) {
   return `₱${Number(n).toFixed(2)}`
 }
 
+function normalizeExternalUrl(url) {
+  if (!url) return ''
+  const trimmed = url.trim()
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 // Converts a "HH:MM" 24-hour string into a compact 12-hour label, e.g.
 // "11:00" -> "11AM", "13:00" -> "1PM", "13:30" -> "1:30PM".
 function formatHour12(timeStr) {
@@ -259,6 +266,8 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
 
   const subtotal = selectedSlots.length * (court.pricePerHour || 0)
   const total = selectedSlots.length > 0 ? subtotal + SERVICE_FEE : 0
+  const isExternalOnly = court.bookingMode === 'ExternalOnly'
+  const externalUrl = normalizeExternalUrl(court.externalBookingUrl || court.venue?.externalBookingUrl)
 
   const trustBadges = [
     { icon: ShieldCheck, title: 'Verified court', body: 'Inspected regularly for quality.' },
@@ -601,6 +610,32 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
               )}
             </div>
 
+            {isExternalOnly ? (
+              <div className="p-4 rounded-xl flex flex-col gap-3" style={{ outline: `1px solid ${COLORS.chalkDim}`, background: '#F8FAF7' }}>
+                <p className="text-sm font-semibold" style={{ color: COLORS.ink }}>Listed for visibility</p>
+                <p className="text-sm" style={{ color: COLORS.inkMute }}>This court manages bookings outside PickleBook.</p>
+                {externalUrl ? (
+                  <a
+                    href={externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="cd-book-btn w-full py-3 rounded-xl font-semibold text-base text-center transition-all duration-150"
+                    style={{ background: COLORS.citron, color: COLORS.navyDeep }}
+                  >
+                    Open Booking Link
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => setShowMessageModal(true)}
+                    className="cd-book-btn w-full py-3 rounded-xl font-semibold text-base transition-all duration-150"
+                    style={{ background: COLORS.citron, color: COLORS.navyDeep }}
+                  >
+                    Message Owner
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
 <div className="p-4 rounded-xl flex flex-col gap-1 transition-colors duration-150" style={{ outline: `1px solid ${COLORS.chalkDim}` }}>
               <span className="text-xs font-medium uppercase tracking-wide" style={{ color: COLORS.ink }}>Select date</span>
               <input
@@ -677,11 +712,11 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
             </button>
             <p className="text-sm text-center" style={{ color: COLORS.inkMute }}>You won't be charged yet</p>
 
-            {court.externalBookingUrl && (
+            {externalUrl && (
               <div className="pt-4 flex flex-col items-center gap-2 text-center" style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>
                 <p className="text-sm" style={{ color: COLORS.inkMute }}>This court also takes bookings through their own site.</p>
                 <a
-                  href={court.externalBookingUrl}
+                  href={externalUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="cd-external-book inline-flex items-center justify-center gap-1.5 text-sm font-semibold transition-colors duration-150"
@@ -690,6 +725,8 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
                   Visit their booking site <ExternalLink size={14} />
                 </a>
               </div>
+            )}
+              </>
             )}
 
             <div className="pt-4 flex justify-center" style={{ borderTop: `1px solid ${COLORS.chalkDim}` }}>

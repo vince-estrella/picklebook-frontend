@@ -59,6 +59,11 @@ if (!court || !selectedSlots || selectedSlots.length === 0) {
   return null
 }
 
+if (court.bookingMode === 'ExternalOnly') {
+  navigate(`/courts/${id}`)
+  return null
+}
+
   const handleSubmit = async () => {
     if (!form.firstName || !form.lastName || !form.phone || !form.email) {
       setError('Please fill in all fields.')
