@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Menu } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Clock, Menu, Search, UserCheck } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
 
-// Formats "HH:MM" or "HH:MM:SS" (24hr) into "h:mm AM/PM"
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function formatTime12h(time) {
   if (!time) return ''
   const [hStr, mStr] = time.split(':')
@@ -15,22 +21,52 @@ function formatTime12h(time) {
   return `${h}:${mStr} ${period}`
 }
 
+function statusClass(status) {
+  const normalized = String(status || '').toLowerCase()
+  if (normalized.includes('cancel')) return 'bg-red-50 text-red-700 border-red-100'
+  if (normalized.includes('pending')) return 'bg-amber-50 text-amber-700 border-amber-100'
+  if (normalized.includes('confirm')) return 'bg-green-50 text-green-700 border-green-100'
+  return 'bg-slate-100 text-slate-700 border-slate-200'
+}
+
 function OwnerBookingsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString())
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('All')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
-    api.get(`/bookings/court/${id}?date=${today}`)
+    api.get(`/bookings/court/${id}?date=${selectedDate}`)
       .then(res => {
-        setBookings(res.data)
+        setBookings(Array.isArray(res.data) ? res.data : [])
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [id])
+  }, [id, selectedDate])
+
+  const statuses = useMemo(() => {
+    const unique = new Set(bookings.map((booking) => booking.status).filter(Boolean))
+    return ['All', ...unique]
+  }, [bookings])
+
+  const filteredBookings = bookings.filter((booking) => {
+    const text = query.trim().toLowerCase()
+    const matchesQuery = !text || [
+      booking.bookingReference,
+      booking.bookerName,
+      booking.bookerPhone,
+      booking.status,
+    ].some((value) => String(value || '').toLowerCase().includes(text))
+    const matchesStatus = statusFilter === 'All' || booking.status === statusFilter
+    return matchesQuery && matchesStatus
+  })
+
+  const confirmedCount = bookings.filter((booking) => String(booking.status || '').toLowerCase().includes('confirm')).length
+  const pendingCount = bookings.filter((booking) => String(booking.status || '').toLowerCase().includes('pending')).length
 
   return (
     <div className="w-full min-h-screen owner-workspace flex">
@@ -38,34 +74,101 @@ function OwnerBookingsPage() {
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="owner-topbar px-4 sm:px-6 lg:px-12 py-4 backdrop-blur-md sticky top-0 z-10">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 -ml-2 rounded-lg text-neutral-700 hover:bg-gray-200 shrink-0"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="min-w-0">
+                <p className="owner-kicker mb-1">Court Schedule</p>
+                <h1 className="owner-title text-xl sm:text-2xl leading-8 truncate">Booking Management</h1>
+              </div>
+            </div>
             <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 rounded-lg text-neutral-700 hover:bg-gray-200 shrink-0"
-              aria-label="Open menu"
+              onClick={() => navigate('/owner/courts')}
+              className="owner-secondary-btn px-3 py-2 text-sm flex items-center gap-2"
             >
-              <Menu className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => navigate('/owner/dashboard')}
-              className="owner-secondary-btn px-3 py-2 text-sm bg-transparent cursor-pointer"
-            >
-              ← Back to Dashboard
+              <ArrowLeft className="w-4 h-4" />
+              Courts
             </button>
           </div>
         </header>
 
-        <main className="p-4 sm:p-6 lg:p-12">
-          <h1 className="owner-title text-xl sm:text-2xl mb-1">Booking Management</h1>
-          <p className="text-slate-500 text-sm mb-6">Today's bookings for this court.</p>
+        <main className="p-4 sm:p-6 lg:p-12 flex flex-col gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="owner-stat p-4">
+              <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1.5">
+                <CalendarDays className="w-4 h-4" />
+                Total
+              </p>
+              <p className="text-2xl font-bold text-slate-900">{bookings.length}</p>
+            </div>
+            <div className="owner-stat p-4">
+              <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1.5">
+                <UserCheck className="w-4 h-4" />
+                Confirmed
+              </p>
+              <p className="text-2xl font-bold text-[var(--pb-teal)]">{confirmedCount}</p>
+            </div>
+            <div className="owner-stat p-4">
+              <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1.5">
+                <Clock className="w-4 h-4" />
+                Pending
+              </p>
+              <p className="text-2xl font-bold text-amber-700">{pendingCount}</p>
+            </div>
+          </div>
 
-          <div className="bg-white border border-stone-200 rounded-xl overflow-hidden">
+          <section className="owner-panel p-4 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+              <label className="flex flex-col gap-1 text-xs font-bold uppercase text-slate-500">
+                Date
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(event) => setSelectedDate(event.target.value)}
+                  className="owner-field px-3 py-2 text-sm normal-case font-normal"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs font-bold uppercase text-slate-500">
+                Status
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="owner-field px-3 py-2 text-sm normal-case font-normal"
+                >
+                  {statuses.map((status) => <option key={status}>{status}</option>)}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs font-bold uppercase text-slate-500">
+                Search
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Name, phone, reference"
+                    className="owner-field pl-9 pr-3 py-2 text-sm normal-case font-normal"
+                  />
+                </div>
+              </label>
+            </div>
+            <p className="text-sm text-slate-500">
+              Showing {filteredBookings.length} of {bookings.length}
+            </p>
+          </section>
+
+          <div className="owner-panel overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[640px]">
+              <table className="w-full border-collapse min-w-[760px]">
                 <thead>
-                  <tr className="bg-gray-50">
-                    {['Booking ID', 'Date', 'Time', 'Booker Name', 'Phone', 'Status'].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                  <tr className="bg-[#f8faf6] border-b border-stone-200">
+                    {['Reference', 'Date', 'Time', 'Booker', 'Phone', 'Status'].map(h => (
+                      <th key={h} className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">
                         {h}
                       </th>
                     ))}
@@ -74,19 +177,19 @@ function OwnerBookingsPage() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={6} className="p-8 text-center text-slate-400">Loading...</td></tr>
-                  ) : bookings.length === 0 ? (
-                    <tr><td colSpan={6} className="p-8 text-center text-slate-400">No bookings for today.</td></tr>
+                  ) : filteredBookings.length === 0 ? (
+                    <tr><td colSpan={6} className="p-8 text-center text-slate-400">No bookings match this view.</td></tr>
                   ) : (
-                    bookings.map(b => (
-                      <tr key={b.id} className="border-t border-stone-100">
-                        <td className="px-4 py-3.5 font-semibold text-sm text-green-700">{b.bookingReference}</td>
-                        <td className="px-4 py-3.5 text-sm">{new Date(b.date).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</td>
-                        <td className="px-4 py-3.5 text-sm">{formatTime12h(b.startTime)} – {formatTime12h(b.endTime)}</td>
-                        <td className="px-4 py-3.5 text-sm">{b.bookerName}</td>
-                        <td className="px-4 py-3.5 text-sm">{b.bookerPhone}</td>
-                        <td className="px-4 py-3.5">
-                          <span className="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-                            {b.status}
+                    filteredBookings.map(booking => (
+                      <tr key={booking.id} className="border-t border-stone-100 hover:bg-slate-50">
+                        <td className="px-4 py-4 font-bold text-sm text-[var(--pb-teal)]">{booking.bookingReference}</td>
+                        <td className="px-4 py-4 text-sm text-slate-700">{new Date(booking.date).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila' })}</td>
+                        <td className="px-4 py-4 text-sm text-slate-700">{formatTime12h(booking.startTime)} - {formatTime12h(booking.endTime)}</td>
+                        <td className="px-4 py-4 text-sm font-semibold text-slate-900">{booking.bookerName || '-'}</td>
+                        <td className="px-4 py-4 text-sm text-slate-700">{booking.bookerPhone || '-'}</td>
+                        <td className="px-4 py-4">
+                          <span className={`border text-xs font-bold px-2.5 py-1 rounded-full ${statusClass(booking.status)}`}>
+                            {booking.status || 'Unknown'}
                           </span>
                         </td>
                       </tr>

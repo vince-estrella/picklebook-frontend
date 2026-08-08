@@ -327,7 +327,7 @@ function EditCourtPage() {
                     key={option.value}
                     type="button"
                     onClick={() => setForm({ ...form, bookingMode: option.value })}
-                    className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${selected ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]' : 'outline-neutral-200 bg-white hover:bg-stone-50'}`}
+                    className={`p-4 owner-switch-card ${selected ? 'owner-switch-card-active' : ''}`}
                   >
                     <span className={`text-sm font-semibold block ${selected ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>{option.title}</span>
                     <span className="text-xs text-zinc-600 block mt-1">{option.body}</span>
@@ -354,7 +354,7 @@ function EditCourtPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setForm({ ...form, paymentMethod: option.value })}
-                      className={`p-4 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${selected ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]' : 'outline-neutral-200 bg-white hover:bg-stone-50'}`}
+                      className={`p-4 owner-switch-card ${selected ? 'owner-switch-card-active' : ''}`}
                     >
                       <span className={`text-sm font-semibold block ${selected ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>{option.title}</span>
                       <span className="text-xs text-zinc-600 block mt-1">{option.body}</span>
@@ -398,7 +398,7 @@ function EditCourtPage() {
                     key={a}
                     type="button"
                     onClick={() => toggleAmenity(a)}
-                    className={`p-3 rounded-lg outline outline-1 outline-offset-[-1px] text-left transition-colors ${selected ? 'outline-[var(--pb-teal)] bg-[#E7EEE9]' : 'outline-neutral-200 bg-white hover:bg-stone-50'}`}
+                    className={`p-3 owner-switch-card ${selected ? 'owner-switch-card-active' : ''}`}
                   >
                     <span className={`text-xs font-medium leading-4 ${selected ? 'text-[var(--pb-teal)]' : 'text-stone-900'}`}>{a}</span>
                   </button>

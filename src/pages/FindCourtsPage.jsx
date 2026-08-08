@@ -288,7 +288,7 @@ function FindCourtsPage() {
                 <input
                   type="number"
                   min="0"
-                  placeholder="₱0"
+                  placeholder="PHP 0"
                   value={minPrice}
                   onChange={e => setMinPrice(e.target.value)}
                   className="fc-input"
@@ -298,7 +298,7 @@ function FindCourtsPage() {
                 <input
                   type="number"
                   min="0"
-                  placeholder="₱1000"
+                  placeholder="PHP 1000"
                   value={maxPrice}
                   onChange={e => setMaxPrice(e.target.value)}
                   className="fc-input"
@@ -375,6 +375,8 @@ function FindCourtsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {venueGroups.map(venue => {
                 const court = venue.courts[0]
+                const bookableCount = venue.courts.filter(courtOption => courtOption.bookingMode !== 'ExternalOnly').length
+                const externalCount = venue.courts.length - bookableCount
                 return (
                 <div
                   key={venue.key}
@@ -414,9 +416,22 @@ function FindCourtsPage() {
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-bold" style={{ ...monoStyle, color: COLORS.ink }}>₱{court.pricePerHour}</p>
+                        <p className="font-bold" style={{ ...monoStyle, color: COLORS.ink }}>PHP {court.pricePerHour}</p>
                         <p className="text-xs" style={{ color: COLORS.inkMute }}>per hour</p>
                       </div>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {bookableCount > 0 && (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: '#E7EEE9', color: COLORS.teal }}>
+                          {bookableCount} bookable
+                        </span>
+                      )}
+                      {externalCount > 0 && (
+                        <span className="px-3 py-1 rounded-full text-xs font-bold" style={{ background: COLORS.chalkDim, color: COLORS.inkMute }}>
+                          {externalCount} external
+                        </span>
+                      )}
                     </div>
 
                     {/* Available today? */}
@@ -526,7 +541,7 @@ function FindCourtsPage() {
                             </p>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <p style={{ ...monoStyle, fontSize: '14px', fontWeight: 600, color: COLORS.teal, margin: 0 }}>
-                                ₱{court.pricePerHour}<span style={{ fontSize: '11px', color: COLORS.inkMute, fontWeight: 500 }}>/hr</span>
+                                PHP {court.pricePerHour}<span style={{ fontSize: '11px', color: COLORS.inkMute, fontWeight: 500 }}>/hr</span>
                               </p>
                               <button
                                 onClick={() => navigate(`/courts/${court.id}`)}

@@ -63,7 +63,7 @@ function computeIsOpenNow(court) {
 }
 
 function formatCurrency(n) {
-  return `₱${Number(n).toFixed(2)}`
+  return `PHP ${Number(n).toFixed(2)}`
 }
 
 function normalizeExternalUrl(url) {

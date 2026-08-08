@@ -259,7 +259,7 @@ function AddCourtPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Environment</label>
                   <select
@@ -287,7 +287,7 @@ function AddCourtPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
                   <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Max Players</label>
                   <input
@@ -319,7 +319,7 @@ function AddCourtPage() {
                   Choose whether players book through PickleBook or use your listing for visibility only.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, bookingMode: 'PickleBook' })}
@@ -362,7 +362,7 @@ function AddCourtPage() {
                     Choose how bookers pay for this court.
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setForm({ ...form, paymentMethod: 'PayAtVenue' })}
@@ -422,7 +422,7 @@ function AddCourtPage() {
             </div>
             <div className="owner-panel p-6 sm:p-8 flex flex-col gap-6">
               <h2 className="text-stone-900 text-xl font-semibold leading-6">Facility Amenities</h2>
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {AMENITIES_OPTIONS.map(a => {
                   const selected = amenities.includes(a)
                   return (
@@ -455,10 +455,10 @@ function AddCourtPage() {
                 {SCHEDULE_ROWS.map((row, i) => (
                   <div
                     key={row.label}
-                    className={`py-3 flex justify-between items-center ${i < SCHEDULE_ROWS.length - 1 ? 'border-b border-zinc-100' : ''}`}
+                    className={`py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 ${i < SCHEDULE_ROWS.length - 1 ? 'border-b border-zinc-100' : ''}`}
                   >
                     <span className="w-32 text-stone-900 text-sm font-semibold leading-5 tracking-tight">{row.label}</span>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <input
                         type="time"
                         value={form[row.openKey].substring(0, 5)}
@@ -539,7 +539,7 @@ function AddCourtPage() {
                 onClick={() => navigate('/owner/dashboard')}
                 className="owner-secondary-btn px-8 py-3 text-sm leading-5 tracking-tight"
               >
-                Discard Draft
+                Discard
               </button>
               <button
                 type="button"
@@ -554,7 +554,7 @@ function AddCourtPage() {
         </main>
 
         {/* Footer */}
-        <footer className="w-full px-4 sm:px-8 py-10 bg-[var(--pb-navy)] border-t border-white/10 flex justify-between items-center flex-wrap gap-6">
+        <footer className="w-full px-4 sm:px-8 py-10 bg-[var(--pb-navy)] border-t border-white/10 flex flex-col sm:flex-row sm:justify-between sm:items-center flex-wrap gap-6">
           <div className="flex flex-col gap-2">
             <span className="owner-brand text-xl font-bold leading-6">PickleBook</span>
             <span className="text-stone-400 text-base font-normal leading-6">© 2026 PickleBook. High-performance court management.</span>

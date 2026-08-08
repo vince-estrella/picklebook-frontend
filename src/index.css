@@ -118,6 +118,51 @@
   background: #fbedec;
 }
 
+.owner-icon-btn {
+  border: 1px solid var(--pb-chalk-dim);
+  border-radius: 6px;
+  color: var(--pb-ink-muted);
+  background: #fff;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.owner-icon-btn:hover {
+  background: #f4f6f1;
+  border-color: var(--pb-line);
+  color: var(--pb-ink);
+}
+
+.owner-stat {
+  background: #fff;
+  border: 1px solid var(--pb-chalk-dim);
+  border-radius: 8px;
+}
+
+.owner-chip {
+  border-radius: 999px;
+  border: 1px solid var(--pb-chalk-dim);
+  background: #fff;
+  color: var(--pb-ink-muted);
+  font-weight: 700;
+}
+
+.owner-switch-card {
+  border: 1px solid var(--pb-chalk-dim);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.owner-switch-card:hover {
+  background: #f8faf6;
+}
+
+.owner-switch-card-active {
+  border-color: var(--pb-teal);
+  background: #e7eee9;
+}
+
 .owner-title {
   color: var(--pb-navy);
   font-family: "Big Shoulders Display", system-ui, sans-serif;

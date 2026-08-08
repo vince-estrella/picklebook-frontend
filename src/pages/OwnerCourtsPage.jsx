@@ -1,8 +1,49 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Plus, Pencil, Eye, Trash2, Menu } from 'lucide-react'
+import {
+  Building2,
+  CalendarCheck,
+  ExternalLink,
+  MapPin,
+  Menu,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+
+function groupCourtsByVenue(courts) {
+  const map = new Map()
+
+  courts.forEach((court) => {
+    const venue = court.venue || {
+      id: null,
+      name: 'Ungrouped venue',
+      address: court.address,
+    }
+    const key = venue.id ? `venue-${venue.id}` : `court-${court.id}`
+
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        name: venue.name || 'Ungrouped venue',
+        address: venue.address || court.address,
+        courts: [],
+      })
+    }
+
+    map.get(key).courts.push(court)
+  })
+
+  return [...map.values()].map((venue) => ({
+    ...venue,
+    minPrice: Math.min(...venue.courts.map((court) => Number(court.pricePerHour) || 0)),
+    bookableCount: venue.courts.filter((court) => court.bookingMode !== 'ExternalOnly').length,
+    externalCount: venue.courts.filter((court) => court.bookingMode === 'ExternalOnly').length,
+  }))
+}
 
 function OwnerCourtsPage() {
   const navigate = useNavigate()
@@ -50,15 +91,20 @@ function OwnerCourtsPage() {
     }
   }
 
-  const filteredCourts = courts.filter((c) => {
+  const filteredCourts = courts.filter((court) => {
     const q = search.trim().toLowerCase()
     if (!q) return true
     return (
-      c.name?.toLowerCase().includes(q) ||
-      c.venue?.name?.toLowerCase().includes(q) ||
-      c.address?.toLowerCase().includes(q)
+      court.name?.toLowerCase().includes(q) ||
+      court.venue?.name?.toLowerCase().includes(q) ||
+      court.address?.toLowerCase().includes(q) ||
+      court.bookingMode?.toLowerCase().includes(q)
     )
   })
+  const venueGroups = groupCourtsByVenue(filteredCourts)
+  const allVenueGroups = groupCourtsByVenue(courts)
+  const pickleBookCount = courts.filter((court) => court.bookingMode !== 'ExternalOnly').length
+  const externalCount = courts.length - pickleBookCount
 
   if (loading) {
     return (
@@ -72,9 +118,7 @@ function OwnerCourtsPage() {
     <div className="w-full min-h-screen owner-workspace flex">
       <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
         <header className="owner-topbar px-4 sm:px-6 lg:px-12 py-4 backdrop-blur-md flex justify-between items-center sticky top-0 z-10 gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <button
@@ -84,7 +128,10 @@ function OwnerCourtsPage() {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="owner-title text-xl sm:text-2xl leading-8 truncate">Manage Courts</h1>
+            <div className="min-w-0">
+              <p className="owner-kicker mb-1">Venue Inventory</p>
+              <h1 className="owner-title text-xl sm:text-2xl leading-8 truncate">Manage Courts</h1>
+            </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="relative hidden sm:block">
@@ -108,7 +155,6 @@ function OwnerCourtsPage() {
         </header>
 
         <main className="p-4 sm:p-6 lg:p-12 flex flex-col gap-6">
-          {/* Mobile search */}
           <div className="relative sm:hidden">
             <Search className="w-4 h-4 text-neutral-700 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
@@ -120,9 +166,24 @@ function OwnerCourtsPage() {
             />
           </div>
 
-          <p className="text-slate-500 text-sm">
-            {filteredCourts.length} of {courts.length} court{courts.length === 1 ? '' : 's'}
-          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="owner-stat p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">Venues</p>
+              <p className="text-2xl font-bold text-slate-900">{allVenueGroups.length}</p>
+            </div>
+            <div className="owner-stat p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">Courts</p>
+              <p className="text-2xl font-bold text-slate-900">{courts.length}</p>
+            </div>
+            <div className="owner-stat p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">PickleBook</p>
+              <p className="text-2xl font-bold text-[var(--pb-teal)]">{pickleBookCount}</p>
+            </div>
+            <div className="owner-stat p-4">
+              <p className="text-xs font-bold uppercase text-slate-500">External</p>
+              <p className="text-2xl font-bold text-slate-900">{externalCount}</p>
+            </div>
+          </div>
 
           {deleteError && (
             <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -130,92 +191,108 @@ function OwnerCourtsPage() {
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[640px]">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-stone-300">
-                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Court Name</th>
-                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Venue</th>
-                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Price</th>
-                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Type</th>
-                    <th className="px-4 sm:px-6 py-4 text-right text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCourts.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-10 text-center text-slate-500 text-sm font-normal">
-                        {courts.length === 0
-                          ? 'No courts yet. Click "Add Court" to get started.'
-                          : 'No courts match your search.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredCourts.map((court) => (
-                      <tr key={court.id} className="border-t border-stone-200 transition-colors duration-150 hover:bg-gray-100">
-                        <td className="px-4 sm:px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                              <img
-                                className="w-full h-full object-cover"
-                                src={court.images?.[0]?.imageUrl || 'https://placehold.co/40x40'}
-                                alt={court.name}
-                              />
+          {filteredCourts.length === 0 ? (
+            <div className="owner-panel p-10 text-center text-slate-500 text-sm">
+              {courts.length === 0
+                ? 'No courts yet. Click "Add Court" to get started.'
+                : 'No courts match your search.'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+              {venueGroups.map((venue) => (
+                <section key={venue.key} className="owner-panel overflow-hidden">
+                  <div className="p-5 border-b border-stone-200 bg-[#f8faf6]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="owner-kicker mb-1">Venue</p>
+                        <h2 className="text-lg font-bold text-slate-900 truncate">{venue.name}</h2>
+                        <p className="mt-1 text-sm text-slate-500 flex items-start gap-1.5">
+                          <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                          <span className="line-clamp-2">{venue.address || 'No address saved'}</span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-slate-500">from</p>
+                        <p className="font-bold text-slate-900">PHP {venue.minPrice}/hr</p>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <span className="owner-chip px-3 py-1 text-xs inline-flex items-center gap-1">
+                        <Building2 className="w-3.5 h-3.5" />
+                        {venue.courts.length} court{venue.courts.length === 1 ? '' : 's'}
+                      </span>
+                      <span className="owner-chip px-3 py-1 text-xs inline-flex items-center gap-1">
+                        <CalendarCheck className="w-3.5 h-3.5" />
+                        {venue.bookableCount} PickleBook
+                      </span>
+                      {venue.externalCount > 0 && (
+                        <span className="owner-chip px-3 py-1 text-xs inline-flex items-center gap-1">
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          {venue.externalCount} external
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-stone-100">
+                    {venue.courts.map((court) => {
+                      const externalOnly = court.bookingMode === 'ExternalOnly'
+                      return (
+                        <div key={court.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                              {court.images?.[0]?.imageUrl ? (
+                                <img className="w-full h-full object-cover" src={court.images[0].imageUrl} alt={court.name} />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">No img</div>
+                              )}
                             </div>
-                            <span className="text-slate-800 text-sm sm:text-base font-normal leading-6">{court.name}</span>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-900 truncate">{court.name}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                <span>{court.type || 'Court'}</span>
+                                <span>PHP {court.pricePerHour}/hr</span>
+                                <span className={`px-2 py-0.5 rounded-full font-bold ${externalOnly ? 'bg-slate-100 text-slate-700' : 'bg-green-50 text-green-700'}`}>
+                                  {externalOnly ? 'External only' : 'PickleBook booking'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4 text-neutral-700 text-sm font-normal leading-5">
-                          <div className="font-semibold text-slate-800">{court.venue?.name || 'Ungrouped venue'}</div>
-                          <div className="text-xs text-slate-500 mt-1">{court.venue?.address || court.address}</div>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4">
-                          <span className="text-slate-800 text-sm font-bold leading-5">₱{court.pricePerHour}</span>
-                          <span className="text-slate-800 text-sm font-semibold leading-5">/hr</span>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4">
-                          <span
-                            className={`px-3 py-[2.5px] rounded-full inline-block text-xs font-bold leading-4 ${
-                              court.type === 'Indoor' ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'
-                            }`}
-                          >
-                            {court.type}
-                          </span>
-                        </td>
-                        <td className="px-4 sm:px-6 py-4">
-                          <div className="flex justify-end gap-2">
+
+                          <div className="flex sm:justify-end gap-2">
                             <button
                               onClick={() => navigate(`/owner/courts/${court.id}/edit`)}
-                              className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-green-800 hover:bg-green-100"
+                              className="owner-icon-btn p-2"
                               title="Edit"
                             >
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => navigate(`/owner/courts/${court.id}/bookings`)}
-                              className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-green-800 hover:bg-green-100"
-                              title="View Bookings"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
+                            {!externalOnly && (
+                              <button
+                                onClick={() => navigate(`/owner/courts/${court.id}/bookings`)}
+                                className="owner-icon-btn p-2"
+                                title="View bookings"
+                              >
+                                <CalendarCheck className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDelete(court)}
                               disabled={deletingId === court.id}
-                              className="p-2 rounded-lg text-neutral-700 transition-colors duration-150 hover:text-red-700 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                              title="Delete Court"
+                              className="owner-icon-btn p-2 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Delete court"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))}
             </div>
-          </div>
+          )}
         </main>
       </div>
     </div>
