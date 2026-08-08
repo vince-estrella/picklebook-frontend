@@ -20,6 +20,7 @@ function EditCourtPage() {
   const navigate = useNavigate()
   const { id } = useParams()
   const [form, setForm] = useState(null)
+  const [venues, setVenues] = useState([])
   const [amenities, setAmenities] = useState([])
   const [images, setImages] = useState([])
   const [existingImages, setExistingImages] = useState([])
@@ -36,9 +37,15 @@ function EditCourtPage() {
       return
     }
 
-    api.get(`/courts/${id}`).then(res => {
+    Promise.all([
+      api.get(`/courts/${id}`),
+      api.get('/venues/owner'),
+    ]).then(([res, venuesRes]) => {
       const court = res.data
+      setVenues(Array.isArray(venuesRes.data) ? venuesRes.data : [])
       setForm({
+        venueId: court.venueId || '',
+        venueName: court.venue?.name || '',
         name: court.name || '',
         address: court.address || '',
         type: court.type || 'Outdoor',
@@ -104,8 +111,8 @@ function EditCourtPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.address || !form.pricePerHour) {
-      setError('Court name, address, and price are required.')
+    if (!form.name || !form.pricePerHour || (!form.venueId && (!form.venueName || !form.address))) {
+      setError('Court name, venue, address, and price are required.')
       return
     }
     setLoading(true)
@@ -113,6 +120,18 @@ function EditCourtPage() {
     try {
       const courtData = {
         ...form,
+        venueId: form.venueId ? Number(form.venueId) : null,
+        venue: form.venueId
+          ? null
+          : {
+              name: form.venueName,
+              address: form.address,
+              latitude: form.latitude,
+              longitude: form.longitude,
+              amenities: amenities.join(','),
+              description: form.description,
+              externalBookingUrl: form.externalBookingUrl,
+            },
         amenities: amenities.join(','),
         pricePerHour: parseFloat(form.pricePerHour),
         maxPlayers: parseInt(form.maxPlayers),
@@ -211,15 +230,52 @@ function EditCourtPage() {
             {images.length > 0 && <p className="text-[var(--pb-teal)] text-sm font-semibold leading-5">{images.length} new image(s) selected</p>}
           </section>
 
+          <section className="owner-panel p-6 sm:p-8 flex flex-col gap-5">
+            <div>
+              <h2 className="text-stone-900 text-xl font-semibold leading-6">Venue</h2>
+              <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">One venue appears as one map pin. Courts under it stay bookable separately.</p>
+            </div>
+            <label className="flex flex-col gap-2">
+              <span className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Use existing venue</span>
+              <select
+                value={form.venueId}
+                onChange={e => {
+                  const venue = venues.find(v => String(v.id) === e.target.value)
+                  setForm({
+                    ...form,
+                    venueId: e.target.value,
+                    venueName: '',
+                    address: venue?.address || form.address,
+                    latitude: venue?.latitude ?? form.latitude,
+                    longitude: venue?.longitude ?? form.longitude,
+                  })
+                }}
+                className={fieldClass()}
+              >
+                <option value="">Create a new venue</option>
+                {venues.map(venue => (
+                  <option key={venue.id} value={venue.id}>{venue.name} ({venue.courtCount} court{venue.courtCount === 1 ? '' : 's'})</option>
+                ))}
+              </select>
+            </label>
+            {!form.venueId && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col gap-2">
+                  <span className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Venue Name</span>
+                  <input value={form.venueName} onChange={e => setForm({ ...form, venueName: e.target.value })} className={fieldClass()} />
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Venue Address</span>
+                  <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className={fieldClass()} />
+                </label>
+              </div>
+            )}
+          </section>
+
           <section className="owner-panel p-6 sm:p-8 flex flex-col gap-4">
             <div className="flex flex-col gap-2">
               <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Court Name</label>
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className={fieldClass()} />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Full Address</label>
-              <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} className={fieldClass()} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

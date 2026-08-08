@@ -424,6 +424,44 @@ const hostAvatarUrl = court.ownerProfileImageUrl || null
           </div>
         </div>
 
+        {court.venue?.courts?.length > 1 && (
+          <div className="pb-8 flex flex-col gap-4" style={{ borderBottom: `1px solid ${COLORS.chalkDim}` }}>
+            <div>
+              <h2 className="text-2xl" style={{ ...headingStyle, color: COLORS.ink, fontWeight: 700 }}>{court.venue.name}</h2>
+              <p className="text-sm" style={{ color: COLORS.inkMute }}>
+                {court.venue.courts.length} bookable courts at this venue. Each court keeps its own schedule and price.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {court.venue.courts.map(venueCourt => {
+                const active = venueCourt.id === court.id
+                return (
+                  <button
+                    key={venueCourt.id}
+                    type="button"
+                    onClick={() => !active && navigate(`/courts/${venueCourt.id}`)}
+                    className="rounded-xl p-4 text-left transition-colors"
+                    style={{
+                      background: active ? '#FBFAD9' : '#fff',
+                      border: `1px solid ${active ? COLORS.citron : COLORS.chalkDim}`,
+                      cursor: active ? 'default' : 'pointer',
+                    }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold" style={{ color: COLORS.ink }}>{venueCourt.name}</p>
+                        <p className="text-xs mt-1" style={{ color: COLORS.inkMute }}>{venueCourt.type} · {venueCourt.surfaceType || 'Standard surface'}</p>
+                      </div>
+                      <p className="text-sm font-bold" style={{ ...monoStyle, color: COLORS.teal }}>PHP {venueCourt.pricePerHour}/hr</p>
+                    </div>
+                    {active && <p className="text-xs font-bold mt-3" style={{ color: COLORS.teal }}>Selected court</p>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* About */}
         {description && (
           <div className="pb-8 flex flex-col gap-4" style={{ borderBottom: `1px solid ${COLORS.chalkDim}` }}>

@@ -55,6 +55,7 @@ function OwnerCourtsPage() {
     if (!q) return true
     return (
       c.name?.toLowerCase().includes(q) ||
+      c.venue?.name?.toLowerCase().includes(q) ||
       c.address?.toLowerCase().includes(q)
     )
   })
@@ -135,7 +136,7 @@ function OwnerCourtsPage() {
                 <thead>
                   <tr className="bg-gray-100 border-b border-stone-300">
                     <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Court Name</th>
-                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Location</th>
+                    <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Venue</th>
                     <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Price</th>
                     <th className="px-4 sm:px-6 py-4 text-left text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Type</th>
                     <th className="px-4 sm:px-6 py-4 text-right text-slate-500 text-xs sm:text-sm font-semibold uppercase leading-4 tracking-wide">Actions</th>
@@ -165,7 +166,10 @@ function OwnerCourtsPage() {
                             <span className="text-slate-800 text-sm sm:text-base font-normal leading-6">{court.name}</span>
                           </div>
                         </td>
-                        <td className="px-4 sm:px-6 py-4 text-neutral-700 text-sm font-normal leading-5">{court.address}</td>
+                        <td className="px-4 sm:px-6 py-4 text-neutral-700 text-sm font-normal leading-5">
+                          <div className="font-semibold text-slate-800">{court.venue?.name || 'Ungrouped venue'}</div>
+                          <div className="text-xs text-slate-500 mt-1">{court.venue?.address || court.address}</div>
+                        </td>
                         <td className="px-4 sm:px-6 py-4">
                           <span className="text-slate-800 text-sm font-bold leading-5">₱{court.pricePerHour}</span>
                           <span className="text-slate-800 text-sm font-semibold leading-5">/hr</span>

@@ -112,6 +112,42 @@ const inputStyle = {
 // Default center when no courts have coordinates yet — Metro Manila.
 const DEFAULT_CENTER = [14.5995, 120.9842]
 
+function venueKeyForCourt(court) {
+  if (court.venue?.id) return `venue-${court.venue.id}`
+  return `court-${court.id}`
+}
+
+function groupCourtsByVenue(courts) {
+  const map = new Map()
+  courts.forEach(court => {
+    const key = venueKeyForCourt(court)
+    const venue = court.venue || {
+      id: null,
+      name: court.name,
+      address: court.address,
+      latitude: court.latitude,
+      longitude: court.longitude,
+    }
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        id: venue.id,
+        name: venue.name || court.name,
+        address: venue.address || court.address,
+        latitude: venue.latitude ?? court.latitude,
+        longitude: venue.longitude ?? court.longitude,
+        courts: [],
+      })
+    }
+    map.get(key).courts.push(court)
+  })
+  return [...map.values()].map(group => ({
+    ...group,
+    minPrice: Math.min(...group.courts.map(c => Number(c.pricePerHour) || 0)),
+    images: group.courts.flatMap(c => c.images || []),
+  }))
+}
+
 // Navy teardrop pin with a citron rim, built as a divIcon so no external
 // marker image assets are needed (avoids the classic Leaflet/webpack
 // "missing marker icon" issue).
@@ -196,9 +232,10 @@ function FindCourtsPage() {
     return matchSearch && matchType && matchMin && matchMax
   })
 
-  const mappableCourts = filteredCourts.filter(c => c.latitude != null && c.longitude != null)
-  const unmappedCount = filteredCourts.length - mappableCourts.length
-  const mapPoints = mappableCourts.map(c => [c.latitude, c.longitude])
+  const venueGroups = groupCourtsByVenue(filteredCourts)
+  const mappableVenues = venueGroups.filter(v => v.latitude != null && v.longitude != null)
+  const unmappedCount = venueGroups.length - mappableVenues.length
+  const mapPoints = mappableVenues.map(v => [v.latitude, v.longitude])
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.chalk, fontFamily: "'Inter', sans-serif" }}>
@@ -315,7 +352,7 @@ function FindCourtsPage() {
             <div>
               <h1 className="text-2xl" style={{ ...headingStyle, color: COLORS.ink, fontWeight: 800 }}>Available Courts</h1>
               <p className="text-sm mt-1" style={{ color: COLORS.inkMute }}>
-                Showing {filteredCourts.length} court{filteredCourts.length === 1 ? '' : 's'} near your location
+                Showing {venueGroups.length} venue{venueGroups.length === 1 ? '' : 's'} with {filteredCourts.length} court{filteredCourts.length === 1 ? '' : 's'}
               </p>
             </div>
 
@@ -336,9 +373,11 @@ function FindCourtsPage() {
           {viewMode === 'Grid' ? (
             /* ================= GRID VIEW ================= */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredCourts.map(court => (
+              {venueGroups.map(venue => {
+                const court = venue.courts[0]
+                return (
                 <div
-                  key={court.id}
+                  key={venue.key}
                   className="fc-card rounded-2xl overflow-hidden transition-all duration-200"
                   style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}` }}
                 >
@@ -361,7 +400,7 @@ function FindCourtsPage() {
                       className="absolute top-4 right-4 px-3 py-1 rounded-full font-bold text-xs"
                       style={court.type === 'Indoor' ? { background: '#E7EEE9', color: COLORS.teal } : { background: COLORS.chalkDim, color: COLORS.inkMute }}
                     >
-                      {court.type}
+                      {venue.courts.length} court{venue.courts.length === 1 ? '' : 's'}
                     </div>
                   </div>
 
@@ -369,9 +408,9 @@ function FindCourtsPage() {
                   <div className="p-6">
                     <div className="flex justify-between items-start gap-3">
                       <div>
-                        <h2 className="font-semibold" style={{ color: COLORS.ink }}>{court.name}</h2>
+                        <h2 className="font-semibold" style={{ color: COLORS.ink }}>{venue.name}</h2>
                         <p className="text-sm mt-1 flex items-center gap-1" style={{ color: COLORS.inkMute }}>
-                          <MapPin size={13} /> {court.address}
+                          <MapPin size={13} /> {venue.address}
                         </p>
                       </div>
                       <div className="text-right shrink-0">
@@ -400,17 +439,34 @@ function FindCourtsPage() {
                       })()}
                     </div>
 
+                    <div className="mt-4 flex flex-col gap-2">
+                      {venue.courts.slice(0, 4).map(courtOption => (
+                        <button
+                          key={courtOption.id}
+                          onClick={() => navigate(`/courts/${courtOption.id}`)}
+                          className="rounded-lg px-3 py-2 text-left transition-colors hover:bg-slate-50"
+                          style={{ border: `1px solid ${COLORS.chalkDim}` }}
+                        >
+                          <span className="font-semibold text-sm" style={{ color: COLORS.ink }}>{courtOption.name}</span>
+                          <span className="float-right text-sm font-bold" style={{ ...monoStyle, color: COLORS.teal }}>PHP {courtOption.pricePerHour}/hr</span>
+                        </button>
+                      ))}
+                      {venue.courts.length > 4 && (
+                        <p className="text-xs" style={{ color: COLORS.inkMute }}>+{venue.courts.length - 4} more courts at this venue</p>
+                      )}
+                    </div>
+
                     {/* Book button */}
                     <button
                       onClick={() => navigate(`/courts/${court.id}`)}
                       className="fc-book-btn mt-6 w-full py-3.5 rounded-xl font-semibold transition-all duration-150"
                       style={{ background: COLORS.citron, color: COLORS.navyDeep }}
                     >
-                      Book Now
+                      View Courts
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
 
               {filteredCourts.length === 0 && (
                 <div className="md:col-span-2 rounded-2xl p-12 text-center" style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}`, color: COLORS.inkMute }}>
@@ -449,19 +505,24 @@ function FindCourtsPage() {
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     <FitBounds points={mapPoints} />
-                    {mappableCourts.map(court => (
+                    {mappableVenues.map(venue => {
+                      const court = venue.courts[0]
+                      return (
                       <Marker
-                        key={court.id}
-                        position={[court.latitude, court.longitude]}
+                        key={venue.key}
+                        position={[venue.latitude, venue.longitude]}
                         icon={courtPinIcon}
                       >
                         <Popup>
                           <div style={{ padding: '14px' }}>
                             <p style={{ ...headingStyle, fontSize: '16px', fontWeight: 700, color: COLORS.ink, margin: '0 0 4px' }}>
-                              {court.name}
+                              {venue.name}
                             </p>
                             <p style={{ fontSize: '12px', color: COLORS.inkMute, display: 'flex', alignItems: 'center', gap: '4px', margin: '0 0 10px' }}>
-                              <MapPin size={12} /> {court.address}
+                              <MapPin size={12} /> {venue.address}
+                            </p>
+                            <p style={{ fontSize: '12px', color: COLORS.inkMute, margin: '0 0 10px' }}>
+                              {venue.courts.length} court{venue.courts.length === 1 ? '' : 's'} at this venue
                             </p>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <p style={{ ...monoStyle, fontSize: '14px', fontWeight: 600, color: COLORS.teal, margin: 0 }}>
@@ -487,7 +548,7 @@ function FindCourtsPage() {
                           </div>
                         </Popup>
                       </Marker>
-                    ))}
+                    )})}
                   </MapContainer>
                 )}
               </div>

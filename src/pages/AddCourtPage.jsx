@@ -27,6 +27,8 @@ function AddCourtPage() {
   const navigate = useNavigate()
   const [form, setForm] = useState({
     name: '',
+    venueId: '',
+    venueName: '',
     address: '',
     type: 'Outdoor',
     surfaceType: '',
@@ -47,6 +49,7 @@ function AddCourtPage() {
     allowOpenPlay: true,
   })
   const [amenities, setAmenities] = useState([])
+  const [venues, setVenues] = useState([])
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -55,7 +58,9 @@ function AddCourtPage() {
   useEffect(() => {
     if (!localStorage.getItem('token')) {
       navigate('/owner/login')
+      return
     }
+    api.get('/venues/owner').then(res => setVenues(Array.isArray(res.data) ? res.data : [])).catch(() => setVenues([]))
   }, [navigate])
 
   const toggleAmenity = (a) => {
@@ -63,8 +68,8 @@ function AddCourtPage() {
   }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.address || !form.pricePerHour) {
-      setError('Court name, address, and price are required.')
+    if (!form.name || !form.pricePerHour || (!form.venueId && (!form.venueName || !form.address))) {
+      setError('Court name, venue, address, and price are required.')
       return
     }
     setLoading(true)
@@ -72,7 +77,28 @@ function AddCourtPage() {
 
     let courtId
     try {
-      const courtData = { ...form, amenities: amenities.join(','), pricePerHour: parseFloat(form.pricePerHour), maxPlayers: parseInt(form.maxPlayers) }
+      const selectedVenue = venues.find(v => String(v.id) === String(form.venueId))
+      const courtData = {
+        ...form,
+        venueId: form.venueId ? Number(form.venueId) : null,
+        venue: form.venueId
+          ? null
+          : {
+              name: form.venueName,
+              address: form.address,
+              latitude: form.latitude,
+              longitude: form.longitude,
+              amenities: amenities.join(','),
+              description: form.description,
+              externalBookingUrl: form.externalBookingUrl,
+            },
+        address: selectedVenue?.address || form.address,
+        latitude: selectedVenue?.latitude ?? form.latitude,
+        longitude: selectedVenue?.longitude ?? form.longitude,
+        amenities: amenities.join(','),
+        pricePerHour: parseFloat(form.pricePerHour),
+        maxPlayers: parseInt(form.maxPlayers),
+      }
       const res = await api.post('/courts', courtData)
       courtId = res.data.id
     } catch {
@@ -138,6 +164,67 @@ function AddCourtPage() {
 
           <div className="flex flex-col gap-8">
 
+            <div className="owner-panel p-6 sm:p-8 flex flex-col gap-5">
+              <div>
+                <h2 className="text-stone-900 text-xl font-semibold leading-6">Venue</h2>
+                <p className="text-zinc-600 text-sm font-normal leading-5 mt-1">
+                  The venue is the map pin. Add courts underneath it as bookable units.
+                </p>
+              </div>
+              {venues.length > 0 && (
+                <label className="flex flex-col gap-2">
+                  <span className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Use existing venue</span>
+                  <select
+                    value={form.venueId}
+                    onChange={e => {
+                      const venue = venues.find(v => String(v.id) === e.target.value)
+                      setForm({
+                        ...form,
+                        venueId: e.target.value,
+                        venueName: '',
+                        address: venue?.address || form.address,
+                        latitude: venue?.latitude ?? form.latitude,
+                        longitude: venue?.longitude ?? form.longitude,
+                      })
+                    }}
+                    className={fieldClass()}
+                  >
+                    <option value="">Create a new venue</option>
+                    {venues.map(venue => (
+                      <option key={venue.id} value={venue.id}>{venue.name} ({venue.courtCount} court{venue.courtCount === 1 ? '' : 's'})</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {!form.venueId && (
+                <>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Venue Name</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Metro Sports Cebu"
+                      value={form.venueName}
+                      onChange={e => setForm({ ...form, venueName: e.target.value })}
+                      className={fieldClass()}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Venue Address</span>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Street, barangay, city"
+                        value={form.address}
+                        onChange={e => setForm({ ...form, address: e.target.value })}
+                        className={fieldClass('pl-12')}
+                      />
+                    </div>
+                  </label>
+                </>
+              )}
+            </div>
+
             {/* Gallery upload */}
             <div className="owner-panel-muted p-6 sm:p-8 flex flex-col gap-4">
               <span className="text-zinc-600 text-sm font-semibold uppercase leading-5 tracking-wide">Gallery</span>
@@ -169,20 +256,6 @@ function AddCourtPage() {
                   onChange={e => setForm({ ...form, name: e.target.value })}
                   className={fieldClass()}
                 />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-neutral-700 text-sm font-semibold leading-5 tracking-tight">Full Address</label>
-                <div className="relative">
-                  <MapPin className="w-4 h-4 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Blk 1, Lot 1, Court 1"
-                    value={form.address}
-                    onChange={e => setForm({ ...form, address: e.target.value })}
-                    className={fieldClass('pl-12')}
-                  />
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -392,7 +465,7 @@ function AddCourtPage() {
             </div>
 
             {/* Location */}
-            <div className="owner-panel p-6 sm:p-8 flex flex-col gap-4">
+            {!form.venueId && <div className="owner-panel p-6 sm:p-8 flex flex-col gap-4">
               <h2 className="text-stone-900 text-xl font-semibold leading-6">Court Location</h2>
               <LocationPicker
                 onLocationChange={(location) => {
@@ -408,7 +481,7 @@ function AddCourtPage() {
                 <br />
                 Longitude: {form.longitude}
               </p>
-            </div>
+            </div>}
 
             {error && (
               <p className="text-red-600 text-sm font-normal leading-5">{error}</p>
