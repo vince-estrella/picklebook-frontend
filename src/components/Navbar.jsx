@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-function getInitials(player) {
-  const first = player?.firstName?.[0] || ''
-  const last = player?.lastName?.[0] || ''
-  return `${first}${last}`.toUpperCase() || '?'
-}
+import { CalendarCheck, Settings } from 'lucide-react'
 
 function Navbar() {
   const [player] = useState(() => {
@@ -31,36 +26,28 @@ function Navbar() {
     <nav className="flex items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4 bg-white border-b border-gray-100">
       <Link to="/" className="flex items-center gap-2 font-bold text-gray-900 text-lg shrink-0">
         <img src="/favicon.svg" alt="" className="h-8 w-8" />
-        <span className="hidden min-[380px]:inline">PickleBook</span>
+        <span className="hidden sm:inline">PickleBook</span>
       </Link>
 
-      <div className="flex items-center justify-end gap-3 sm:gap-6 min-w-0">
+      <div className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
         {player ? (
           <>
             <Link
               to="/my-bookings"
-              className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors whitespace-nowrap"
+              className="h-10 w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
+              aria-label="My Bookings"
+              title="My Bookings"
             >
-              My Bookings
+              <CalendarCheck className="h-5 w-5" />
             </Link>
 
             <Link
               to="/settings"
-              className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors whitespace-nowrap"
+              className="h-10 w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
+              aria-label="Settings"
+              title="Settings"
             >
-              Settings
-            </Link>
-
-            <Link
-              to="/settings"
-              className="h-9 w-9 rounded-full bg-green-100 text-green-800 flex items-center justify-center overflow-hidden font-bold text-xs shrink-0"
-              aria-label="Open profile settings"
-            >
-              {player.profileImageUrl ? (
-                <img src={player.profileImageUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                getInitials(player)
-              )}
+              <Settings className="h-5 w-5" />
             </Link>
           </>
         ) : (
