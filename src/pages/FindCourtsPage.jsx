@@ -253,11 +253,21 @@ function FindCourtsPage() {
         .leaflet-popup-content-wrapper { border-radius: 10px; padding: 0; overflow: hidden; }
         .leaflet-popup-content { margin: 0; width: 220px !important; }
         .leaflet-container { font-family: 'Inter', sans-serif; }
+        @media (max-width: 767px) {
+          .fc-shell {
+            padding: calc(env(safe-area-inset-top, 0px) + 34px) 20px 64px !important;
+            gap: 28px !important;
+          }
+          .fc-section-header {
+            align-items: flex-start !important;
+            gap: 16px !important;
+          }
+        }
       `}</style>
 
       <Navbar />
 
-      <div className="w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-10 pb-16 flex flex-col md:flex-row gap-8">
+      <div className="fc-shell w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-10 pb-16 flex flex-col md:flex-row gap-8">
 
         {/* ================= SIDEBAR ================= */}
         <div className="w-full md:w-64 shrink-0">
@@ -348,7 +358,7 @@ function FindCourtsPage() {
         <div className="flex-1 flex flex-col gap-6">
 
           {/* Header */}
-          <div className="flex justify-between items-end flex-wrap gap-4">
+          <div className="fc-section-header flex justify-between items-end flex-wrap gap-4">
             <div>
               <h1 className="text-2xl" style={{ ...headingStyle, color: COLORS.ink, fontWeight: 800 }}>Available Courts</h1>
               <p className="text-sm mt-1" style={{ color: COLORS.inkMute }}>

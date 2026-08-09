@@ -35,13 +35,13 @@ function Navbar() {
   }
 
   return (
-    <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100">
-      <Link to="/" className="flex items-center gap-2 font-bold text-gray-900 text-lg">
+    <nav className="flex items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4 bg-white border-b border-gray-100 flex-wrap">
+      <Link to="/" className="flex items-center gap-2 font-bold text-gray-900 text-lg shrink-0">
         <img src="/favicon.svg" alt="" className="h-8 w-8" />
         <span>PickleBook</span>
       </Link>
 
-      <div className="flex items-center gap-4 sm:gap-6">
+      <div className="flex items-center justify-end gap-2 sm:gap-6 flex-wrap">
         <InstallPickleBookButton compact />
 
         {player ? (

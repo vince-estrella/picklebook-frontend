@@ -197,6 +197,8 @@ function MyBookingsPage() {
         }
         @media (max-width: 640px) {
           .hb-bookings-header { flex-direction: column; align-items: flex-start !important; gap: 20px !important; }
+          .hb-bookings-header { padding: calc(env(safe-area-inset-top, 0px) + 44px) 20px 36px !important; }
+          .hb-bookings-body { padding: 34px 20px 64px !important; }
         }
       `}</style>
 
@@ -271,7 +273,7 @@ function MyBookingsPage() {
       </div>
 
       {/* ================= CONTENT ================= */}
-      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 24px 80px' }}>
+      <div className="hb-bookings-body" style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 24px 80px' }}>
         {loading ? (
           <p style={{ color: COLORS.inkMute, textAlign: 'center', padding: '48px 0', fontFamily: "'JetBrains Mono', monospace", fontSize: '13px' }}>
             Loading your bookings…

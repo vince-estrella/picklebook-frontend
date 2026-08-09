@@ -343,8 +343,8 @@ function PlayerSettingsPage() {
         .ps-avatar-btn:hover { transform: scale(1.03); }
 
         @media (max-width: 640px) {
-          .ps-header-wrap { padding: 28px 16px !important; }
-          .ps-body-wrap { padding: 20px 16px 40px !important; }
+          .ps-header-wrap { padding: calc(env(safe-area-inset-top, 0px) + 42px) 20px 32px !important; }
+          .ps-body-wrap { padding: 30px 20px 56px !important; }
         }
       `}</style>
 
