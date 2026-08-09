@@ -24,17 +24,17 @@ function Navbar() {
 
   return (
     <nav className="flex items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4 bg-white border-b border-gray-100">
-      <Link to="/" className="flex items-center gap-2 font-bold text-gray-900 text-lg shrink-0">
+      <Link to="/" className="flex items-center gap-1.5 sm:gap-2 font-bold text-gray-900 text-lg shrink-0">
         <img src="/favicon.svg" alt="" className="h-8 w-8" />
-        <span className="hidden sm:inline">PickleBook</span>
+        <span className="text-[20px] leading-none sm:text-lg">PickleBook</span>
       </Link>
 
-      <div className="flex items-center justify-end gap-2 sm:gap-4 min-w-0">
+      <div className="flex items-center justify-end gap-1.5 sm:gap-4 min-w-0">
         {player ? (
           <>
             <Link
               to="/my-bookings"
-              className="h-10 w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
+              className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
               aria-label="My Bookings"
               title="My Bookings"
             >
@@ -43,7 +43,7 @@ function Navbar() {
 
             <Link
               to="/settings"
-              className="h-10 w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
+              className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
               aria-label="Settings"
               title="Settings"
             >
