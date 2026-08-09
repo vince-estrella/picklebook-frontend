@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin } from 'lucide-react'
+import { Filter, MapPin, X } from 'lucide-react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -193,6 +193,7 @@ function FindCourtsPage() {
   const [maxPrice, setMaxPrice] = useState('')
   const [viewMode, setViewMode] = useState('Grid')
   const [bookingsByCourtId, setBookingsByCourtId] = useState({})
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   useEffect(() => {
     api.get('/courts')
@@ -236,6 +237,13 @@ function FindCourtsPage() {
   const mappableVenues = venueGroups.filter(v => v.latitude != null && v.longitude != null)
   const unmappedCount = venueGroups.length - mappableVenues.length
   const mapPoints = mappableVenues.map(v => [v.latitude, v.longitude])
+  const activeFilterCount = [search.trim(), typeFilter !== 'All', minPrice, maxPrice].filter(Boolean).length
+  const resetFilters = () => {
+    setSearch('')
+    setTypeFilter('All')
+    setMinPrice('')
+    setMaxPrice('')
+  }
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.chalk, fontFamily: "'Inter', sans-serif" }}>
@@ -253,15 +261,37 @@ function FindCourtsPage() {
         .leaflet-popup-content-wrapper { border-radius: 10px; padding: 0; overflow: hidden; }
         .leaflet-popup-content { margin: 0; width: 220px !important; }
         .leaflet-container { font-family: 'Inter', sans-serif; }
+        .fc-mobile-filter-toggle { display: none; }
         @media (max-width: 767px) {
           .fc-shell {
-            padding: calc(env(safe-area-inset-top, 0px) + 34px) 20px 64px !important;
-            gap: 28px !important;
+            padding: calc(env(safe-area-inset-top, 0px) + 24px) 16px 64px !important;
+            gap: 18px !important;
           }
           .fc-section-header {
             align-items: flex-start !important;
             gap: 16px !important;
           }
+          .fc-sidebar { width: 100% !important; }
+          .fc-filter-card { padding: 12px !important; gap: 12px !important; border-radius: 10px !important; }
+          .fc-filter-title { display: none; }
+          .fc-mobile-filter-toggle {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border: 1px solid ${COLORS.chalkDim};
+            background: #fff;
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: ${COLORS.ink};
+            font-weight: 700;
+          }
+          .fc-filter-summary { display: ${mobileFiltersOpen ? 'none' : 'flex'} !important; }
+          .fc-advanced-filter { display: ${mobileFiltersOpen ? 'flex' : 'none'} !important; }
+          .fc-reset-btn.fc-advanced-filter { display: ${mobileFiltersOpen ? 'block' : 'none'} !important; }
+          .fc-filter-row { gap: 10px !important; }
+          .fc-filter-row input { min-width: 0; }
         }
       `}</style>
 
@@ -270,9 +300,26 @@ function FindCourtsPage() {
       <div className="fc-shell w-full max-w-[1280px] mx-auto px-6 md:px-12 pt-10 pb-16 flex flex-col md:flex-row gap-8">
 
         {/* ================= SIDEBAR ================= */}
-        <div className="w-full md:w-64 shrink-0">
-          <div className="p-5 rounded-xl flex flex-col gap-7" style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}` }}>
-            <h2 className="text-lg" style={{ ...headingStyle, color: COLORS.ink, fontWeight: 700 }}>Filters</h2>
+        <div className="fc-sidebar w-full md:w-64 shrink-0">
+          <div className="fc-filter-card p-5 rounded-xl flex flex-col gap-7" style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}` }}>
+            <button
+              type="button"
+              className="fc-mobile-filter-toggle"
+              onClick={() => setMobileFiltersOpen(open => !open)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Filter size={16} />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span style={{ background: COLORS.citron, color: COLORS.navyDeep, borderRadius: '999px', padding: '2px 7px', fontSize: '11px' }}>
+                    {activeFilterCount}
+                  </span>
+                )}
+              </span>
+              {mobileFiltersOpen ? <X size={16} /> : <span style={{ color: COLORS.inkMute, fontSize: '12px' }}>Tap to refine</span>}
+            </button>
+
+            <h2 className="fc-filter-title text-lg" style={{ ...headingStyle, color: COLORS.ink, fontWeight: 700 }}>Filters</h2>
 
             {/* Location */}
             <div className="flex flex-col gap-2">
@@ -289,12 +336,21 @@ function FindCourtsPage() {
               />
             </div>
 
+            <div className="fc-filter-summary hidden items-center justify-between gap-3" style={{ color: COLORS.inkMute, fontSize: '12px' }}>
+              <span>{activeFilterCount > 0 ? `${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}` : 'Search by city, then refine if needed.'}</span>
+              {activeFilterCount > 0 && (
+                <button type="button" onClick={resetFilters} style={{ color: COLORS.teal, fontWeight: 700 }}>
+                  Reset
+                </button>
+              )}
+            </div>
+
             {/* Price */}
-            <div className="flex flex-col gap-2">
+            <div className="fc-advanced-filter flex flex-col gap-2">
               <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: COLORS.inkMute }}>
                 Price Range (per hr)
               </label>
-              <div className="flex items-center gap-2">
+              <div className="fc-filter-row flex items-center gap-2">
                 <input
                   type="number"
                   min="0"
@@ -304,7 +360,7 @@ function FindCourtsPage() {
                   className="fc-input"
                   style={inputStyle}
                 />
-                <span style={{ color: COLORS.inkMute }}>–</span>
+                <span style={{ color: COLORS.inkMute }}>-</span>
                 <input
                   type="number"
                   min="0"
@@ -318,19 +374,9 @@ function FindCourtsPage() {
             </div>
 
             {/* Availability */}
-            <div className="flex flex-col gap-3">
+            <div className="fc-advanced-filter flex flex-col gap-3">
               <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: COLORS.inkMute }}>
-                Availability
-              </label>
-
-              <label className="flex gap-2 items-center cursor-pointer">
-                <input type="checkbox" className="cursor-pointer" />
-                <span className="text-sm" style={{ color: COLORS.ink }}>Available Today</span>
-              </label>
-
-              <label className="flex gap-2 items-center cursor-pointer">
-                <input type="checkbox" className="cursor-pointer" />
-                <span className="text-sm" style={{ color: COLORS.ink }}>Instant Book</span>
+                Court Type
               </label>
 
               <label className="flex gap-2 items-center cursor-pointer">
@@ -345,8 +391,8 @@ function FindCourtsPage() {
             </div>
 
             <button
-              onClick={() => { setSearch(''); setTypeFilter('All'); setMinPrice(''); setMaxPrice('') }}
-              className="fc-reset-btn rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 active:scale-[0.98]"
+              onClick={resetFilters}
+              className="fc-advanced-filter fc-reset-btn rounded-lg py-2.5 text-sm font-medium transition-colors duration-150 active:scale-[0.98]"
               style={{ border: `1px solid ${COLORS.chalkDim}`, color: COLORS.inkMute }}
             >
               Reset All Filters
