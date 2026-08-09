@@ -937,6 +937,7 @@ function QueueManager() {
         .qm-btn:focus-visible { outline: 2px solid ${COLORS.citron}; outline-offset: 2px; }
         .qm-grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
         .qm-courts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .qm-panel, .qm-grid > div, .qm-court-card, .qm-stats-scroll { min-width: 0; }
         .qm-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
         .qm-spin { animation: qm-spin 0.8s linear infinite; }
         @keyframes qm-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -956,7 +957,11 @@ function QueueManager() {
         /* --- Mobile portrait tightening (iPhone 11 and similar, ~390-430px) --- */
         @media (max-width: 640px) {
           .qm-header-wrap { padding: 20px 14px !important; }
-          .qm-body-wrap { padding: 14px 10px 40px !important; }
+          .qm-body-wrap { padding: 12px 8px 40px !important; overflow-x: hidden; }
+          .qm-grid { gap: 14px !important; min-width: 0 !important; }
+          .qm-panel { border-radius: 8px !important; }
+          .qm-panel-header { padding: 12px 12px !important; }
+          .qm-panel-title { font-size: 16px !important; margin-bottom: 10px !important; }
 
           .qm-header-top { flex-direction: column; align-items: stretch !important; gap: 14px !important; }
 
@@ -1004,7 +1009,8 @@ function QueueManager() {
              inside its own box — avoids a scroll-within-scroll on phones */
           .qm-queue-scroll { max-height: none !important; overflow: visible !important; }
 
-          .qm-court-card { min-height: 0 !important; padding: 14px !important; }
+          .qm-court-card { min-height: 0 !important; padding: 12px !important; border-radius: 8px !important; }
+          .qm-court-card h3 { font-size: 15px !important; }
 
           /* Queue rows: let content wrap cleanly instead of squeezing name + controls */
           .qm-queue-row {
@@ -1037,7 +1043,11 @@ function QueueManager() {
 
           /* Stats table: shrink padding & font so more columns are visible
              before the user has to scroll horizontally */
-          .qm-stats-table th, .qm-stats-table td { padding: 8px 10px !important; font-size: 12.5px !important; }
+          .qm-stats-panel { margin-top: 18px !important; border-radius: 8px !important; }
+          .qm-stats-scroll { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .qm-stats-table { width: max-content !important; min-width: 620px !important; }
+          .qm-stats-table th, .qm-stats-table td { padding: 7px 8px !important; font-size: 12px !important; }
+          .qm-stats-table th { font-size: 10px !important; }
 
           /* Room-code / QR block scales down so it never forces overflow */
           .qm-roomcode-value { font-size: 36px !important; }
@@ -1049,6 +1059,11 @@ function QueueManager() {
           .qm-header-actions { grid-template-columns: 1fr 1fr; }
           .qm-modal { padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px)) !important; }
           .qm-roomcode-value { font-size: 32px !important; }
+          .qm-body-wrap { padding-left: 6px !important; padding-right: 6px !important; }
+          .qm-panel-header { padding: 10px !important; }
+          .qm-queue-row { padding: 10px !important; }
+          .qm-stats-table { min-width: 560px !important; }
+          .qm-stats-table th, .qm-stats-table td { padding: 6px 7px !important; font-size: 11.5px !important; }
         }
       `}</style>
 
@@ -1115,9 +1130,9 @@ function QueueManager() {
         <div className="qm-grid">
           {/* ---------- LEFT: WAITING QUEUE ---------- */}
           <div>
-            <div style={{ background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.chalkDim}`, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 18px', borderBottom: `1px solid ${COLORS.chalkDim}` }}>
-                <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: '0 0 12px', color: COLORS.ink }}>
+            <div className="qm-panel" style={{ background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.chalkDim}`, overflow: 'hidden' }}>
+              <div className="qm-panel-header" style={{ padding: '16px 18px', borderBottom: `1px solid ${COLORS.chalkDim}` }}>
+                <h2 className="qm-panel-title" style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: '0 0 12px', color: COLORS.ink }}>
                   Waiting Queue
                 </h2>
                 <div style={{ position: 'relative', marginBottom: '10px' }}>
@@ -1226,11 +1241,11 @@ function QueueManager() {
             </div>
 
             {/* ---------- STATS TABLE ---------- */}
-            <div style={{ marginTop: '32px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.chalkDim}`, overflow: 'hidden' }}>
-              <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: 0, padding: '16px 18px', borderBottom: `1px solid ${COLORS.chalkDim}`, color: COLORS.ink }}>
+            <div className="qm-panel qm-stats-panel" style={{ marginTop: '32px', background: '#fff', borderRadius: '10px', border: `1px solid ${COLORS.chalkDim}`, overflow: 'hidden' }}>
+              <h2 className="qm-panel-header qm-panel-title" style={{ fontFamily: "'Big Shoulders Display', sans-serif", textTransform: 'uppercase', fontSize: '18px', margin: 0, padding: '16px 18px', borderBottom: `1px solid ${COLORS.chalkDim}`, color: COLORS.ink }}>
                 Player Statistics
               </h2>
-              <div style={{ overflowX: 'auto' }}>
+              <div className="qm-stats-scroll" style={{ overflowX: 'auto' }}>
                 <table className="qm-stats-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
                   <thead>
                     <tr style={{ background: COLORS.chalk }}>
