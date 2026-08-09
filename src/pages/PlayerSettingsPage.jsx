@@ -4,6 +4,7 @@ import { AlertCircle, Camera, Check, Loader2 } from 'lucide-react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 import PushNotificationSettings from '../components/PushNotificationSettings'
+import AppInstallSettings from '../components/AppInstallSettings'
 
 // ---------------------------------------------------------------------------
 // Design tokens — shared with QueueManager/HomePage so this page reads as
@@ -363,6 +364,8 @@ function PlayerSettingsPage() {
 
       {/* ================= BODY ================= */}
       <main className="ps-body-wrap" style={{ maxWidth: '760px', margin: '0 auto', padding: '28px 32px 60px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+        <AppInstallSettings />
 
         <PushNotificationSettings />
 

@@ -9,6 +9,7 @@ import { MdOutlineEventAvailable } from 'react-icons/md'
 
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import InstallPickleBookButton from '../components/InstallPickleBookButton'
 
 // ---------------------------------------------------------------------------
 // Design tokens — grounded in the court itself: deep court navy, kitchen
@@ -50,6 +51,13 @@ function HomePage() {
         .hb-btn:focus-visible, .hb-link:focus-visible {
           outline: 2px solid ${COLORS.citron};
           outline-offset: 3px;
+        }
+        .hb-cta-actions {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
         }
       `}</style>
 
@@ -371,29 +379,32 @@ function HomePage() {
         <p style={{ color: '#A9B7B2', marginBottom: '32px', fontSize: '15px' }}>
           Join the pickleball community today. Simple, fast, and reliable.
         </p>
-        <button
-          className="hb-btn"
-          onClick={() => navigate('/courts')}
-          onMouseEnter={e => e.currentTarget.style.background = COLORS.citronHover}
-          onMouseLeave={e => e.currentTarget.style.background = COLORS.citron}
-          style={{
-            background: COLORS.citron,
-            color: COLORS.navyDeep,
-            border: 'none',
-            borderRadius: '4px',
-            padding: '14px 28px',
-            fontWeight: 700,
-            fontSize: '15px',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '9px',
-            transition: 'background 0.15s ease',
-          }}
-        >
-          <FaSearch size={13} />
-          Find Courts
-        </button>
+        <div className="hb-cta-actions">
+          <button
+            className="hb-btn"
+            onClick={() => navigate('/courts')}
+            onMouseEnter={e => e.currentTarget.style.background = COLORS.citronHover}
+            onMouseLeave={e => e.currentTarget.style.background = COLORS.citron}
+            style={{
+              background: COLORS.citron,
+              color: COLORS.navyDeep,
+              border: 'none',
+              borderRadius: '4px',
+              padding: '14px 28px',
+              fontWeight: 700,
+              fontSize: '15px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '9px',
+              transition: 'background 0.15s ease',
+            }}
+          >
+            <FaSearch size={13} />
+            Find Courts
+          </button>
+          <InstallPickleBookButton />
+        </div>
       </div>
 
       {/* ================= FOOTER ================= */}

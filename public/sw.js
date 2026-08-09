@@ -1,7 +1,6 @@
-const CACHE_VERSION = 'picklebook-v1'
+const CACHE_VERSION = 'picklebook-v2'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const STATIC_ASSETS = [
-  '/',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/pwa/icon-192.png',
@@ -22,7 +21,6 @@ self.addEventListener('activate', (event) => {
           .filter((key) => key.startsWith('picklebook-') && key !== STATIC_CACHE)
           .map((key) => caches.delete(key))
       ))
-      .then(() => self.clients.claim())
   )
 })
 
@@ -34,11 +32,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api')) return
 
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => response)
-        .catch(() => caches.match('/'))
-    )
+    event.respondWith(fetch(request))
     return
   }
 
