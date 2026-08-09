@@ -98,20 +98,27 @@ function QueueScannerPage() {
   const startScanner = async () => {
     setStatus('Opening camera...')
     try {
+      if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+        setStatus('Camera access requires HTTPS. Open PickleBook from the live site or installed app.')
+        return
+      }
+
       const { Html5Qrcode } = await import('html5-qrcode')
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode(scannerElementId, false)
       }
 
-      const cameras = await Html5Qrcode.getCameras()
-      if (!cameras.length) {
-        setStatus('No camera was found on this device.')
-        return
+      let cameraConfig = { facingMode: 'environment' }
+      try {
+        const cameras = await Html5Qrcode.getCameras()
+        const backCamera = cameras.find((camera) => /back|rear|environment/i.test(camera.label))
+        if (backCamera?.id) cameraConfig = { deviceId: { exact: backCamera.id } }
+      } catch {
+        // Browser may not expose camera list until start() requests permission.
       }
 
-      const backCamera = cameras.find((camera) => /back|rear|environment/i.test(camera.label))
       await scannerRef.current.start(
-        backCamera?.id || { facingMode: 'environment' },
+        cameraConfig,
         { fps: 10, qrbox: { width: 240, height: 240 }, aspectRatio: 1 },
         handleScanResult,
         () => {}
@@ -119,7 +126,14 @@ function QueueScannerPage() {
       setScanning(true)
       setStatus('Point your camera at the PickleBook queue QR.')
     } catch (error) {
-      setStatus(error?.message || 'Could not start the camera. You can still enter the room code manually.')
+      const message = String(error?.message || '')
+      if (/permission|notallowed|denied/i.test(message)) {
+        setStatus('Camera permission was blocked. Allow camera access in your browser settings, or enter the room code manually.')
+      } else if (/notfound|overconstrained|notreadable/i.test(message)) {
+        setStatus('Could not find an available camera. You can still enter the room code manually.')
+      } else {
+        setStatus(message || 'Could not start the camera. You can still enter the room code manually.')
+      }
     }
   }
 
@@ -162,9 +176,9 @@ function QueueScannerPage() {
         </section>
 
         <section style={{ background: '#fff', border: `1px solid ${COLORS.chalkDim}`, borderRadius: '12px', padding: '14px', boxShadow: '0 10px 28px rgba(11,42,56,0.08)' }}>
-          <div id={scannerElementId} style={{ overflow: 'hidden', borderRadius: '10px', background: COLORS.navyDeep, minHeight: scanning ? '280px' : '0' }} />
+          <div id={scannerElementId} style={{ overflow: 'hidden', borderRadius: '10px', background: COLORS.navyDeep, minHeight: '280px' }} />
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: scanning ? '14px' : 0 }}>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
             <button
               type="button"
               onClick={scanning ? stopScanner : startScanner}

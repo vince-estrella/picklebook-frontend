@@ -118,8 +118,9 @@ function AddCourtPage() {
       }
       const res = await api.post('/courts', courtData)
       courtId = res.data.id
-    } catch {
-      setError('Failed to save court. Please try again.')
+    } catch (err) {
+      const message = err.response?.data
+      setError(typeof message === 'string' ? message : 'Failed to save court. Please try again.')
       setLoading(false)
       return
     }

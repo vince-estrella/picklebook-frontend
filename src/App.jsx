@@ -87,7 +87,7 @@ function App() {
         <Route path="/courts/:id" element={<CourtDetailPage />} />
         <Route path="/queue" element={<QueueManager />} />
         <Route path="/join" element={<JoinQueuePage />} />
-        <Route path="/scan-queue" element={player(<QueueScannerPage />)} />
+        <Route path="/scan-queue" element={<QueueScannerPage />} />
         <Route path="/open-play/:code" element={player(<OpenPlaySessionPage />)} />
         <Route path="/contact" element={<ContactSupportPage />} />
         <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
