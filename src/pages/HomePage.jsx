@@ -183,7 +183,30 @@ function HomePage() {
                 }}
               >
                 <FaUsers size={13} />
-                Join Queue
+                Scan Queue
+              </button>
+              <button
+                className="hb-btn"
+                onClick={() => navigate('/queue')}
+                onMouseEnter={e => e.currentTarget.style.color = COLORS.citron}
+                onMouseLeave={e => e.currentTarget.style.color = '#A9B7B2'}
+                style={{
+                  background: 'transparent',
+                  color: '#A9B7B2',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '14px 10px',
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '9px',
+                  transition: 'color 0.15s ease',
+                }}
+              >
+                <FaUsers size={13} />
+                Host Queue
               </button>
             </div>
 

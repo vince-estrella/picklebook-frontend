@@ -1113,18 +1113,21 @@ function QueueManager() {
                 Open Play Session
               </p>
               <h1 style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontWeight: 800, fontSize: 'clamp(28px, 8vw, 44px)', color: COLORS.chalk, margin: 0, textTransform: 'uppercase', lineHeight: 1 }}>
-                Queue Manager
+                Host Queue
               </h1>
+              <p style={{ color: '#C8D3CE', fontSize: '13px', margin: '10px 0 0', maxWidth: '460px', lineHeight: 1.45 }}>
+                Create a live queue, show the QR, and let players scan themselves in.
+              </p>
             </div>
             <div className="qm-header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               {roomCode ? (
                 <Button className="qm-btn" variant="outline" size="lg" icon={<FaWifi size={13} color={COLORS.citron} />} onClick={() => setShowJoinPanel(true)}>
-                  <span className="qm-btn-label-full">Join Session Live</span>
-                  <span className="qm-btn-label-short">Live</span>
+                  <span className="qm-btn-label-full">Show QR</span>
+                  <span className="qm-btn-label-short">QR</span>
                 </Button>
               ) : (
                 <Button className="qm-btn" variant="outline" size="lg" icon={<FaQrcode size={13} />} onClick={startJoinSession}>
-                  Join Game
+                  Create QR
                 </Button>
               )}
               <Button className="qm-btn" variant="outline" size="lg" icon={<FaTrophy size={13} />} onClick={() => setShowRankings(true)}>
@@ -1389,9 +1392,9 @@ function JoinGamePanel({ code, openPlayRoomCode, joinedCount, onClose, onEndSess
   }
 
   return (
-    <Modal title="Join Game" onClose={onClose} width={420}>
+    <Modal title="Host Queue QR" onClose={onClose} width={420}>
       <p style={{ fontSize: '13.5px', color: COLORS.inkMute, margin: '0 0 20px' }}>
-        Players scan or type this code on their own phone to add themselves to the queue, follow it live, and check the rankings.
+        Players scan or type this code on their own phone to add themselves to your queue, follow it live, and check the rankings.
         {openPlayRoomCode ? ' This queue is linked to Open Play, so scans will ask players to log in before joining.' : ''}
       </p>
 
@@ -1427,7 +1430,7 @@ function JoinGamePanel({ code, openPlayRoomCode, joinedCount, onClose, onEndSess
       </div>
 
       <div style={{ display: 'flex', gap: '10px', justifyContent: 'space-between' }}>
-        <Button variant="danger" size="sm" onClick={onEndSession}>End Join Session</Button>
+        <Button variant="danger" size="sm" onClick={onEndSession}>End Queue QR</Button>
         <Button variant="primary" size="sm" onClick={onClose}>Done</Button>
       </div>
     </Modal>

@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Keyboard, QrCode, RotateCcw } from 'lucide-react'
+import { Camera, Keyboard, ListStart, QrCode, RotateCcw } from 'lucide-react'
 import Navbar from '../components/Navbar'
 
 const COLORS = {
@@ -207,6 +207,23 @@ function QueueScannerPage() {
             Reopen my last queue ({lastQueue.code})
           </button>
         )}
+
+        <section style={{ marginTop: '14px', background: COLORS.navy, color: '#fff', borderRadius: '12px', padding: '18px', display: 'flex', gap: '14px', alignItems: 'center' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(215,226,43,0.14)', color: COLORS.citron, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+            <ListStart size={22} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 900 }}>Hosting today?</h2>
+            <p style={{ margin: 0, color: '#C8D3CE', fontSize: '13px', lineHeight: 1.4 }}>Create a queue, show your QR, and let players scan in.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/queue')}
+            style={{ border: 'none', borderRadius: '10px', padding: '11px 13px', background: COLORS.citron, color: COLORS.navyDeep, fontWeight: 900, flexShrink: 0 }}
+          >
+            Host
+          </button>
+        </section>
       </main>
     </div>
   )
