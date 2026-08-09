@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { CalendarCheck, MessageCircle, Settings } from 'lucide-react'
+import api from '../services/api'
 
 function Navbar() {
+  const location = useLocation()
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false)
   const [player] = useState(() => {
     const stored = localStorage.getItem('player')
     if (stored && localStorage.getItem('playerToken')) {
@@ -21,6 +24,32 @@ function Navbar() {
     window.addEventListener('storage', handleStorage)
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
+
+  useEffect(() => {
+    if (!player || !localStorage.getItem('playerToken')) return undefined
+
+    let cancelled = false
+    const loadUnread = () => {
+      api.get('/messages/conversations')
+        .then((res) => {
+          if (cancelled) return
+          const unread = (res.data || []).some((conversation) => Number(conversation.unreadCount || 0) > 0)
+          setHasUnreadMessages(unread)
+        })
+        .catch(() => {
+          if (!cancelled) setHasUnreadMessages(false)
+        })
+    }
+
+    loadUnread()
+    const interval = window.setInterval(loadUnread, 45000)
+    window.addEventListener('focus', loadUnread)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', loadUnread)
+    }
+  }, [player, location.pathname])
 
   return (
     <nav className="flex items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4 bg-white border-b border-gray-100">
@@ -43,11 +72,14 @@ function Navbar() {
 
             <Link
               to="/messages"
-              className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
+              className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
               aria-label="Messages"
               title="Messages"
             >
               <MessageCircle className="h-5 w-5" />
+              {hasUnreadMessages && (
+                <span className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+              )}
             </Link>
 
             <Link
