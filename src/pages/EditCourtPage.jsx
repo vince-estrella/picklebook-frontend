@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Link as LinkIcon, Menu, Upload, X } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 const AMENITIES_OPTIONS = ['Night Lighting', 'Free WiFi', 'Parking', 'Locker Rooms', 'Water Station', 'Paddle Rental', 'Changing Rooms', 'Ample Parking']
 
@@ -32,45 +33,63 @@ function EditCourtPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
+    let cancelled = false
+
+    async function loadCourt() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
+        navigate('/owner/login')
+        return
+      }
+
+      try {
+        const [res, venuesRes] = await Promise.all([
+          api.get(`/courts/${id}`),
+          api.get('/venues/owner'),
+        ])
+        if (cancelled) return
+        const court = res.data
+        setVenues(Array.isArray(venuesRes.data) ? venuesRes.data : [])
+        setForm({
+          venueId: court.venueId || '',
+          venueName: court.venue?.name || '',
+          name: court.name || '',
+          address: court.address || '',
+          type: court.type || 'Outdoor',
+          surfaceType: court.surfaceType || '',
+          maxPlayers: court.maxPlayers || 4,
+          pricePerHour: court.pricePerHour || '',
+          description: court.description || '',
+          externalBookingUrl: court.externalBookingUrl || '',
+          monFriOpen: court.monFriOpen || '06:00:00',
+          monFriClose: court.monFriClose || '22:00:00',
+          satOpen: court.satOpen || '07:00:00',
+          satClose: court.satClose || '21:00:00',
+          sunOpen: court.sunOpen || '08:00:00',
+          sunClose: court.sunClose || '20:00:00',
+          latitude: court.latitude || 0,
+          longitude: court.longitude || 0,
+          courtOwnerId: court.courtOwnerId,
+          bookingMode: court.bookingMode || 'PickleBook',
+          paymentMethod: court.paymentMethod || 'PayAtVenue',
+          allowOpenPlay: court.allowOpenPlay ?? true,
+        })
+        setAmenities(court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : [])
+        setExistingImages(court.images || [])
+      } catch (err) {
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          navigate('/owner/login')
+          return
+        }
+        navigate('/owner/dashboard')
+      } finally {
+        if (!cancelled) setFetching(false)
+      }
     }
 
-    Promise.all([
-      api.get(`/courts/${id}`),
-      api.get('/venues/owner'),
-    ]).then(([res, venuesRes]) => {
-      const court = res.data
-      setVenues(Array.isArray(venuesRes.data) ? venuesRes.data : [])
-      setForm({
-        venueId: court.venueId || '',
-        venueName: court.venue?.name || '',
-        name: court.name || '',
-        address: court.address || '',
-        type: court.type || 'Outdoor',
-        surfaceType: court.surfaceType || '',
-        maxPlayers: court.maxPlayers || 4,
-        pricePerHour: court.pricePerHour || '',
-        description: court.description || '',
-        externalBookingUrl: court.externalBookingUrl || '',
-        monFriOpen: court.monFriOpen || '06:00:00',
-        monFriClose: court.monFriClose || '22:00:00',
-        satOpen: court.satOpen || '07:00:00',
-        satClose: court.satClose || '21:00:00',
-        sunOpen: court.sunOpen || '08:00:00',
-        sunClose: court.sunClose || '20:00:00',
-        latitude: court.latitude || 0,
-        longitude: court.longitude || 0,
-        courtOwnerId: court.courtOwnerId,
-        bookingMode: court.bookingMode || 'PickleBook',
-        paymentMethod: court.paymentMethod || 'PayAtVenue',
-        allowOpenPlay: court.allowOpenPlay ?? true,
-      })
-      setAmenities(court.amenities ? court.amenities.split(',').map(a => a.trim()).filter(Boolean) : [])
-      setExistingImages(court.images || [])
-      setFetching(false)
-    }).catch(() => navigate('/owner/dashboard'))
+    loadCourt()
+    return () => { cancelled = true }
   }, [id, navigate])
 
   const toggleAmenity = (a) => {

@@ -229,9 +229,11 @@ function PlayerSettingsPage() {
           email: res.data.email,
           profileImageUrl: res.data.profileImageUrl,
         })
-      } catch {
-        clearPlayerSession()
-        if (!cancelled) navigate('/login')
+      } catch (err) {
+        if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
+          clearPlayerSession()
+          navigate('/login')
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar, Clock } from 'lucide-react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
-import { clearPlayerSession } from '../lib/playerSession'
+import { clearPlayerSession, ensurePlayerSession } from '../lib/playerSession'
 
 // ---------------------------------------------------------------------------
 // Same design tokens as HomePage — deep court navy, kitchen teal, chalk-line
@@ -54,21 +54,37 @@ function MyBookingsPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!localStorage.getItem('playerToken')) {
-      navigate('/login')
-      return
-    }
-    api.get('/users/bookings')
-      .then(res => {
-        setBookings(res.data)
-        setLoading(false)
-      })
-      .catch(() => {
-        clearPlayerSession()
-        setError('Could not load your bookings. Please try logging in again.')
-        setLoading(false)
+    let cancelled = false
+
+    async function loadBookings() {
+      const valid = await ensurePlayerSession()
+      if (cancelled) return
+
+      if (!valid) {
         navigate('/login')
-      })
+        return
+      }
+
+      try {
+        const res = await api.get('/users/bookings')
+        if (cancelled) return
+        setBookings(res.data)
+      } catch (err) {
+        if (cancelled) return
+        const status = err.response?.status
+        if (status === 401 || status === 403) {
+          clearPlayerSession()
+          navigate('/login')
+          return
+        }
+        setError('Could not load your bookings. Please try again.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadBookings()
+    return () => { cancelled = true }
   }, [navigate])
 
   const now = new Date()

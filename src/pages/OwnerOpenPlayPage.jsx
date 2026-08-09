@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { AlertCircle, CheckCircle2, Copy, Menu, Plus, RefreshCw, UserCheck, WalletCards, XCircle } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 function toDateInput(date = new Date()) {
   const year = date.getFullYear()
@@ -87,7 +88,7 @@ function OwnerOpenPlayPage() {
     [sessions, selectedRoom]
   )
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [courtsRes, sessionsRes] = await Promise.all([
         api.get('/courts/owner'),
@@ -101,39 +102,33 @@ function OwnerOpenPlayPage() {
       }))
       setSelectedRoom((prev) => prev || sessionsRes.data?.[0]?.roomCode || null)
       setError('')
-    } catch {
-      navigate('/owner/login')
+    } catch (err) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        navigate('/owner/login')
+        return
+      }
+      setError('Could not load open play sessions. Please try again.')
     } finally {
       setLoading(false)
     }
-  }
+  }, [navigate])
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
-    }
-    Promise.all([
-      api.get('/courts/owner'),
-      api.get('/openplay/owner/sessions'),
-    ])
-      .then(([courtsRes, sessionsRes]) => {
-        setCourts(courtsRes.data)
-        setSessions(sessionsRes.data)
-        setForm((prev) => ({
-          ...prev,
-          courtId: prev.courtId || courtsRes.data?.[0]?.id || '',
-        }))
-        setSelectedRoom((prev) => prev || sessionsRes.data?.[0]?.roomCode || null)
-        setError('')
-      })
-      .catch(() => {
+    let cancelled = false
+
+    async function restoreAndLoad() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
         navigate('/owner/login')
-      })
-      .finally(() => {
-        setLoading(false)
-      })
-  }, [navigate])
+        return
+      }
+      await loadData()
+    }
+
+    restoreAndLoad()
+    return () => { cancelled = true }
+  }, [loadData, navigate])
 
   useEffect(() => {
     if (!selectedRoom) {

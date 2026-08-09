@@ -10,6 +10,7 @@ import {
 import api from '../services/api'
 import LocationPicker from '../components/LocationPicker'
 import OwnerSidebar from '../components/OwnerSidebar'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 const AMENITIES_OPTIONS = ['Night Lighting', 'Free WiFi', 'Parking', 'Locker Rooms', 'Water Station', 'Paddle Rental', 'Changing Rooms', 'Ample Parking']
 
@@ -57,11 +58,26 @@ function AddCourtPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
+    let cancelled = false
+
+    async function loadVenues() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
+        navigate('/owner/login')
+        return
+      }
+      api.get('/venues/owner')
+        .then(res => {
+          if (!cancelled) setVenues(Array.isArray(res.data) ? res.data : [])
+        })
+        .catch(() => {
+          if (!cancelled) setVenues([])
+        })
     }
-    api.get('/venues/owner').then(res => setVenues(Array.isArray(res.data) ? res.data : [])).catch(() => setVenues([]))
+
+    loadVenues()
+    return () => { cancelled = true }
   }, [navigate])
 
   const toggleAmenity = (a) => {

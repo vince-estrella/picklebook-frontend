@@ -66,8 +66,10 @@ function OwnerSettingsPage() {
         if (cancelled) return
         setProfile(res.data)
         setNewEmail(res.data.email || '')
-      } catch {
-        if (!cancelled) navigate('/owner/login')
+      } catch (err) {
+        if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
+          navigate('/owner/login')
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }

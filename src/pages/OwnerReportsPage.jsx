@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 const RANGE_OPTIONS = [
   { value: 'all', label: 'All time' },
@@ -50,20 +51,35 @@ function OwnerReportsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
+    let cancelled = false
+
+    async function loadReports() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
+        navigate('/owner/login')
+        return
+      }
+
+      try {
+        const [courtsRes, bookingsRes] = await Promise.all([
+          api.get('/courts/owner'),
+          api.get('/bookings/owner'),
+        ])
+        if (cancelled) return
+        setCourts(courtsRes.data)
+        setBookings(bookingsRes.data)
+      } catch (err) {
+        if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
+          navigate('/owner/login')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-    Promise.all([
-      api.get('/courts/owner'),
-      api.get('/bookings/owner'),
-    ]).then(([courtsRes, bookingsRes]) => {
-      setCourts(courtsRes.data)
-      setBookings(bookingsRes.data)
-      setLoading(false)
-    }).catch(() => {
-      navigate('/owner/login')
-    })
+
+    loadReports()
+    return () => { cancelled = true }
   }, [navigate])
 
   const filteredBookings = useMemo(

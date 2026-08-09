@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 function groupCourtsByVenue(courts) {
   const map = new Map()
@@ -55,19 +56,30 @@ function OwnerCourtsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
-    }
-    api
-      .get('/courts/owner')
-      .then((res) => {
-        setCourts(res.data)
-        setLoading(false)
-      })
-      .catch(() => {
+    let cancelled = false
+
+    async function loadCourts() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
         navigate('/owner/login')
-      })
+        return
+      }
+
+      try {
+        const res = await api.get('/courts/owner')
+        if (!cancelled) setCourts(res.data)
+      } catch (err) {
+        if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
+          navigate('/owner/login')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadCourts()
+    return () => { cancelled = true }
   }, [navigate])
 
   const handleDelete = async (court) => {

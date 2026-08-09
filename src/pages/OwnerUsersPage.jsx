@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Phone, Calendar, Menu } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 function formatCurrency(n) {
   return `₱${Number(n || 0).toFixed(2)}`
@@ -46,19 +47,33 @@ function OwnerUsersPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
+    let cancelled = false
+
+    async function loadUsers() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
+        navigate('/owner/login')
+        return
+      }
+
+      try {
+        const res = await api.get('/bookings/owner')
+        if (!cancelled) setBookings(res.data)
+      } catch (err) {
+        if (cancelled) return
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          navigate('/owner/login')
+          return
+        }
+        setError('Could not load bookings. Please try again.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     }
-    api.get('/bookings/owner')
-      .then(res => {
-        setBookings(res.data)
-        setLoading(false)
-      })
-      .catch(() => {
-        setError('Could not load bookings. The /bookings/owner endpoint may not exist yet.')
-        setLoading(false)
-      })
+
+    loadUsers()
+    return () => { cancelled = true }
   }, [navigate])
 
   const customers = useMemo(() => deriveCustomers(bookings), [bookings])

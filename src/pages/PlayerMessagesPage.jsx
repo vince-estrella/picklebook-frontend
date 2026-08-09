@@ -41,9 +41,14 @@ function PlayerMessagesPage() {
         setActiveId((current) => current || data[0]?.id || null)
         setError('')
       })
-      .catch(() => {
-        clearPlayerSession()
-        navigate('/login')
+      .catch((err) => {
+        const status = err.response?.status
+        if (status === 401 || status === 403) {
+          clearPlayerSession()
+          navigate('/login')
+          return
+        }
+        setError('Could not load your messages. Please try again.')
       })
       .finally(() => setLoading(false))
     })

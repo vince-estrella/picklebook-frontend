@@ -14,6 +14,7 @@ import {
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
 import BookingReceiptModal from '../components/BookingReceiptModal'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 // Formats "HH:MM" or "HH:MM:SS" (24hr) into "h:mm AM/PM"
 function formatTime12h(time) {
@@ -48,19 +49,30 @@ function BookingsListPage() {
   const [viewingBookingId, setViewingBookingId] = useState(null)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
-    }
-    api
-      .get('/bookings/owner')
-      .then((res) => {
-        setBookings(res.data)
-        setLoading(false)
-      })
-      .catch(() => {
+    let cancelled = false
+
+    async function loadBookings() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
         navigate('/owner/login')
-      })
+        return
+      }
+
+      try {
+        const res = await api.get('/bookings/owner')
+        if (!cancelled) setBookings(res.data)
+      } catch (err) {
+        if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
+          navigate('/owner/login')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadBookings()
+    return () => { cancelled = true }
   }, [navigate])
 
   const handleUpdateStatus = async (bookingId, status) => {

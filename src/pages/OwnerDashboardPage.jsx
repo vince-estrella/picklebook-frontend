@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
 import api from '../services/api'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 function OwnerDashboardPage() {
   const navigate = useNavigate()
@@ -32,23 +33,38 @@ function OwnerDashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
-    }
-    Promise.all([
-      api.get('/courts/owner'),
-      api.get('/bookings/owner'),
-      api.get('/bookings/stats'),
-    ]).then(([courtsRes, bookingsRes, statsRes]) => {
-      setCourts(courtsRes.data)
-      setBookings(bookingsRes.data)
-      setStats(statsRes.data)
-      setLoading(false)
-    }).catch(() => {
-      navigate('/owner/login')
-    })
+    let cancelled = false
 
+    async function loadDashboard() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+      if (!valid) {
+        navigate('/owner/login')
+        return
+      }
+
+      try {
+        const [courtsRes, bookingsRes, statsRes] = await Promise.all([
+          api.get('/courts/owner'),
+          api.get('/bookings/owner'),
+          api.get('/bookings/stats'),
+        ])
+        if (cancelled) return
+        setCourts(courtsRes.data)
+        setBookings(bookingsRes.data)
+        setStats(statsRes.data)
+      } catch (err) {
+        if (cancelled) return
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          navigate('/owner/login')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadDashboard()
+    return () => { cancelled = true }
   }, [navigate])
 
   if (loading) {
