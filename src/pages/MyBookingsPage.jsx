@@ -52,6 +52,7 @@ function MyBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [cancellingId, setCancellingId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -92,6 +93,30 @@ function MyBookingsPage() {
     return getBookingEndInstant(b) >= now && b.status !== 'Cancelled'
   })
   const past = bookings.filter(b => !upcoming.includes(b))
+
+  const handleCancelBooking = async (booking) => {
+    const confirmed = window.confirm('Cancel this booking?')
+    if (!confirmed) return
+
+    setCancellingId(booking.id)
+    setError(null)
+    try {
+      const res = await api.patch(`/bookings/${booking.id}/cancel`)
+      setBookings((prev) => prev.map((item) => (
+        item.id === booking.id
+          ? { ...item, status: res.data.status, paymentStatus: res.data.paymentStatus }
+          : item
+      )))
+      if (res.data.requiresRefund) {
+        setError('Booking cancelled. This paid online booking now needs manual refund review from the court owner.')
+      }
+    } catch (err) {
+      const message = err.response?.data
+      setError(typeof message === 'string' ? message : 'Could not cancel this booking. Please try again.')
+    } finally {
+      setCancellingId(null)
+    }
+  }
 
   const BookingCard = ({ b }) => (
     <div
@@ -177,6 +202,28 @@ function MyBookingsPage() {
               </span>
             )}
           </div>
+        )}
+        {getBookingEndInstant(b) >= now && b.status !== 'Cancelled' && b.status !== 'Completed' && (
+          <button
+            type="button"
+            onClick={() => handleCancelBooking(b)}
+            disabled={cancellingId === b.id}
+            className="hb-btn"
+            style={{
+              marginTop: '14px',
+              border: '1px solid #E3C3C0',
+              background: 'transparent',
+              color: '#B3453D',
+              borderRadius: '4px',
+              padding: '9px 14px',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: cancellingId === b.id ? 'not-allowed' : 'pointer',
+              opacity: cancellingId === b.id ? 0.6 : 1,
+            }}
+          >
+            {cancellingId === b.id ? 'Cancelling...' : 'Cancel Booking'}
+          </button>
         )}
       </div>
       <div style={{ textAlign: 'right', flexShrink: 0, borderLeft: `1px solid ${COLORS.chalkDim}`, paddingLeft: '20px' }}>

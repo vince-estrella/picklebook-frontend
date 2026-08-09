@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, CalendarDays, Clock, Menu, Search, UserCheck } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
+import OwnerLoadError from '../components/OwnerLoadError'
 import api from '../services/api'
 
 function getLocalDateString(date = new Date()) {
@@ -38,15 +39,21 @@ function OwnerBookingsPage() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     api.get(`/bookings/court/${id}?date=${selectedDate}`)
       .then(res => {
+        setLoadError('')
         setBookings(Array.isArray(res.data) ? res.data : [])
         setLoading(false)
       })
-      .catch(() => setLoading(false))
-  }, [id, selectedDate])
+      .catch(() => {
+        setLoadError('Could not load this court schedule.')
+        setLoading(false)
+      })
+  }, [id, selectedDate, retryKey])
 
   const statuses = useMemo(() => {
     const unique = new Set(bookings.map((booking) => booking.status).filter(Boolean))
@@ -162,7 +169,17 @@ function OwnerBookingsPage() {
             </p>
           </section>
 
-          <div className="owner-panel overflow-hidden">
+          {loadError ? (
+            <OwnerLoadError
+              title="Schedule did not load"
+              message={loadError}
+              onRetry={() => {
+                setLoadError('')
+                setLoading(true)
+                setRetryKey((key) => key + 1)
+              }}
+            />
+          ) : <div className="owner-panel overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[760px]">
                 <thead>
@@ -198,7 +215,7 @@ function OwnerBookingsPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </div>}
         </main>
       </div>
     </div>

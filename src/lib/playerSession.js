@@ -10,7 +10,8 @@ export function hasPlayerSessionMarker() {
 }
 
 export async function ensurePlayerSession() {
-  if (hasPlayerSessionMarker()) return true
+  const marker = localStorage.getItem('playerToken')
+  if (marker && marker !== 'cookie') return true
 
   try {
     const res = await api.get('/users/profile')

@@ -76,3 +76,13 @@ export async function enablePushNotifications() {
 export async function sendTestPushNotification() {
   await api.post('/push/test')
 }
+
+export async function getPushPreferences() {
+  const res = await api.get('/push/preferences')
+  return res.data
+}
+
+export async function updatePushPreferences(preferences) {
+  const res = await api.put('/push/preferences', preferences)
+  return res.data
+}

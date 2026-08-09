@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import OwnerLoadError from '../components/OwnerLoadError'
 import { ensureOwnerSession } from '../lib/ownerSession'
 
 const RANGE_OPTIONS = [
@@ -49,6 +50,8 @@ function OwnerReportsPage() {
   const [loading, setLoading] = useState(true)
   const [range, setRange] = useState('30d')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -62,6 +65,7 @@ function OwnerReportsPage() {
       }
 
       try {
+        setLoadError('')
         const [courtsRes, bookingsRes] = await Promise.all([
           api.get('/courts/owner'),
           api.get('/bookings/owner'),
@@ -72,7 +76,9 @@ function OwnerReportsPage() {
       } catch (err) {
         if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
           navigate('/owner/login')
+          return
         }
+        if (!cancelled) setLoadError('Could not load your reports.')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -80,7 +86,7 @@ function OwnerReportsPage() {
 
     loadReports()
     return () => { cancelled = true }
-  }, [navigate])
+  }, [navigate, retryKey])
 
   const filteredBookings = useMemo(
     () => bookings.filter(b => isWithinRange(getBookingDate(b), range)),
@@ -124,6 +130,24 @@ function OwnerReportsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center owner-workspace text-slate-500">
         Loading...
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full min-h-screen owner-workspace flex">
+        <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 p-4 sm:p-6 lg:p-12">
+          <OwnerLoadError
+            title="Reports did not load"
+            message={loadError}
+            onRetry={() => {
+              setLoading(true)
+              setRetryKey((key) => key + 1)
+            }}
+          />
+        </div>
       </div>
     )
   }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { AlertCircle, CheckCircle2, Copy, Menu, Plus, RefreshCw, UserCheck, WalletCards, XCircle } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
+import OwnerLoadError from '../components/OwnerLoadError'
 import api from '../services/api'
 import { ensureOwnerSession } from '../lib/ownerSession'
 
@@ -70,6 +71,7 @@ function OwnerOpenPlayPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
   const [participantFilter, setParticipantFilter] = useState('all')
   const [form, setForm] = useState({
     courtId: '',
@@ -90,6 +92,7 @@ function OwnerOpenPlayPage() {
 
   const loadData = useCallback(async () => {
     try {
+      setLoadError('')
       const [courtsRes, sessionsRes] = await Promise.all([
         api.get('/courts/owner'),
         api.get('/openplay/owner/sessions'),
@@ -107,7 +110,7 @@ function OwnerOpenPlayPage() {
         navigate('/owner/login')
         return
       }
-      setError('Could not load open play sessions. Please try again.')
+      setLoadError('Could not load open play sessions. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -182,6 +185,24 @@ function OwnerOpenPlayPage() {
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center owner-workspace text-slate-500">Loading...</div>
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full min-h-screen owner-workspace flex">
+        <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 p-4 sm:p-6 lg:p-12">
+          <OwnerLoadError
+            title="Open Play did not load"
+            message={loadError}
+            onRetry={() => {
+              setLoading(true)
+              loadData()
+            }}
+          />
+        </div>
+      </div>
+    )
   }
 
   const activeDetail = detail || selectedSession

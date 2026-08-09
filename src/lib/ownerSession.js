@@ -5,7 +5,8 @@ export function hasOwnerSessionMarker() {
 }
 
 export async function ensureOwnerSession() {
-  if (hasOwnerSessionMarker()) return true
+  const marker = localStorage.getItem('token')
+  if (marker && marker !== 'cookie') return true
 
   try {
     const res = await api.get('/owner/profile')

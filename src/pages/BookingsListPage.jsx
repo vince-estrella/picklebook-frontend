@@ -14,6 +14,7 @@ import {
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
 import BookingReceiptModal from '../components/BookingReceiptModal'
+import OwnerLoadError from '../components/OwnerLoadError'
 import { ensureOwnerSession } from '../lib/ownerSession'
 
 // Formats "HH:MM" or "HH:MM:SS" (24hr) into "h:mm AM/PM"
@@ -47,6 +48,8 @@ function BookingsListPage() {
   const [page, setPage] = useState(1)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [viewingBookingId, setViewingBookingId] = useState(null)
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -60,12 +63,15 @@ function BookingsListPage() {
       }
 
       try {
+        setLoadError('')
         const res = await api.get('/bookings/owner')
         if (!cancelled) setBookings(res.data)
       } catch (err) {
         if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
           navigate('/owner/login')
+          return
         }
+        if (!cancelled) setLoadError('Could not load your bookings.')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -73,7 +79,7 @@ function BookingsListPage() {
 
     loadBookings()
     return () => { cancelled = true }
-  }, [navigate])
+  }, [navigate, retryKey])
 
   const handleUpdateStatus = async (bookingId, status) => {
     if (status === 'Cancelled' && !window.confirm('Cancel this booking? This cannot be undone.')) return
@@ -112,6 +118,39 @@ function BookingsListPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500">
         Loading...
+      </div>
+    )
+  }
+
+  const handleRefundStatus = async (bookingId, paymentStatus) => {
+    if (paymentStatus === 'Refunded' && !window.confirm('Mark this booking as refunded?')) return
+    try {
+      const res = await api.patch(`/bookings/${bookingId}/refund-status`, JSON.stringify(paymentStatus), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, paymentStatus: res.data.paymentStatus } : b))
+      )
+    } catch (err) {
+      console.error(`Failed to update refund status to ${paymentStatus}:`, err)
+      alert('Could not update refund status. Please try again.')
+    }
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full min-h-screen bg-slate-50 flex">
+        <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 p-4 sm:p-6 lg:p-12">
+          <OwnerLoadError
+            title="Bookings did not load"
+            message={loadError}
+            onRetry={() => {
+              setLoading(true)
+              setRetryKey((key) => key + 1)
+            }}
+          />
+        </div>
       </div>
     )
   }
@@ -265,6 +304,11 @@ function BookingsListPage() {
                           >
                             {b.status}
                           </span>
+                          {b.paymentStatus === 'RefundPending' && (
+                            <span className="mt-1 px-3 py-[2.5px] rounded-full inline-block text-xs font-bold leading-4 bg-amber-100 text-amber-800">
+                              Refund needed
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 sm:px-6 py-4">
                           <div className="flex justify-end gap-2">
@@ -292,6 +336,15 @@ function BookingsListPage() {
                                   <X className="w-4 h-4" />
                                 </button>
                               </>
+                            )}
+                            {b.paymentStatus === 'RefundPending' && (
+                              <button
+                                onClick={() => handleRefundStatus(b.id, 'Refunded')}
+                                className="px-2 py-1 rounded-lg text-xs font-bold text-amber-800 bg-amber-100 transition-colors duration-150 hover:bg-amber-200"
+                                title="Mark Refunded"
+                              >
+                                Refunded
+                              </button>
                             )}
                           </div>
                         </td>

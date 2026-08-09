@@ -4,17 +4,37 @@ import {
   enablePushNotifications,
   getPushUnsupportedMessage,
   getNotificationState,
+  getPushPreferences,
   pushSupported,
   sendTestPushNotification,
+  updatePushPreferences,
 } from '../lib/pushNotifications'
+
+const DEFAULT_PREFS = {
+  bookingNotifications: true,
+  messageNotifications: true,
+  openPlayNotifications: true,
+  reminderNotifications: true,
+}
+
+const PREF_OPTIONS = [
+  ['bookingNotifications', 'Bookings'],
+  ['messageNotifications', 'Messages'],
+  ['openPlayNotifications', 'Open play'],
+  ['reminderNotifications', 'Reminders'],
+]
 
 function PushNotificationSettings({ owner = false }) {
   const [state, setState] = useState('checking')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [preferences, setPreferences] = useState(DEFAULT_PREFS)
 
   useEffect(() => {
     getNotificationState().then(setState).catch(() => setState('unsupported'))
+    getPushPreferences()
+      .then((prefs) => setPreferences({ ...DEFAULT_PREFS, ...(prefs || {}) }))
+      .catch(() => {})
   }, [])
 
   const handleEnable = async () => {
@@ -23,6 +43,8 @@ function PushNotificationSettings({ owner = false }) {
     try {
       await enablePushNotifications()
       setState('enabled')
+      const prefs = await getPushPreferences()
+      setPreferences({ ...DEFAULT_PREFS, ...(prefs || {}) })
       setMessage(owner
         ? 'Owner notifications are enabled for this device.'
         : 'Push notifications are enabled for this device.')
@@ -31,6 +53,20 @@ function PushNotificationSettings({ owner = false }) {
       setState(pushSupported() ? Notification.permission : 'unsupported')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const handlePreferenceChange = async (key) => {
+    const next = { ...preferences, [key]: !preferences[key] }
+    setPreferences(next)
+    setMessage('')
+    try {
+      const saved = await updatePushPreferences(next)
+      setPreferences({ ...DEFAULT_PREFS, ...(saved || next) })
+      setMessage('Notification preferences saved.')
+    } catch {
+      setPreferences(preferences)
+      setMessage('Could not save notification preferences.')
     }
   }
 
@@ -110,6 +146,25 @@ function PushNotificationSettings({ owner = false }) {
       </div>
 
       {message && <p className={owner ? 'text-sm text-slate-600' : ''} style={!owner ? { color: '#5b6864', fontSize: '13px', margin: 0 } : undefined}>{message}</p>}
+
+      {enabled && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          {PREF_OPTIONS.map(([key, label]) => (
+            <label
+              key={key}
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
+            >
+              <span>{label}</span>
+              <input
+                type="checkbox"
+                checked={Boolean(preferences[key])}
+                onChange={() => handlePreferenceChange(key)}
+                className="h-4 w-4 accent-green-700"
+              />
+            </label>
+          ))}
+        </div>
+      )}
     </section>
   )
 }

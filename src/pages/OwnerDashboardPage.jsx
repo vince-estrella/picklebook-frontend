@@ -14,6 +14,7 @@ import {
   CalendarCheck,
 } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
+import OwnerLoadError from '../components/OwnerLoadError'
 import api from '../services/api'
 import { ensureOwnerSession } from '../lib/ownerSession'
 
@@ -31,6 +32,8 @@ function OwnerDashboardPage() {
 
   const [showMobileSearch, setShowMobileSearch] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -44,6 +47,7 @@ function OwnerDashboardPage() {
       }
 
       try {
+        setLoadError('')
         const [courtsRes, bookingsRes, statsRes] = await Promise.all([
           api.get('/courts/owner'),
           api.get('/bookings/owner'),
@@ -57,7 +61,9 @@ function OwnerDashboardPage() {
         if (cancelled) return
         if (err.response?.status === 401 || err.response?.status === 403) {
           navigate('/owner/login')
+          return
         }
+        setLoadError('Could not load your dashboard data.')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -65,7 +71,7 @@ function OwnerDashboardPage() {
 
     loadDashboard()
     return () => { cancelled = true }
-  }, [navigate])
+  }, [navigate, retryKey])
 
   if (loading) {
     return (
@@ -142,6 +148,17 @@ function OwnerDashboardPage() {
         </header>
 
         <main className="p-4 sm:p-6 lg:p-12 flex flex-col gap-6 lg:gap-8">
+          {loadError ? (
+            <OwnerLoadError
+              title="Dashboard did not load"
+              message={loadError}
+              onRetry={() => {
+                setLoading(true)
+                setRetryKey((key) => key + 1)
+              }}
+            />
+          ) : (
+            <>
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -378,6 +395,8 @@ function OwnerDashboardPage() {
               </div>
             </div>
           </div>
+            </>
+          )}
         </main>
 
         {/* Footer */}

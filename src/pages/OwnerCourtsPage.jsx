@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import OwnerLoadError from '../components/OwnerLoadError'
 import { ensureOwnerSession } from '../lib/ownerSession'
 
 function groupCourtsByVenue(courts) {
@@ -54,6 +55,8 @@ function OwnerCourtsPage() {
   const [deletingId, setDeletingId] = useState(null)
   const [deleteError, setDeleteError] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -67,12 +70,15 @@ function OwnerCourtsPage() {
       }
 
       try {
+        setLoadError('')
         const res = await api.get('/courts/owner')
         if (!cancelled) setCourts(res.data)
       } catch (err) {
         if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
           navigate('/owner/login')
+          return
         }
+        if (!cancelled) setLoadError('Could not load your courts.')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -80,7 +86,7 @@ function OwnerCourtsPage() {
 
     loadCourts()
     return () => { cancelled = true }
-  }, [navigate])
+  }, [navigate, retryKey])
 
   const handleDelete = async (court) => {
     const confirmed = window.confirm(
@@ -122,6 +128,24 @@ function OwnerCourtsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center owner-workspace text-slate-500">
         Loading...
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full min-h-screen owner-workspace flex">
+        <OwnerSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 p-4 sm:p-6 lg:p-12">
+          <OwnerLoadError
+            title="Courts did not load"
+            message={loadError}
+            onRetry={() => {
+              setLoading(true)
+              setRetryKey((key) => key + 1)
+            }}
+          />
+        </div>
       </div>
     )
   }

@@ -5,22 +5,6 @@ const api = axios.create({
   withCredentials: true,
 })
 
-if (
-  typeof window !== 'undefined' &&
-  window.location.pathname.startsWith('/owner') &&
-  !localStorage.getItem('token')
-) {
-  localStorage.setItem('token', 'cookie')
-}
-
-if (
-  typeof window !== 'undefined' &&
-  ['/my-bookings', '/messages', '/settings', '/open-play'].some((path) => window.location.pathname.startsWith(path)) &&
-  !localStorage.getItem('playerToken')
-) {
-  localStorage.setItem('playerToken', 'cookie')
-}
- 
 // Owner and Player accounts are separate token types, stored under separate
 // localStorage keys. Requests to owner-only routes (anything containing
 // "owner" or hitting courtowners auth) send the owner token; everything else

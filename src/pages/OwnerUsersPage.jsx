@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, Phone, Calendar, Menu } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import OwnerLoadError from '../components/OwnerLoadError'
 import { ensureOwnerSession } from '../lib/ownerSession'
 
 function formatCurrency(n) {
@@ -45,6 +46,7 @@ function OwnerUsersPage() {
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -58,6 +60,7 @@ function OwnerUsersPage() {
       }
 
       try {
+        setError(null)
         const res = await api.get('/bookings/owner')
         if (!cancelled) setBookings(res.data)
       } catch (err) {
@@ -74,7 +77,7 @@ function OwnerUsersPage() {
 
     loadUsers()
     return () => { cancelled = true }
-  }, [navigate])
+  }, [navigate, retryKey])
 
   const customers = useMemo(() => deriveCustomers(bookings), [bookings])
 
@@ -137,12 +140,17 @@ function OwnerUsersPage() {
           </div>
 
           {error && (
-            <div className="p-4 bg-amber-50 outline outline-1 outline-amber-200 rounded-lg text-amber-800 text-sm">
-              {error}
-            </div>
+            <OwnerLoadError
+              title="Customers did not load"
+              message={error}
+              onRetry={() => {
+                setLoading(true)
+                setRetryKey((key) => key + 1)
+              }}
+            />
           )}
 
-          <div className="bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden">
+          {!error && <div className="bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse min-w-[640px]">
                 <thead>
@@ -201,7 +209,7 @@ function OwnerUsersPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </div>}
         </main>
       </div>
     </div>
