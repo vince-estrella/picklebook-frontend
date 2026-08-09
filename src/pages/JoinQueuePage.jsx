@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { FaBed, FaClock, FaCheckCircle, FaCrown, FaTrophy } from 'react-icons/fa'
+import { FaBed, FaClock, FaCheckCircle, FaCrown, FaQrcode, FaTrophy } from 'react-icons/fa'
 import { subscribeRoomState, submitJoinRequest, roomExists } from '../lib/roomSync'
 import api from '../services/api'
 
@@ -39,12 +39,51 @@ const inputStyle = {
   boxSizing: 'border-box',
 }
 
-// sessionStorage (not localStorage) on purpose: it's scoped to this one tab,
-// so joining as a second "player" in another tab/window on the same device
-// can't overwrite the first player's saved identity. It still survives a
-// reload of *this* tab, which is all "remember me if I refresh" needs.
+// Stored per room so a player can close/reopen the installed app and return
+// to the queue state that belongs to their device.
 function joinStorageKey(code) {
   return `picklebook_join_${code}`
+}
+
+const LAST_QUEUE_KEY = 'picklebook_last_queue'
+
+function getStoredJoinRequestId(code) {
+  return localStorage.getItem(joinStorageKey(code)) || sessionStorage.getItem(joinStorageKey(code))
+}
+
+function rememberJoinedQueue(code, requestId) {
+  sessionStorage.setItem(joinStorageKey(code), requestId)
+  localStorage.setItem(joinStorageKey(code), requestId)
+  localStorage.setItem(LAST_QUEUE_KEY, JSON.stringify({
+    code,
+    path: `/join?code=${encodeURIComponent(code)}`,
+    savedAt: Date.now(),
+  }))
+}
+
+function requestQueueNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {})
+  }
+}
+
+function getStoredPlayerProfile() {
+  try {
+    return JSON.parse(localStorage.getItem('player') || '{}')
+  } catch {
+    return {}
+  }
+}
+
+function getPlayerDisplayName(player) {
+  const name = [player?.firstName, player?.lastName].filter(Boolean).join(' ').trim()
+  return name || player?.email || ''
+}
+
+function getInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return 'PB'
+  return `${parts[0][0] || ''}${parts[parts.length - 1]?.[0] || ''}`.toUpperCase()
 }
 
 function playSuccessTone() {
@@ -97,6 +136,35 @@ function CrownBadge() {
   )
 }
 
+function PlayerAvatar({ player, size = 34 }) {
+  const name = player?.name || player?.playerName || ''
+  return (
+    <span
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        flexShrink: 0,
+        display: 'inline-grid',
+        placeItems: 'center',
+        background: '#E8F8D8',
+        color: COLORS.teal,
+        border: '2px solid #fff',
+        boxShadow: '0 4px 10px rgba(11,42,56,0.10)',
+        fontSize: `${Math.max(10, size * 0.34)}px`,
+        fontWeight: 800,
+      }}
+    >
+      {player?.profileImageUrl ? (
+        <img src={player.profileImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        getInitials(name)
+      )}
+    </span>
+  )
+}
+
 function tabStyle(active) {
   return {
     flex: 1, padding: '12px', border: 'none', background: active ? COLORS.chalk : '#fff',
@@ -117,8 +185,8 @@ function JoinQueuePage() {
   const [codeError, setCodeError] = useState('')
 
   const [roomState, setRoomState] = useState(null) // { players, courts }
-  const [myRequestId, setMyRequestId] = useState(() => (code ? sessionStorage.getItem(joinStorageKey(code)) : null))
-  const [nameInput, setNameInput] = useState('')
+  const [myRequestId, setMyRequestId] = useState(() => (code ? getStoredJoinRequestId(code) : null))
+  const [nameInput, setNameInput] = useState(() => getPlayerDisplayName(getStoredPlayerProfile()))
   const [skillInput, setSkillInput] = useState(DEFAULT_SKILL)
   const [submitting, setSubmitting] = useState(false)
   const [tab, setTab] = useState('queue') // 'queue' | 'rankings'
@@ -172,12 +240,6 @@ function JoinQueuePage() {
     prevStatusRef.current = me.status
   }, [me, myCourt])
 
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {})
-    }
-  }, [])
-
   const handleCodeSubmit = async (e) => {
     e.preventDefault()
     const clean = codeInput.trim().toUpperCase()
@@ -195,7 +257,7 @@ function JoinQueuePage() {
       const url = new URL(window.location.href)
       url.searchParams.set('code', clean)
       window.history.replaceState({}, '', url)
-      setMyRequestId(sessionStorage.getItem(joinStorageKey(clean)))
+      setMyRequestId(getStoredJoinRequestId(clean))
     } catch {
       setCodeError('Something went wrong checking that code — try again.')
     }
@@ -217,9 +279,15 @@ function JoinQueuePage() {
         }
         await api.post(`/openplay/sessions/${linkedOpenPlayCode}/join`)
       }
-      const requestId = await submitJoinRequest(code, { name: nameInput.trim(), skill: skillInput })
-      sessionStorage.setItem(joinStorageKey(code), requestId)
+      const playerProfile = getStoredPlayerProfile()
+      const requestId = await submitJoinRequest(code, {
+        name: nameInput.trim(),
+        skill: skillInput,
+        profileImageUrl: playerProfile.profileImageUrl || null,
+      })
+      rememberJoinedQueue(code, requestId)
       setMyRequestId(requestId)
+      requestQueueNotificationPermission()
     } catch {
       setCodeError('Could not submit your name — check your connection and try again.')
     }
@@ -245,8 +313,20 @@ function JoinQueuePage() {
         {!code && (
           <div style={{ background: '#fff', borderRadius: '12px', padding: '22px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
             <p style={{ fontSize: '13.5px', color: COLORS.inkMute, margin: '0 0 16px' }}>
-              Enter the room code shown at the courts.
+              Scan the QR at the courts or enter the room code shown by the host.
             </p>
+            <button
+              type="button"
+              onClick={() => window.location.assign('/scan-queue')}
+              style={{
+                width: '100%', padding: '13px', borderRadius: '8px', border: `1px solid ${COLORS.chalkDim}`, fontWeight: 700, fontSize: '15px',
+                background: COLORS.navy, color: '#fff', cursor: 'pointer', marginBottom: '14px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+            >
+              <FaQrcode size={15} />
+              Scan QR Code
+            </button>
             <form onSubmit={handleCodeSubmit}>
               <input
                 autoFocus
@@ -353,6 +433,7 @@ function JoinQueuePage() {
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.inkMute, width: '20px' }}>
                         {String(i + 1).padStart(2, '0')}
                       </span>
+                      <PlayerAvatar player={p} size={32} />
                       {p.id === leaderId && <CrownBadge />}
                       <span style={{ fontSize: '13.5px', fontWeight: p.id === me.id ? 700 : 500, color: COLORS.ink, flex: 1 }}>
                         {p.name}{p.id === me.id ? ' (you)' : ''}
@@ -431,6 +512,7 @@ function RankingList({ rankings, meId }) {
       }}
     >
       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: COLORS.inkMute, width: '20px' }}>{i + 1}</span>
+      <PlayerAvatar player={p} size={32} />
       {i === 0 && p.totalGames > 0 && <CrownBadge />}
       <span style={{ fontSize: '13.5px', fontWeight: p.id === meId ? 700 : 500, color: COLORS.ink, flex: 1 }}>
         {p.name}{p.id === meId ? ' (you)' : ''}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarCheck, Settings } from 'lucide-react'
+import { CalendarCheck, QrCode, Settings } from 'lucide-react'
 
 function Navbar() {
   const [player] = useState(() => {
@@ -39,6 +39,15 @@ function Navbar() {
               title="My Bookings"
             >
               <CalendarCheck className="h-5 w-5" />
+            </Link>
+
+            <Link
+              to="/scan-queue"
+              className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
+              aria-label="Scan Queue QR"
+              title="Scan Queue QR"
+            >
+              <QrCode className="h-5 w-5" />
             </Link>
 
             <Link

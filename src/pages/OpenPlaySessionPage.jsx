@@ -271,6 +271,7 @@ function OpenPlaySessionPage() {
                     openPlayPlayers: participants.map(player => ({
                       name: player.playerName,
                       skill: queueSkillFromOpenPlay(booking.openPlaySkillLevel),
+                      profileImageUrl: player.playerProfileImageUrl,
                     })),
                   },
                 })}

@@ -18,6 +18,7 @@ import OwnerCourtsPage from './pages/OwnerCourtsPage'
 import OwnerMessagesPage from './pages/OwnerMessagesPage'
 import QueueManager from './pages/QueueManager'
 import JoinQueuePage from './pages/JoinQueuePage'
+import QueueScannerPage from './pages/QueueScannerPage'
 import ContactSupportPage from './pages/ContactSupportPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsOfServicePage from './pages/TermsOfServicePage'
@@ -64,6 +65,7 @@ function App() {
       <Route path="/courts/:id" element={<CourtDetailPage />} />
       <Route path="/queue" element={<QueueManager />} />
       <Route path="/join" element={<JoinQueuePage />} />
+      <Route path="/scan-queue" element={<QueueScannerPage />} />
       <Route path="/open-play/:code" element={<OpenPlaySessionPage />} />
       <Route path="/contact" element={<ContactSupportPage />} />
       <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />

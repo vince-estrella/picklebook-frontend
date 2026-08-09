@@ -164,7 +164,7 @@ function HomePage() {
               </button>
               <button
                 className="hb-btn"
-                onClick={() => navigate('/queue')}
+                onClick={() => navigate('/scan-queue')}
                 onMouseEnter={e => e.currentTarget.style.color = COLORS.citron}
                 onMouseLeave={e => e.currentTarget.style.color = '#A9B7B2'}
                 style={{

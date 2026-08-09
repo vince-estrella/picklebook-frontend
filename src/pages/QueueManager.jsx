@@ -448,6 +448,40 @@ function CrownBadge() {
   )
 }
 
+function getInitials(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return 'PB'
+  return `${parts[0][0] || ''}${parts[parts.length - 1]?.[0] || ''}`.toUpperCase()
+}
+
+function PlayerAvatar({ player, size = 34 }) {
+  return (
+    <span
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        overflow: 'hidden',
+        flexShrink: 0,
+        display: 'inline-grid',
+        placeItems: 'center',
+        background: '#E8F8D8',
+        color: COLORS.teal,
+        border: '2px solid #fff',
+        boxShadow: '0 4px 10px rgba(11,42,56,0.10)',
+        fontSize: `${Math.max(10, size * 0.34)}px`,
+        fontWeight: 800,
+      }}
+    >
+      {player?.profileImageUrl ? (
+        <img src={player.profileImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        getInitials(player?.name)
+      )}
+    </span>
+  )
+}
+
 function Modal({ title, onClose, children, width = 420 }) {
   return (
     <div
@@ -617,6 +651,7 @@ function QueueManager() {
           partnerHistory: [],
           courtId: null,
           joinRequestId: e.joinRequestId || null,
+          profileImageUrl: e.profileImageUrl || null,
         })
       }
       return { players: ps }
@@ -672,7 +707,7 @@ function QueueManager() {
         // triggers a re-render — closes the race where a second snapshot
         // fires while the first is still in flight.
         fresh.forEach(r => knownJoinIdsRef.current.add(r.id))
-        addPlayers(fresh.map(r => ({ name: r.name, skill: r.skill, joinRequestId: r.id })))
+        addPlayers(fresh.map(r => ({ name: r.name, skill: r.skill, joinRequestId: r.id, profileImageUrl: r.profileImageUrl })))
       }
       requests.forEach(r => clearJoinRequest(roomCode, r.id).catch(() => {}))
       setJoinedCount(c => c + fresh.length)
@@ -1506,6 +1541,7 @@ function QueueRow({ player, position, isLeader, pairMode, isPairSelected, onSele
           {String(position).padStart(2, '0')}
         </span>
       )}
+      <PlayerAvatar player={player} size={34} />
       <div className="qm-queue-row-info" style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           {isLeader && <CrownBadge />}

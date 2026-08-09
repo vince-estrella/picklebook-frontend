@@ -93,8 +93,8 @@ export async function roomExists(code) {
 }
 
 /** Player submits their name — host will pick this up and add them. */
-export async function submitJoinRequest(code, { name, skill }) {
+export async function submitJoinRequest(code, { name, skill, profileImageUrl }) {
   const reqRef = push(ref(db(), `rooms/${code}/joinRequests`))
-  await set(reqRef, { name, skill, requestedAt: Date.now() })
+  await set(reqRef, { name, skill, profileImageUrl: profileImageUrl || null, requestedAt: Date.now() })
   return reqRef.key
 }
