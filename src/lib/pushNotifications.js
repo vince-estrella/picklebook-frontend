@@ -11,6 +11,15 @@ export function pushSupported() {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
 }
 
+export function getPushUnsupportedMessage() {
+  const ua = window.navigator.userAgent
+  const isiOS = /iphone|ipad|ipod/i.test(ua)
+  if (isiOS) {
+    return 'iPhone notifications only work from a Safari-installed Home Screen app on supported iOS versions. Configuration profiles can add the app icon, but Apple may not allow web push from that profile.'
+  }
+  return 'This browser does not support web push notifications.'
+}
+
 export async function getNotificationState() {
   if (!pushSupported()) return 'unsupported'
   const registration = await navigator.serviceWorker.ready

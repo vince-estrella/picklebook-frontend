@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Bell, Loader2, Send } from 'lucide-react'
 import {
   enablePushNotifications,
+  getPushUnsupportedMessage,
   getNotificationState,
   pushSupported,
   sendTestPushNotification,
@@ -68,7 +69,14 @@ function PushNotificationSettings({ owner = false }) {
       </div>
 
       {unsupported && (
-        <p className="text-sm text-slate-500">This browser does not support web push notifications.</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-slate-500">{getPushUnsupportedMessage()}</p>
+          {/iphone|ipad|ipod/i.test(window.navigator.userAgent) && (
+            <p className="text-xs text-slate-500">
+              For notifications on iPhone: open PickleBook in Safari, tap Share, choose Add to Home Screen, then open that Home Screen app and enable notifications here.
+            </p>
+          )}
+        </div>
       )}
       {blocked && (
         <p className="text-sm text-red-600">Notifications are blocked. Enable them in your browser settings to use PickleBook alerts.</p>
