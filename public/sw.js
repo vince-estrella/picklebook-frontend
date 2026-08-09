@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'picklebook-v3'
+const CACHE_VERSION = 'picklebook-v4'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const STATIC_ASSETS = [
   '/manifest.webmanifest',
