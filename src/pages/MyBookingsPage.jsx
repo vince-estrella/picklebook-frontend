@@ -68,12 +68,6 @@ function MyBookingsPage() {
       })
   }, [navigate])
 
-  const handleLogout = () => {
-    localStorage.removeItem('playerToken')
-    localStorage.removeItem('player')
-    navigate('/login')
-  }
-
   const now = new Date()
   const upcoming = bookings.filter(b => {
     return getBookingEndInstant(b) >= now && b.status !== 'Cancelled'
@@ -214,7 +208,7 @@ function MyBookingsPage() {
             margin: '0 auto',
             padding: '56px 24px 44px',
             display: 'flex',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-start',
             alignItems: 'center',
           }}
         >
@@ -249,26 +243,6 @@ function MyBookingsPage() {
               My <span style={{ color: COLORS.citron }}>Bookings</span>
             </h1>
           </div>
-          <button
-            className="hb-btn"
-            onClick={handleLogout}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(238,241,234,0.08)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            style={{
-              background: 'transparent',
-              color: COLORS.chalk,
-              border: '1px solid rgba(238,241,234,0.35)',
-              borderRadius: '4px',
-              padding: '11px 22px',
-              fontWeight: 600,
-              fontSize: '14px',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease',
-              flexShrink: 0,
-            }}
-          >
-            Log out
-          </button>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, Camera, Check, Loader2 } from 'lucide-react'
+import { AlertCircle, Camera, Check, Loader2, LogOut } from 'lucide-react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
 import PushNotificationSettings from '../components/PushNotificationSettings'
@@ -174,6 +174,17 @@ function StatusMessage({ status }) {
   return null
 }
 
+function getPlayerInitials(player) {
+  const first = player?.firstName?.[0] || ''
+  const last = player?.lastName?.[0] || ''
+  return `${first}${last}`.toUpperCase() || '?'
+}
+
+function updateStoredPlayer(updates) {
+  const stored = JSON.parse(localStorage.getItem('player') || '{}')
+  localStorage.setItem('player', JSON.stringify({ ...stored, ...updates }))
+}
+
 function PlayerSettingsPage() {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
@@ -206,17 +217,16 @@ function PlayerSettingsPage() {
       .then(res => {
         setProfile(res.data)
         setNewEmail(res.data.email || '')
+        updateStoredPlayer({
+          email: res.data.email,
+          profileImageUrl: res.data.profileImageUrl,
+        })
         setLoading(false)
       })
       .catch(() => {
         setLoading(false)
       })
   }, [navigate])
-
-  const updateStoredPlayer = (updates) => {
-    const stored = JSON.parse(localStorage.getItem('player') || '{}')
-    localStorage.setItem('player', JSON.stringify({ ...stored, ...updates }))
-  }
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0]
@@ -321,6 +331,17 @@ function PlayerSettingsPage() {
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      await api.post('/users/logout')
+    } catch {
+      // Still clear local state if the network/logout request is unavailable.
+    }
+    localStorage.removeItem('playerToken')
+    localStorage.removeItem('player')
+    navigate('/login')
+  }
+
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: COLORS.chalk, fontFamily: "'Inter', sans-serif", color: COLORS.inkMute }}>
@@ -333,6 +354,7 @@ function PlayerSettingsPage() {
 
   const player = JSON.parse(localStorage.getItem('player') || '{}')
   const displayedAvatar = avatarPreview || profile.profileImageUrl || player.profileImageUrl
+  const initials = getPlayerInitials(player)
 
   return (
     <div style={{ minHeight: '100vh', background: COLORS.chalk, fontFamily: "'Inter', sans-serif" }}>
@@ -387,7 +409,7 @@ function PlayerSettingsPage() {
               {displayedAvatar ? (
                 <img src={displayedAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Profile" />
               ) : (
-                <span style={{ color: COLORS.inkMute, fontSize: '26px', fontWeight: 700, fontFamily: "'Big Shoulders Display', sans-serif" }}>?</span>
+                <span style={{ color: COLORS.teal, fontSize: '24px', fontWeight: 800, fontFamily: "'Big Shoulders Display', sans-serif" }}>{initials}</span>
               )}
               <span
                 style={{
@@ -430,6 +452,18 @@ function PlayerSettingsPage() {
               <StatusMessage status={avatarStatus} />
             </div>
           </div>
+        </Card>
+
+        <Card title="Session" subtitle="Manage this device.">
+          <Button
+            className="ps-btn"
+            type="button"
+            variant="danger"
+            icon={<LogOut className="w-4 h-4" />}
+            onClick={handleLogout}
+          >
+            Log out
+          </Button>
         </Card>
 
         {/* ---------- EMAIL ---------- */}
