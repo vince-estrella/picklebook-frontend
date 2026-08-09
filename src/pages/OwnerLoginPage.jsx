@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Lock, ArrowRight, ArrowLeft, BarChart3, Building2 } from 'lucide-react'
 import api from '../services/api'
+import { getStoredSessionToken } from '../lib/authSession'
 import playerLoginHero from '../assets/player-login-hero.jpg'
 
 function OwnerLoginPage() {
@@ -19,7 +20,7 @@ function OwnerLoginPage() {
     setError(null)
     try {
       const res = await api.post('/courtowners/login', form)
-      localStorage.setItem('token', 'cookie')
+      localStorage.setItem('token', getStoredSessionToken(res.data.token))
       localStorage.setItem('owner', JSON.stringify({
         id: res.data.id,
         firstName: res.data.firstName,

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Lock, ArrowRight, ArrowLeft, CalendarCheck, Users as UsersIcon } from 'lucide-react'
 import api from '../services/api'
+import { getStoredSessionToken } from '../lib/authSession'
 import playerLoginHero from '../assets/player-login-hero.jpg'
 
 function PlayerLoginPage() {
@@ -19,7 +20,7 @@ function PlayerLoginPage() {
     setError(null)
     try {
       const res = await api.post('/users/login', form)
-      localStorage.setItem('playerToken', 'cookie')
+      localStorage.setItem('playerToken', getStoredSessionToken(res.data.token))
       localStorage.setItem('player', JSON.stringify({
         id: res.data.id,
         firstName: res.data.firstName,

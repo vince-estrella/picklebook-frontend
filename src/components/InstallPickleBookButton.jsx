@@ -8,31 +8,40 @@ import {
   subscribeInstallPrompt,
 } from '../lib/pwa'
 
+function getManualInstallCopy() {
+  const ua = window.navigator.userAgent
+  if (/android/i.test(ua)) {
+    return 'Open the browser menu, then choose Install app or Add to Home screen.'
+  }
+  if (/edg/i.test(ua)) {
+    return 'Open the browser menu, then choose Apps > Install this site as an app.'
+  }
+  if (/chrome|chromium/i.test(ua)) {
+    return 'Open the browser menu, then choose Save and share > Install PickleBook.'
+  }
+  return 'Use your browser menu and choose Install app or Add to Home Screen.'
+}
+
 function InstallPickleBookButton({ compact = false }) {
   const [installPrompt, setInstallPrompt] = useState(getDeferredInstallPrompt())
-  const [showIosHelp, setShowIosHelp] = useState(false)
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem('pwaInstallDismissed') === 'true')
+  const [showHelp, setShowHelp] = useState(false)
 
   useEffect(() => subscribeInstallPrompt(setInstallPrompt), [])
 
-  if (isStandalonePwa() || dismissed) return null
-
-  const canNativeInstall = Boolean(installPrompt)
-  const canShowIosHelp = isIosDevice()
-  if (!canNativeInstall && !canShowIosHelp) return null
+  if (isStandalonePwa()) return null
 
   const handleInstall = async () => {
-    if (canNativeInstall) {
+    if (installPrompt) {
       await promptInstall()
       return
     }
-    setShowIosHelp(true)
+    setShowHelp(true)
   }
 
-  const handleDismiss = () => {
-    localStorage.setItem('pwaInstallDismissed', 'true')
-    setDismissed(true)
-  }
+  const helpTitle = isIosDevice() ? 'Install on iPhone' : 'Install PickleBook'
+  const helpText = isIosDevice()
+    ? 'Tap Share, then choose Add to Home Screen.'
+    : getManualInstallCopy()
 
   return (
     <div className="relative">
@@ -47,22 +56,27 @@ function InstallPickleBookButton({ compact = false }) {
         <span className={compact ? 'hidden sm:inline' : ''}>Install PickleBook</span>
       </button>
 
-      {showIosHelp && (
+      {showHelp && (
         <div className="absolute right-0 top-full mt-2 w-72 rounded-lg border border-slate-200 bg-white p-4 shadow-xl z-50">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-bold text-slate-900">Install on iPhone</p>
-              <p className="text-sm text-slate-600 mt-1">
-                Tap Share, then choose Add to Home Screen.
-              </p>
+              <p className="text-sm font-bold text-slate-900">{helpTitle}</p>
+              <p className="text-sm text-slate-600 mt-1">{helpText}</p>
+              {!installPrompt && !isIosDevice() && (
+                <p className="text-xs text-slate-500 mt-2">
+                  If the install option is missing, refresh once after the page fully loads.
+                </p>
+              )}
             </div>
-            <button type="button" onClick={() => setShowIosHelp(false)} className="p-1 rounded-md hover:bg-slate-100" aria-label="Close install instructions">
+            <button
+              type="button"
+              onClick={() => setShowHelp(false)}
+              className="p-1 rounded-md hover:bg-slate-100"
+              aria-label="Close install instructions"
+            >
               <X className="w-4 h-4" />
             </button>
           </div>
-          <button type="button" onClick={handleDismiss} className="mt-3 text-xs font-semibold text-slate-500 hover:text-slate-900">
-            Do not show again
-          </button>
         </div>
       )}
     </div>
