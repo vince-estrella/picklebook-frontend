@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Camera, Check, Loader2 } from 'lucide-react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
+import PushNotificationSettings from '../components/PushNotificationSettings'
 
 // ---------------------------------------------------------------------------
 // Design tokens — shared with QueueManager/HomePage so this page reads as
@@ -362,6 +363,8 @@ function PlayerSettingsPage() {
 
       {/* ================= BODY ================= */}
       <main className="ps-body-wrap" style={{ maxWidth: '760px', margin: '0 auto', padding: '28px 32px 60px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+        <PushNotificationSettings />
 
         {/* ---------- PROFILE PICTURE ---------- */}
         <Card title="Profile Picture" subtitle="Shown on your player account.">

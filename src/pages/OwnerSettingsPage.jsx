@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Camera, Loader2, Check, AlertCircle, Menu } from 'lucide-react'
 import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
+import PushNotificationSettings from '../components/PushNotificationSettings'
 
 // Small inline status line shown under each form once it's submitted.
 function StatusMessage({ status }) {
@@ -163,6 +164,8 @@ function OwnerSettingsPage() {
         </header>
 
         <main className="p-4 sm:p-6 lg:p-12 max-w-3xl flex flex-col gap-6 lg:gap-8">
+
+          <PushNotificationSettings owner />
 
           {/* Profile picture */}
           <section className="p-4 sm:p-6 bg-white rounded-xl shadow-sm outline outline-1 outline-offset-[-1px] outline-stone-300 flex flex-col gap-4">

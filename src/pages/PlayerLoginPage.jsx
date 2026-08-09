@@ -19,7 +19,7 @@ function PlayerLoginPage() {
     setError(null)
     try {
       const res = await api.post('/users/login', form)
-      localStorage.setItem('playerToken', res.data.token)
+      localStorage.setItem('playerToken', 'cookie')
       localStorage.setItem('player', JSON.stringify({
         id: res.data.id,
         firstName: res.data.firstName,

@@ -5,6 +5,10 @@ import './index.css'
 import 'leaflet/dist/leaflet.css'
 import './utils/leafletConfig'
 import App from './App.jsx'
+import { registerServiceWorker, setupInstallPromptCapture } from './lib/pwa'
+
+setupInstallPromptCapture()
+registerServiceWorker()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

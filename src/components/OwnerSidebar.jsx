@@ -11,6 +11,8 @@ import {
   Settings,
   X,
 } from 'lucide-react'
+import InstallPickleBookButton from './InstallPickleBookButton'
+import api from '../services/api'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', path: '/owner/dashboard', icon: LayoutDashboard },
@@ -27,7 +29,12 @@ function OwnerSidebar({ isOpen, onClose }) {
   const location = useLocation()
   const owner = JSON.parse(localStorage.getItem('owner') || '{}')
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await api.post('/courtowners/logout')
+    } catch {
+      // Local cleanup still logs the browser out if the network is unavailable.
+    }
     localStorage.removeItem('token')
     localStorage.removeItem('owner')
     navigate('/owner/login')
@@ -85,6 +92,9 @@ function OwnerSidebar({ isOpen, onClose }) {
 
         <div className="pt-2">
           <div className="pt-8 border-t border-white/15 flex flex-col gap-1">
+            <div className="px-4 py-2">
+              <InstallPickleBookButton />
+            </div>
             <button
               onClick={() => handleNavigate('/owner/support')}
               className={`owner-nav-item flex items-center gap-3 px-4 py-3 text-sm leading-5 text-left transition-colors duration-150 ${

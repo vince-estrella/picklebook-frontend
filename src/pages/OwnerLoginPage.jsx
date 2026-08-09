@@ -19,7 +19,7 @@ function OwnerLoginPage() {
     setError(null)
     try {
       const res = await api.post('/courtowners/login', form)
-      localStorage.setItem('token', res.data.token)
+      localStorage.setItem('token', 'cookie')
       localStorage.setItem('owner', JSON.stringify({
         id: res.data.id,
         firstName: res.data.firstName,

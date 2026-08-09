@@ -2,6 +2,7 @@ import axios from 'axios'
  
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
+  withCredentials: true,
 })
  
 // Owner and Player accounts are separate token types, stored under separate
@@ -17,10 +18,10 @@ api.interceptors.request.use((config) => {
   const playerToken = localStorage.getItem('playerToken')
  
   if (isOwnerRoute) {
-    if (ownerToken) config.headers.Authorization = `Bearer ${ownerToken}`
-  } else if (playerToken) {
+    if (ownerToken && ownerToken !== 'cookie') config.headers.Authorization = `Bearer ${ownerToken}`
+  } else if (playerToken && playerToken !== 'cookie') {
     config.headers.Authorization = `Bearer ${playerToken}`
-  } else if (ownerToken) {
+  } else if (ownerToken && ownerToken !== 'cookie') {
     config.headers.Authorization = `Bearer ${ownerToken}`
   }
  
@@ -35,4 +36,3 @@ api.interceptors.request.use(config => {
 })
  
 export default api
- 

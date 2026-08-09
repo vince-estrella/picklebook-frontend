@@ -1,5 +1,7 @@
-﻿import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import InstallPickleBookButton from './InstallPickleBookButton'
+import api from '../services/api'
 
 function Navbar() {
   const [player] = useState(() => {
@@ -21,6 +23,17 @@ function Navbar() {
     return () => window.removeEventListener('storage', handleStorage)
   }, [])
 
+  const handleLogout = async () => {
+    try {
+      await api.post('/users/logout')
+    } catch {
+      // Local cleanup still logs the browser out if the network is unavailable.
+    }
+    localStorage.removeItem('player')
+    localStorage.removeItem('playerToken')
+    window.location.href = '/'
+  }
+
   return (
     <nav className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-100">
       <Link to="/" className="flex items-center gap-2 font-bold text-gray-900 text-lg">
@@ -28,7 +41,9 @@ function Navbar() {
         <span>PickleBook</span>
       </Link>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4 sm:gap-6">
+        <InstallPickleBookButton compact />
+
         {player ? (
           <>
             <Link
@@ -44,6 +59,14 @@ function Navbar() {
             >
               Settings
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors"
+            >
+              Log Out
+            </button>
           </>
         ) : (
           <Link
