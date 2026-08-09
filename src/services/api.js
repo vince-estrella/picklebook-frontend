@@ -13,7 +13,11 @@ const api = axios.create({
 // session exists. The backend enforces roles independently via [Authorize(Roles=...)],
 // so sending the "wrong" token to a route that doesn't need one is harmless.
 api.interceptors.request.use((config) => {
-  const isOwnerRoute = config.url?.includes('owner') || config.url?.includes('courtowners')
+  const isPushRoute = config.url?.startsWith('/push')
+  const isOwnerRoute =
+    config.url?.includes('owner') ||
+    config.url?.includes('courtowners') ||
+    (isPushRoute && window.location.pathname.startsWith('/owner'))
   const ownerToken = localStorage.getItem('token')
   const playerToken = localStorage.getItem('playerToken')
  
