@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ExternalLink, Menu, MessageCircle } from 'lucide-react'
 import OwnerSidebar from '../components/OwnerSidebar'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 const SUPPORT_CONTACTS = [
   'Vince Gabrielle Milos',
@@ -15,9 +16,11 @@ function OwnerSupportPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-    }
+    let cancelled = false
+    ensureOwnerSession().then((valid) => {
+      if (!cancelled && !valid) navigate('/owner/login')
+    })
+    return () => { cancelled = true }
   }, [navigate])
 
   return (

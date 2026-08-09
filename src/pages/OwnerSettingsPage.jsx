@@ -5,6 +5,7 @@ import api from '../services/api'
 import OwnerSidebar from '../components/OwnerSidebar'
 import PushNotificationSettings from '../components/PushNotificationSettings'
 import AppInstallSettings from '../components/AppInstallSettings'
+import { ensureOwnerSession } from '../lib/ownerSession'
 
 // Small inline status line shown under each form once it's submitted.
 function StatusMessage({ status }) {
@@ -49,20 +50,31 @@ function OwnerSettingsPage() {
   const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
-      navigate('/owner/login')
-      return
-    }
-    api.get('/owner/profile')
-      .then(res => {
+    let cancelled = false
+
+    async function loadProfile() {
+      const valid = await ensureOwnerSession()
+      if (cancelled) return
+
+      if (!valid) {
+        navigate('/owner/login')
+        return
+      }
+
+      try {
+        const res = await api.get('/owner/profile')
+        if (cancelled) return
         setProfile(res.data)
         setNewEmail(res.data.email || '')
-        setLoading(false)
-      })
-      .catch(() => {
-        // Profile endpoint may not exist yet — still let the owner use the forms below.
-        setLoading(false)
-      })
+      } catch {
+        if (!cancelled) navigate('/owner/login')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadProfile()
+    return () => { cancelled = true }
   }, [navigate])
 
   const handleAvatarChange = (e) => {

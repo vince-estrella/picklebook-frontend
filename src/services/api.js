@@ -4,6 +4,14 @@ const api = axios.create({
   baseURL: import.meta.env.DEV ? (import.meta.env.VITE_API_URL || '/api') : '/api',
   withCredentials: true,
 })
+
+if (
+  typeof window !== 'undefined' &&
+  window.location.pathname.startsWith('/owner') &&
+  !localStorage.getItem('token')
+) {
+  localStorage.setItem('token', 'cookie')
+}
  
 // Owner and Player accounts are separate token types, stored under separate
 // localStorage keys. Requests to owner-only routes (anything containing
