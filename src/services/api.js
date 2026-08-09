@@ -12,6 +12,14 @@ if (
 ) {
   localStorage.setItem('token', 'cookie')
 }
+
+if (
+  typeof window !== 'undefined' &&
+  ['/my-bookings', '/messages', '/settings', '/open-play'].some((path) => window.location.pathname.startsWith(path)) &&
+  !localStorage.getItem('playerToken')
+) {
+  localStorage.setItem('playerToken', 'cookie')
+}
  
 // Owner and Player accounts are separate token types, stored under separate
 // localStorage keys. Requests to owner-only routes (anything containing

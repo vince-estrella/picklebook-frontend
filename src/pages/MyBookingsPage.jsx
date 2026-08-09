@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar, Clock } from 'lucide-react'
 import api from '../services/api'
 import Navbar from '../components/Navbar'
+import { clearPlayerSession } from '../lib/playerSession'
 
 // ---------------------------------------------------------------------------
 // Same design tokens as HomePage — deep court navy, kitchen teal, chalk-line
@@ -63,8 +64,10 @@ function MyBookingsPage() {
         setLoading(false)
       })
       .catch(() => {
+        clearPlayerSession()
         setError('Could not load your bookings. Please try logging in again.')
         setLoading(false)
+        navigate('/login')
       })
   }, [navigate])
 

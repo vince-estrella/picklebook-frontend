@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, MessageCircle, Search, Send } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import api from '../services/api'
+import { clearPlayerSession, ensurePlayerSession } from '../lib/playerSession'
 
 function formatTime(value) {
   if (!value) return ''
@@ -27,20 +28,25 @@ function PlayerMessagesPage() {
   const [error, setError] = useState('')
 
   const loadConversations = useCallback(() => {
-    if (!localStorage.getItem('playerToken')) {
-      navigate('/login')
-      return
-    }
+    ensurePlayerSession().then((valid) => {
+      if (!valid) {
+        navigate('/login')
+        return
+      }
 
-    api.get('/messages/conversations')
+      api.get('/messages/conversations')
       .then((res) => {
         const data = res.data || []
         setConversations(data)
         setActiveId((current) => current || data[0]?.id || null)
         setError('')
       })
-      .catch(() => setError('Could not load messages. Please try logging in again.'))
+      .catch(() => {
+        clearPlayerSession()
+        navigate('/login')
+      })
       .finally(() => setLoading(false))
+    })
   }, [navigate])
 
   useEffect(() => {

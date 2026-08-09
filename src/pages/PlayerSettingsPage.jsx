@@ -5,6 +5,7 @@ import api from '../services/api'
 import Navbar from '../components/Navbar'
 import PushNotificationSettings from '../components/PushNotificationSettings'
 import AppInstallSettings from '../components/AppInstallSettings'
+import { clearPlayerSession, ensurePlayerSession } from '../lib/playerSession'
 
 // ---------------------------------------------------------------------------
 // Design tokens — shared with QueueManager/HomePage so this page reads as
@@ -208,24 +209,36 @@ function PlayerSettingsPage() {
   const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
-    if (!localStorage.getItem('playerToken')) {
-      navigate('/login')
-      return
-    }
+    let cancelled = false
 
-    api.get('/users/profile')
-      .then(res => {
+    async function loadProfile() {
+      const valid = await ensurePlayerSession()
+      if (cancelled) return
+
+      if (!valid) {
+        navigate('/login')
+        return
+      }
+
+      try {
+        const res = await api.get('/users/profile')
+        if (cancelled) return
         setProfile(res.data)
         setNewEmail(res.data.email || '')
         updateStoredPlayer({
           email: res.data.email,
           profileImageUrl: res.data.profileImageUrl,
         })
-        setLoading(false)
-      })
-      .catch(() => {
-        setLoading(false)
-      })
+      } catch {
+        clearPlayerSession()
+        if (!cancelled) navigate('/login')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    loadProfile()
+    return () => { cancelled = true }
   }, [navigate])
 
   const handleAvatarChange = (e) => {
@@ -337,8 +350,7 @@ function PlayerSettingsPage() {
     } catch {
       // Still clear local state if the network/logout request is unavailable.
     }
-    localStorage.removeItem('playerToken')
-    localStorage.removeItem('player')
+    clearPlayerSession()
     navigate('/login')
   }
 
