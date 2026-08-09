@@ -29,6 +29,7 @@ import PlayerLoginPage from './pages/PlayerLoginPage'
 import PlayerRegisterPage from './pages/PlayerRegisterPage'
 import MyBookingsPage from './pages/MyBookingsPage'
 import PlayerSettingsPage from './pages/PlayerSettingsPage'
+import PlayerMessagesPage from './pages/PlayerMessagesPage'
 import ReportListingPage from './pages/ReportListingPage'
 import NotFoundPage from './pages/NotFoundPage'
 import OpenPlaySessionPage from './pages/OpenPlaySessionPage'
@@ -37,6 +38,7 @@ function App() {
   return (
     <Routes>
       <Route path="/my-bookings" element={<MyBookingsPage />} />
+      <Route path="/messages" element={<PlayerMessagesPage />} />
       <Route path="/settings" element={<PlayerSettingsPage />} />
       <Route path="/login" element={<PlayerLoginPage />} />
       <Route path="/register" element={<PlayerRegisterPage />} />

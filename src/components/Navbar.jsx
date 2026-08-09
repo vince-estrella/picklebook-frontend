@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CalendarCheck, QrCode, Settings } from 'lucide-react'
+import { CalendarCheck, MessageCircle, Settings } from 'lucide-react'
 
 function Navbar() {
   const [player] = useState(() => {
@@ -24,12 +24,12 @@ function Navbar() {
 
   return (
     <nav className="flex items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4 bg-white border-b border-gray-100">
-      <Link to="/" className="flex items-center gap-1.5 sm:gap-2 font-bold text-gray-900 text-lg shrink-0">
-        <img src="/favicon.svg" alt="" className="h-8 w-8" />
-        <span className="text-[20px] leading-none sm:text-lg">PickleBook</span>
+      <Link to="/" className="flex min-w-0 items-center gap-1.5 sm:gap-2 font-bold text-gray-900 text-lg shrink-0">
+        <img src="/favicon.svg" alt="" className="h-8 w-8 shrink-0" />
+        <span className="text-[20px] leading-none sm:text-lg max-[380px]:hidden">PickleBook</span>
       </Link>
 
-      <div className="flex items-center justify-end gap-1.5 sm:gap-4 min-w-0">
+      <div className="flex items-center justify-end gap-1 sm:gap-4 min-w-0">
         {player ? (
           <>
             <Link
@@ -42,12 +42,12 @@ function Navbar() {
             </Link>
 
             <Link
-              to="/scan-queue"
+              to="/messages"
               className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg text-gray-600 hover:text-green-700 hover:bg-green-50 transition-colors flex items-center justify-center shrink-0"
-              aria-label="Scan Queue QR"
-              title="Scan Queue QR"
+              aria-label="Messages"
+              title="Messages"
             >
-              <QrCode className="h-5 w-5" />
+              <MessageCircle className="h-5 w-5" />
             </Link>
 
             <Link
@@ -70,7 +70,7 @@ function Navbar() {
 
         <Link
           to="/courts"
-          className="text-sm font-medium bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap"
+          className="text-sm font-bold bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-colors whitespace-nowrap shadow-sm"
         >
           Find Courts
         </Link>
