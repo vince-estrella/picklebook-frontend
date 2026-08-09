@@ -1,10 +1,26 @@
 import api from '../services/api'
 
 function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4)
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const normalized = String(base64String || '').trim()
+  const padding = '='.repeat((4 - normalized.length % 4) % 4)
+  const base64 = (normalized + padding).replace(/-/g, '+').replace(/_/g, '/')
   const rawData = window.atob(base64)
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)))
+}
+
+function getValidatedApplicationServerKey(publicKey) {
+  let key
+  try {
+    key = urlBase64ToUint8Array(publicKey)
+  } catch {
+    throw new Error('Push public key is not valid base64. Check VAPID_PUBLIC_KEY in Railway.')
+  }
+
+  if (key.length !== 65 || key[0] !== 4) {
+    throw new Error('Push public key is not a valid P-256 public key. Regenerate VAPID keys and update Railway.')
+  }
+
+  return key
 }
 
 export function pushSupported() {
@@ -49,7 +65,7 @@ export async function enablePushNotifications() {
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
+      applicationServerKey: getValidatedApplicationServerKey(publicKey),
     })
   }
 
