@@ -23,7 +23,9 @@ function PushNotificationSettings({ owner = false }) {
     try {
       await enablePushNotifications()
       setState('enabled')
-      setMessage('Push notifications are enabled for this device.')
+      setMessage(owner
+        ? 'Owner notifications are enabled for this device.'
+        : 'Push notifications are enabled for this device.')
     } catch (error) {
       setMessage(error.message || 'Could not enable notifications.')
       setState(pushSupported() ? Notification.permission : 'unsupported')
@@ -86,12 +88,12 @@ function PushNotificationSettings({ owner = false }) {
         <button
           type="button"
           onClick={handleEnable}
-          disabled={busy || unsupported || blocked || enabled}
+          disabled={busy || unsupported || blocked}
           className={owner ? 'owner-primary-btn px-4 py-2 text-sm inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed' : 'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed'}
           style={!owner ? { background: '#d7e22b', color: '#071d27' } : undefined}
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
-          {enabled ? 'Notifications Enabled' : 'Enable Notifications'}
+          {enabled ? (owner ? 'Refresh Owner Alerts' : 'Refresh Notifications') : 'Enable Notifications'}
         </button>
 
         {enabled && (
