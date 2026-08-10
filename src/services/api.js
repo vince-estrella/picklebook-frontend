@@ -14,9 +14,20 @@ const api = axios.create({
 // so sending the "wrong" token to a route that doesn't need one is harmless.
 api.interceptors.request.use((config) => {
   const isPushRoute = config.url?.startsWith('/push')
+  const method = (config.method || 'get').toLowerCase()
+  const url = config.url || ''
+  const isOwnerCourtWrite =
+    url === '/courts' && method === 'post'
+    || /^\/courts\/\d+(\/images(\/\d+)?)?$/.test(url) && ['post', 'put', 'delete'].includes(method)
+    || /^\/venues\/\d+$/.test(url) && method === 'delete'
+  const isOwnerBookingAction =
+    url === '/bookings/stats'
+    || /^\/bookings\/\d+\/(status|refund-status)$/.test(url)
   const isOwnerRoute =
-    config.url?.includes('owner') ||
-    config.url?.includes('courtowners') ||
+    url.includes('owner') ||
+    url.includes('courtowners') ||
+    isOwnerCourtWrite ||
+    isOwnerBookingAction ||
     (isPushRoute && window.location.pathname.startsWith('/owner'))
   const ownerToken = localStorage.getItem('token')
   const playerToken = localStorage.getItem('playerToken')
