@@ -25,6 +25,8 @@ import {
   getDatabase, ref, set, onValue, push, remove, off, get, serverTimestamp,
 } from 'firebase/database'
 
+export const QUEUE_ROOM_TTL_MS = 12 * 60 * 60 * 1000
+
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyA0RvDvB3uU3KRaeU0I7c43ZM9SwMw-FYQ',
   authDomain: 'picklebook-659d3.firebaseapp.com',
@@ -40,6 +42,11 @@ function db() {
   return getDatabase(app())
 }
 
+function isExpiredState(state) {
+  const expiresAt = Number(state?.meta?.expiresAt || 0)
+  return expiresAt > 0 && Date.now() > expiresAt
+}
+
 export function makeRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // skips 0/O/1/I — easy to read aloud
   let code = ''
@@ -52,7 +59,13 @@ export function makeRoomCode() {
 /** Host calls this every time local players/courts change. */
 export function publishState(code, players, courts, meta = {}) {
   return set(ref(db(), `rooms/${code}/state`), {
-    players, courts, meta, updatedAt: serverTimestamp(),
+    players,
+    courts,
+    meta: {
+      ...meta,
+      expiresAt: meta.expiresAt || Date.now() + QUEUE_ROOM_TTL_MS,
+    },
+    updatedAt: serverTimestamp(),
   })
 }
 
@@ -82,18 +95,34 @@ export function closeRoom(code) {
 /** Player's device subscribes to the live, read-only queue state. */
 export function subscribeRoomState(code, callback) {
   const stateRef = ref(db(), `rooms/${code}/state`)
-  const handler = snap => callback(snap.val())
+  const handler = snap => {
+    const state = snap.val()
+    if (isExpiredState(state)) {
+      remove(ref(db(), `rooms/${code}`)).catch(() => {})
+      callback(null)
+      return
+    }
+    callback(state)
+  }
   onValue(stateRef, handler)
   return () => off(stateRef, 'value', handler)
 }
 
 export async function roomExists(code) {
   const snap = await get(ref(db(), `rooms/${code}/state`))
-  return snap.exists()
+  if (!snap.exists()) return false
+  const state = snap.val()
+  if (isExpiredState(state)) {
+    await remove(ref(db(), `rooms/${code}`)).catch(() => {})
+    return false
+  }
+  return true
 }
 
 /** Player submits their name — host will pick this up and add them. */
 export async function submitJoinRequest(code, { name, skill, profileImageUrl }) {
+  const exists = await roomExists(code)
+  if (!exists) throw new Error('Queue room is closed or expired.')
   const reqRef = push(ref(db(), `rooms/${code}/joinRequests`))
   await set(reqRef, { name, skill, profileImageUrl: profileImageUrl || null, requestedAt: Date.now() })
   return reqRef.key

@@ -272,6 +272,7 @@ function OpenPlaySessionPage() {
                       name: player.playerName,
                       skill: queueSkillFromOpenPlay(booking.openPlaySkillLevel),
                       profileImageUrl: player.playerProfileImageUrl,
+                      isHost: player.isHost,
                     })),
                   },
                 })}

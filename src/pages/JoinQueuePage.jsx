@@ -185,6 +185,7 @@ function JoinQueuePage() {
   const [codeError, setCodeError] = useState('')
 
   const [roomState, setRoomState] = useState(null) // { players, courts }
+  const [roomLoaded, setRoomLoaded] = useState(false)
   const [myRequestId, setMyRequestId] = useState(() => (code ? getStoredJoinRequestId(code) : null))
   const [nameInput, setNameInput] = useState(() => getPlayerDisplayName(getStoredPlayerProfile()))
   const [skillInput, setSkillInput] = useState(DEFAULT_SKILL)
@@ -196,7 +197,10 @@ function JoinQueuePage() {
   // subscribe once we have a confirmed room code
   useEffect(() => {
     if (!code) return
-    const unsubscribe = subscribeRoomState(code, setRoomState)
+    const unsubscribe = subscribeRoomState(code, (state) => {
+      setRoomState(state)
+      setRoomLoaded(true)
+    })
     return unsubscribe
   }, [code])
 
@@ -254,6 +258,7 @@ function JoinQueuePage() {
         return
       }
       setCode(clean)
+      setRoomLoaded(false)
       const url = new URL(window.location.href)
       url.searchParams.set('code', clean)
       window.history.replaceState({}, '', url)
@@ -352,7 +357,35 @@ function JoinQueuePage() {
           </div>
         )}
 
-        {code && !myRequestId && (
+        {code && roomLoaded && !roomState && (
+          <div style={{ background: '#fff', borderRadius: '12px', padding: '30px 22px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
+            <FaQrcode size={28} color={COLORS.inkMute} style={{ marginBottom: '12px' }} />
+            <h2 style={{ fontFamily: "'Big Shoulders Display', sans-serif", fontSize: '26px', color: COLORS.ink, margin: '0 0 8px', textTransform: 'uppercase' }}>
+              Queue Closed
+            </h2>
+            <p style={{ fontSize: '14px', color: COLORS.inkMute, margin: '0 0 18px' }}>
+              This queue was ended by the host or has expired. Ask the host for a new QR code if play is still running.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setCode('')
+                setCodeInput('')
+                setMyRequestId(null)
+                setRoomLoaded(false)
+                setCodeError('')
+              }}
+              style={{
+                width: '100%', padding: '13px', borderRadius: '8px', border: 'none', fontWeight: 700, fontSize: '15px',
+                background: COLORS.citron, color: COLORS.navyDeep, cursor: 'pointer',
+              }}
+            >
+              Enter New Code
+            </button>
+          </div>
+        )}
+
+        {code && (!roomLoaded || roomState) && !myRequestId && (
           <div style={{ background: '#fff', borderRadius: '12px', padding: '22px', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
             <p style={{ fontSize: '13.5px', color: COLORS.inkMute, margin: '0 0 16px' }}>
               You're joining session <strong style={{ color: COLORS.ink }}>{code}</strong>. Enter your name to get in line.
@@ -386,7 +419,7 @@ function JoinQueuePage() {
           </div>
         )}
 
-        {code && myRequestId && !me && (
+        {code && (!roomLoaded || roomState) && myRequestId && !me && (
           <div style={{ background: '#fff', borderRadius: '12px', padding: '30px 22px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.08)' }}>
             <div className="jq-spin" style={{ width: '28px', height: '28px', margin: '0 auto 14px', border: `3px solid ${COLORS.chalkDim}`, borderTopColor: COLORS.teal, borderRadius: '50%', animation: 'jq-spin 0.8s linear infinite' }} />
             <style>{`@keyframes jq-spin { to { transform: rotate(360deg); } }`}</style>
@@ -396,7 +429,7 @@ function JoinQueuePage() {
           </div>
         )}
 
-        {code && me && (
+        {code && roomState && me && (
           <>
             <StatusCard
               me={me}
