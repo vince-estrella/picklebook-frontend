@@ -50,9 +50,11 @@ function groupCourtsByVenue(courts) {
 function OwnerCourtsPage() {
   const navigate = useNavigate()
   const [courts, setCourts] = useState([])
+  const [venues, setVenues] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+  const [deletingVenueId, setDeletingVenueId] = useState(null)
   const [deleteError, setDeleteError] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loadError, setLoadError] = useState('')
@@ -71,8 +73,14 @@ function OwnerCourtsPage() {
 
       try {
         setLoadError('')
-        const res = await api.get('/courts/owner')
-        if (!cancelled) setCourts(res.data)
+        const [courtsRes, venuesRes] = await Promise.all([
+          api.get('/courts/owner'),
+          api.get('/venues/owner'),
+        ])
+        if (!cancelled) {
+          setCourts(courtsRes.data)
+          setVenues(Array.isArray(venuesRes.data) ? venuesRes.data : [])
+        }
       } catch (err) {
         if (!cancelled && (err.response?.status === 401 || err.response?.status === 403)) {
           navigate('/owner/login')
@@ -109,6 +117,23 @@ function OwnerCourtsPage() {
     }
   }
 
+  const handleDeleteVenue = async (venue) => {
+    const confirmed = window.confirm(`Delete venue "${venue.name}"?`)
+    if (!confirmed) return
+
+    setDeleteError(null)
+    setDeletingVenueId(venue.id)
+    try {
+      await api.delete(`/venues/${venue.id}`)
+      setVenues((prev) => prev.filter((item) => item.id !== venue.id))
+    } catch (err) {
+      const message = err?.response?.data || 'Failed to delete venue. Please try again.'
+      setDeleteError(typeof message === 'string' ? message : 'Failed to delete venue. Please try again.')
+    } finally {
+      setDeletingVenueId(null)
+    }
+  }
+
   const filteredCourts = courts.filter((court) => {
     const q = search.trim().toLowerCase()
     if (!q) return true
@@ -121,6 +146,7 @@ function OwnerCourtsPage() {
   })
   const venueGroups = groupCourtsByVenue(filteredCourts)
   const allVenueGroups = groupCourtsByVenue(courts)
+  const emptyVenues = venues.filter((venue) => Number(venue.courtCount || 0) === 0)
   const pickleBookCount = courts.filter((court) => court.bookingMode !== 'ExternalOnly').length
   const externalCount = courts.length - pickleBookCount
 
@@ -205,7 +231,7 @@ function OwnerCourtsPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="owner-stat p-4">
               <p className="text-xs font-bold uppercase text-slate-500">Venues</p>
-              <p className="text-2xl font-bold text-slate-900">{allVenueGroups.length}</p>
+              <p className="text-2xl font-bold text-slate-900">{venues.length || allVenueGroups.length}</p>
             </div>
             <div className="owner-stat p-4">
               <p className="text-xs font-bold uppercase text-slate-500">Courts</p>
@@ -225,6 +251,38 @@ function OwnerCourtsPage() {
             <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {deleteError}
             </div>
+          )}
+
+          {emptyVenues.length > 0 && (
+            <section className="owner-panel overflow-hidden">
+              <div className="p-5 border-b border-stone-200 bg-[#f8faf6]">
+                <p className="owner-kicker mb-1">Cleanup</p>
+                <h2 className="text-lg font-bold text-slate-900">Empty Venues</h2>
+                <p className="mt-1 text-sm text-slate-500">Only venues with no courts can be deleted.</p>
+              </div>
+              <div className="divide-y divide-stone-100">
+                {emptyVenues.map((venue) => (
+                  <div key={venue.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-slate-900 truncate">{venue.name}</p>
+                      <p className="mt-1 text-sm text-slate-500 flex items-start gap-1.5">
+                        <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span className="line-clamp-2">{venue.address || 'No address saved'}</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteVenue(venue)}
+                      disabled={deletingVenueId === venue.id}
+                      className="owner-danger-btn px-3 py-2 text-sm inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {deletingVenueId === venue.id ? 'Deleting...' : 'Delete Venue'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
 
           {filteredCourts.length === 0 ? (
