@@ -138,6 +138,7 @@ function EditCourtPage() {
     setLoading(true)
     setError(null)
     try {
+      const selectedVenue = venues.find(v => String(v.id) === String(form.venueId))
       const courtData = {
         ...form,
         venueId: form.venueId ? Number(form.venueId) : null,
@@ -152,13 +153,17 @@ function EditCourtPage() {
               description: form.description,
               externalBookingUrl: form.externalBookingUrl,
             },
+        address: selectedVenue?.address || form.address,
+        latitude: selectedVenue?.latitude ?? form.latitude,
+        longitude: selectedVenue?.longitude ?? form.longitude,
         amenities: amenities.join(','),
         pricePerHour: parseFloat(form.pricePerHour),
         maxPlayers: parseInt(form.maxPlayers),
       }
       await api.put(`/courts/${id}`, courtData)
-    } catch {
-      setError('Failed to update court. Please try again.')
+    } catch (err) {
+      const message = err.response?.data
+      setError(typeof message === 'string' ? message : 'Failed to update court. Please try again.')
       setLoading(false)
       return
     }
