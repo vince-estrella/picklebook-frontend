@@ -203,7 +203,7 @@ function MyBookingsPage() {
             )}
           </div>
         )}
-        {getBookingEndInstant(b) >= now && b.status !== 'Cancelled' && b.status !== 'Completed' && (
+        {getBookingEndInstant(b) >= now && b.status === 'Pending' && (
           <button
             type="button"
             onClick={() => handleCancelBooking(b)}
